@@ -6,6 +6,14 @@ export const COMPLIANCE_RULES_CONFIG = defineEntity({
   slug: 'compliance-rules',
   timestamps: true,
 
+  extraPermissions: [
+    {
+      action: 'deprecate',
+      description:
+        'Deprecate a compliance rule and (optionally) cancel every in-flight filing generated from it. Required for both directions of the destructive `* ↔ deprecated` transition; reuse the same perm for reactivation so admins who can retire a rule can reverse it.',
+    },
+  ],
+
   fields: {
     code: {
       type: 'text',
@@ -63,9 +71,46 @@ export const COMPLIANCE_RULES_CONFIG = defineEntity({
           { name: 'deprecated', label: 'Deprecated', color: '#9CA3AF', isSystem: true },
         ],
         transitions: [
-          { from: 'draft', to: ['active', 'deprecated'] },
-          { from: 'active', to: ['deprecated'] },
-          { from: 'deprecated', to: ['active'] },
+          // Draft rules can be either published (`active`) or shelved
+          // (`deprecated`). Shelving a draft is gated by the same perm as
+          // shelving an active rule — both routes culminate in the same
+          // terminal-but-reversible state and should not collapse onto
+          // the generic `compliance-rules.update` permission.
+          {
+            from: 'draft',
+            to: [
+              'active',
+              { state: 'deprecated', requiredPermissions: ['compliance-rules.deprecate'] },
+            ],
+          },
+          // Deprecating an active rule stops the generator and (per the
+          // service layer's `alsoCancelInFlight` opt-in) can cascade
+          // cancellation across every non-terminal filing for that rule.
+          // Reason + comment ride into the rule's transition history row
+          // and downstream filing cancellations so the audit trail explains
+          // *why* the cascade happened.
+          {
+            from: 'active',
+            to: [{
+              state: 'deprecated',
+              requiredPermissions: ['compliance-rules.deprecate'],
+              reasonRequired: true,
+              commentRequired: true,
+            }],
+          },
+          // Reactivation reuses the same permission — same blast radius
+          // (the rule re-enters the generation pipeline, future filings
+          // resume) so the perm and audit-trail requirements stay
+          // symmetric with deprecation.
+          {
+            from: 'deprecated',
+            to: [{
+              state: 'active',
+              requiredPermissions: ['compliance-rules.deprecate'],
+              reasonRequired: true,
+              commentRequired: true,
+            }],
+          },
         ],
       },
     },

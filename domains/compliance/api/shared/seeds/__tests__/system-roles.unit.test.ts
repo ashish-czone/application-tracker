@@ -97,9 +97,9 @@ describe('COMPLIANCE_ROLES seed', () => {
       // out "my unit's clients" would be a separate feature. Leads get the
       // read+write set; Firm Admin additionally gets delete.
       for (const perm of [
-        'clients.read', 'clients.create', 'clients.update',
+        'clients.read', 'clients.create', 'clients.update', 'clients.dormantise',
         'client-contacts.create', 'client-contacts.update', 'client-contacts.delete',
-        'compliance-rules.create', 'compliance-rules.update',
+        'compliance-rules.create', 'compliance-rules.update', 'compliance-rules.deprecate',
       ]) {
         expect(scopeTypesFor('Team Lead', perm)).toEqual(['any']);
       }

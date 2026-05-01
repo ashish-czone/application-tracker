@@ -53,14 +53,19 @@ export function RuleDeprecationDialog({
     },
   });
 
-  const canSubmit = !mutation.isPending && !previewLoading;
+  const trimmedComment = comment.trim();
+  // The rule's `active → deprecated` workflow transition declares
+  // `commentRequired: true`. The engine rejects the deprecate call
+  // server-side when comment is blank, so disable submit until the
+  // admin types something.
+  const canSubmit = !mutation.isPending && !previewLoading && trimmedComment.length > 0;
 
   const handleConfirm = () => {
     if (!canSubmit) return;
     mutation.mutate({
       ruleId,
       alsoCancelInFlight,
-      comment: comment.trim() || undefined,
+      comment: trimmedComment,
     });
   };
 
@@ -114,13 +119,14 @@ export function RuleDeprecationDialog({
 
           <div>
             <Label htmlFor="deprecation-comment">
-              Comment <span className="text-muted-foreground font-normal">(optional)</span>
+              Comment <span className="text-destructive">*</span>
             </Label>
             <textarea
               id="deprecation-comment"
               value={comment}
               onChange={(e) => setComment(e.target.value)}
               rows={3}
+              required
               placeholder="Context for the audit trail — e.g. replaced by a newer rule."
               className="mt-1.5 flex w-full rounded-md border border-input bg-background px-3 py-2 text-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring resize-none"
             />

@@ -196,5 +196,64 @@ describe('Clients (integration)', () => {
         .send({ fieldKey: 'status', to: 'active' })
         .expect(201);
     });
+
+    it('active → dormant is rejected when actor lacks clients.dormantise', async () => {
+      // Bring the client to `active` first using the broader MANAGE token.
+      const created = await request(ctx.httpServer)
+        .post('/api/v1/clients/with-contacts')
+        .set(withAuth(MANAGE))
+        .send({
+          client: { name: unique('GateProbe'), legalName: 'Gate Probe Ltd' },
+          contacts: [{ fullName: 'Primary', complianceIsPrimary: true }],
+        })
+        .expect(201);
+      const clientId = created.body.client.id;
+      await request(ctx.httpServer)
+        .post(`/api/v1/clients/${clientId}/transition`)
+        .set(withAuth(MANAGE))
+        .send({ fieldKey: 'status', to: 'active' })
+        .expect(201);
+
+      // MANAGE deliberately omits `clients.dormantise` — same actor that
+      // could update the client cannot trigger the destructive cascade.
+      const res = await request(ctx.httpServer)
+        .post(`/api/v1/clients/${clientId}/transition`)
+        .set(withAuth(MANAGE))
+        .send({
+          fieldKey: 'status',
+          to: 'dormant',
+          reason: 'Ceased operations',
+          comment: 'No longer trading',
+        });
+      expect([400, 403]).toContain(res.status);
+    });
+
+    it('active → dormant succeeds when actor holds clients.dormantise', async () => {
+      const created = await request(ctx.httpServer)
+        .post('/api/v1/clients/with-contacts')
+        .set(withAuth(MANAGE))
+        .send({
+          client: { name: unique('CanDormant'), legalName: 'Can Dormant Ltd' },
+          contacts: [{ fullName: 'Primary', complianceIsPrimary: true }],
+        })
+        .expect(201);
+      const clientId = created.body.client.id;
+      await request(ctx.httpServer)
+        .post(`/api/v1/clients/${clientId}/transition`)
+        .set(withAuth(MANAGE))
+        .send({ fieldKey: 'status', to: 'active' })
+        .expect(201);
+
+      await request(ctx.httpServer)
+        .post(`/api/v1/clients/${clientId}/transition`)
+        .set(withAuth([...MANAGE, 'clients.dormantise']))
+        .send({
+          fieldKey: 'status',
+          to: 'dormant',
+          reason: 'Ceased operations',
+          comment: 'No longer trading',
+        })
+        .expect(201);
+    });
   });
 });

@@ -129,6 +129,7 @@ const TEAM_LEAD_PERMISSIONS: GrantSpec[] = [
   { name: 'clients.read',                scopes: ANY },
   { name: 'clients.create',              scopes: ANY },
   { name: 'clients.update',              scopes: ANY },
+  { name: 'clients.dormantise',          scopes: ANY },
   { name: 'client-contacts.read',        scopes: ANY },
   { name: 'client-contacts.create',      scopes: ANY },
   { name: 'client-contacts.update',      scopes: ANY },
@@ -140,6 +141,7 @@ const TEAM_LEAD_PERMISSIONS: GrantSpec[] = [
   { name: 'compliance-rules.read',       scopes: ANY },
   { name: 'compliance-rules.create',     scopes: ANY },
   { name: 'compliance-rules.update',     scopes: ANY },
+  { name: 'compliance-rules.deprecate',  scopes: ANY },
 ];
 
 // ── Firm Admin ─────────────────────────────────────────────────────────────
@@ -160,6 +162,7 @@ const FIRM_ADMIN_PERMISSIONS: GrantSpec[] = [
   { name: 'clients.create',                scopes: ANY },
   { name: 'clients.update',                scopes: ANY },
   { name: 'clients.delete',                scopes: ANY },
+  { name: 'clients.dormantise',            scopes: ANY },
   { name: 'client-contacts.read',          scopes: ANY },
   { name: 'client-contacts.create',        scopes: ANY },
   { name: 'client-contacts.update',        scopes: ANY },
@@ -176,6 +179,7 @@ const FIRM_ADMIN_PERMISSIONS: GrantSpec[] = [
   { name: 'compliance-rules.create',       scopes: ANY },
   { name: 'compliance-rules.update',       scopes: ANY },
   { name: 'compliance-rules.delete',       scopes: ANY },
+  { name: 'compliance-rules.deprecate',    scopes: ANY },
   { name: 'law-handlers.read',   scopes: ANY },
   { name: 'law-handlers.create', scopes: ANY },
   { name: 'law-handlers.update', scopes: ANY },

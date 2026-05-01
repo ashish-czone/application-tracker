@@ -330,5 +330,83 @@ describe('Compliance Rules (integration)', () => {
       // (body validation), depending on which layer catches it first.
       expect([400, 422]).toContain(res.status);
     });
+
+    it('rejects active → deprecated via /transition without compliance-rules.deprecate', async () => {
+      // Promote first using the broader MANAGE token.
+      const rule = await createRule();
+      await request(ctx.httpServer)
+        .post(`/api/v1/compliance-rules/${rule.id}/transition`)
+        .set(withAuth(MANAGE))
+        .send({ fieldKey: 'status', to: 'active' })
+        .expect(201);
+
+      // MANAGE excludes the new dedicated perm — engine rejects.
+      const res = await request(ctx.httpServer)
+        .post(`/api/v1/compliance-rules/${rule.id}/transition`)
+        .set(withAuth(MANAGE))
+        .send({
+          fieldKey: 'status',
+          to: 'deprecated',
+          reason: 'Replaced',
+          comment: 'Superseded by RULE-v2',
+        });
+      expect([400, 403]).toContain(res.status);
+    });
+
+    it('allows active → deprecated via /transition with the deprecate perm', async () => {
+      const rule = await createRule();
+      await request(ctx.httpServer)
+        .post(`/api/v1/compliance-rules/${rule.id}/transition`)
+        .set(withAuth(MANAGE))
+        .send({ fieldKey: 'status', to: 'active' })
+        .expect(201);
+
+      await request(ctx.httpServer)
+        .post(`/api/v1/compliance-rules/${rule.id}/transition`)
+        .set(withAuth([...MANAGE, 'compliance-rules.deprecate']))
+        .send({
+          fieldKey: 'status',
+          to: 'deprecated',
+          reason: 'Replaced',
+          comment: 'Superseded by RULE-v2',
+        })
+        .expect(201);
+    });
+  });
+
+  describe('POST /:id/deprecate', () => {
+    it('returns 401 without auth', async () => {
+      const rule = await createRule();
+      await request(ctx.httpServer)
+        .post(`/api/v1/compliance-rules/${rule.id}/deprecate`)
+        .send({})
+        .expect(401);
+    });
+
+    it('returns 403 with compliance-rules.update only — needs the dedicated deprecate perm', async () => {
+      const rule = await createRule();
+      await request(ctx.httpServer)
+        .post(`/api/v1/compliance-rules/${rule.id}/deprecate`)
+        .set(withAuth(MANAGE))
+        .send({})
+        .expect(403);
+    });
+
+    it('succeeds with compliance-rules.deprecate', async () => {
+      const rule = await createRule();
+      // Bring it to 'active' first so the cascade path is meaningful.
+      await request(ctx.httpServer)
+        .post(`/api/v1/compliance-rules/${rule.id}/transition`)
+        .set(withAuth([...MANAGE, 'compliance-rules.deprecate']))
+        .send({ fieldKey: 'status', to: 'active' })
+        .expect(201);
+
+      const res = await request(ctx.httpServer)
+        .post(`/api/v1/compliance-rules/${rule.id}/deprecate`)
+        .set(withAuth([...MANAGE, 'compliance-rules.deprecate']))
+        .send({ comment: 'Superseded by RULE-v2' })
+        .expect(200);
+      expect(res.body).toMatchObject({ ruleId: rule.id, status: 'deprecated' });
+    });
   });
 });

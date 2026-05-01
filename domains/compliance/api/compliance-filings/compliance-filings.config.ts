@@ -131,7 +131,16 @@ export const COMPLIANCE_FILINGS_CONFIG = defineEntity({
             from: 'pending',
             to: [
               { state: 'in_progress', requiredPermissions: ['compliance-filings.pickup'] },
-              { state: 'cancelled', requiredPermissions: ['compliance-filings.close'] },
+              // Cancellation is terminal — capture *why* on every entry
+              // path so the audit trail reads standalone. The same
+              // reason+comment ride into the cascade row when a parent
+              // dormancy / rule deprecation triggers this transition.
+              {
+                state: 'cancelled',
+                requiredPermissions: ['compliance-filings.close'],
+                reasonRequired: true,
+                commentRequired: true,
+              },
             ],
           },
           {
@@ -139,7 +148,12 @@ export const COMPLIANCE_FILINGS_CONFIG = defineEntity({
             to: [
               'pending',
               { state: 'review', requiredPermissions: ['compliance-filings.submit'] },
-              { state: 'cancelled', requiredPermissions: ['compliance-filings.close'] },
+              {
+                state: 'cancelled',
+                requiredPermissions: ['compliance-filings.close'],
+                reasonRequired: true,
+                commentRequired: true,
+              },
             ],
           },
           {
@@ -153,14 +167,24 @@ export const COMPLIANCE_FILINGS_CONFIG = defineEntity({
                 reasonRequired: true,
                 commentRequired: true,
               },
-              { state: 'cancelled', requiredPermissions: ['compliance-filings.close'] },
+              {
+                state: 'cancelled',
+                requiredPermissions: ['compliance-filings.close'],
+                reasonRequired: true,
+                commentRequired: true,
+              },
             ],
           },
           {
             from: 'rejected',
             to: [
               'in_progress',
-              { state: 'cancelled', requiredPermissions: ['compliance-filings.close'] },
+              {
+                state: 'cancelled',
+                requiredPermissions: ['compliance-filings.close'],
+                reasonRequired: true,
+                commentRequired: true,
+              },
             ],
           },
           {

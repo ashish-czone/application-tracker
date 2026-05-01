@@ -3,7 +3,6 @@ import { DatabaseService, and, count, eq, inArray, isNull, ne, not, sql, withSco
 import { EntityService, type BaseListQuery } from '@packages/entity-engine';
 import type { DataAccessContext } from '@packages/rbac';
 import { withTenant } from '@packages/tenancy/helpers';
-import { WorkflowEngineService, WorkflowRegistryService } from '@packages/workflows';
 import { AppLoggerService, type ContextLogger } from '@packages/logger';
 import {
   FREQUENCIES,
@@ -20,7 +19,6 @@ import { ComplianceFilingsCancellationService } from '../compliance-filings/comp
 import type { CreateComplianceRuleDto, UpdateComplianceRuleDto } from './compliance-rules.dto';
 import type { ComplianceRulesListParams } from './compliance-rules-query';
 
-const RULE_WORKFLOW_SLUG = 'compliance-rule-status';
 const TERMINAL_FILING_STATUSES = ['completed', 'cancelled'];
 
 /**
@@ -191,8 +189,6 @@ export class ComplianceRulesService {
     private readonly database: DatabaseService,
     @Inject(forwardRef(() => LawHandlersService))
     private readonly lawHandlers: LawHandlersService,
-    private readonly workflowEngine: WorkflowEngineService,
-    private readonly workflowRegistry: WorkflowRegistryService,
     private readonly filingsCancellation: ComplianceFilingsCancellationService,
     appLogger: AppLoggerService,
   ) {
@@ -544,26 +540,35 @@ export class ComplianceRulesService {
    * Deprecate a rule (I8-I10). Semantics are the softest of the three
    * lifecycle cascades in this stream:
    *
-   *   - Flips `compliance_rules.status` to 'deprecated' and writes one
-   *     `workflow_transition_history` row for the rule itself (captures
-   *     actor, reason, comment). Generator (I9) short-circuits on
-   *     `status === 'deprecated'`, so no new filings will be produced.
+   *   - Flips `compliance_rules.status` to 'deprecated' through the workflow
+   *     engine, which writes the rule's `workflow_transition_history` row
+   *     (captures actor, reason, comment) and enforces the
+   *     `compliance-rules.deprecate` permission declared on the transition.
+   *     Generator (I9) short-circuits on `status === 'deprecated'`, so no
+   *     new filings will be produced.
    *   - Existing non-terminal filings are preserved by default. If the admin
    *     opts in via `alsoCancelInFlight`, every non-terminal filing for this
-   *     rule is cancelled inside the same tx, each with its own
-   *     workflow_transition_history row (reason: "Rule deprecated").
+   *     rule is cancelled inside the same tx as the rule transition, each
+   *     with its own workflow_transition_history row (reason: "Rule
+   *     deprecated").
    *   - No domain-specific event emitted — the rule's own transition row
    *     plus the per-filing cancellation rows are the authoritative audit.
    *
-   * All of the above runs in one tx — the rule status flip and every filing
-   * cancellation succeed or fail together. Idempotent on already-deprecated
-   * rules (no-ops and returns an empty list).
+   * Composition mirrors `ClientsService.transition`: the engine's split
+   * primitives (`validateTransition` → `applyTransition` → `emitTransitionEvent`)
+   * let this service own the tx so the rule status flip and every filing
+   * cancellation commit together. Idempotent on already-deprecated rules
+   * (no-ops and returns an empty list).
    */
   async deprecate(
     ruleId: string,
     params: {
       alsoCancelInFlight?: boolean;
-      actorId: string | null;
+      // Was `string | null` before the engine reroute; the engine's
+      // permission resolver requires a real user id, so this is now a
+      // hard requirement. Only call site (the controller) always passes
+      // `user.userId` from the auth-decoded JWT, so no caller is broken.
+      actorId: string;
       comment?: string;
     },
     accessCtx?: DataAccessContext,
@@ -571,46 +576,30 @@ export class ComplianceRulesService {
     // Existence + actor-scope check via the engine. Throws NotFoundException
     // when the rule is invisible to the actor — keeps the destructive cascade
     // gated by the same scope as the read view.
-    const rule = (await this.entityService.findOneOrFail(ruleId, accessCtx)) as ComplianceRule;
+    const rule = (await this.entityService.findOneOrFail(ruleId, accessCtx)) as unknown as ComplianceRule;
     if (rule.status === 'deprecated') {
       return { ruleId, status: 'deprecated', cancelledFilingIds: [] };
     }
 
-    const definition = this.workflowRegistry.getBySlug(RULE_WORKFLOW_SLUG);
-    if (!definition) {
-      throw new Error(
-        `Workflow definition '${RULE_WORKFLOW_SLUG}' not found — cannot record rule deprecation history`,
-      );
-    }
-    const ruleTransitionId = definition.transitions.find(
-      (t) => t.fromStateName === rule.status && t.toStateName === 'deprecated',
-    )?.id;
-    if (!ruleTransitionId) {
-      throw new Error(
-        `No configured transition from '${rule.status}' → 'deprecated' on workflow '${RULE_WORKFLOW_SLUG}'.`,
-      );
-    }
+    // Engine `validateTransition` enforces `requiredPermissions:
+    // ['compliance-rules.deprecate']` declared on the workflow transition,
+    // resolves the transition row, and prepares the apply context. The
+    // `actorId` for permission resolution must be a user — `null` (system)
+    // bypasses the perm check inside the engine, matching how other
+    // cascade paths invoke the engine without a human actor.
+    const ctx = await this.entityService.validateTransition(
+      ruleId,
+      'status',
+      'deprecated',
+      params.actorId,
+      { reason: REASON_RULE_DEPRECATED, comment: params.comment },
+      accessCtx,
+    );
 
     const alsoCancelInFlight = params.alsoCancelInFlight ?? false;
 
     const cancelledIds = await this.database.db.transaction(async (tx) => {
-      await tx
-        .update(complianceRules)
-        .set({ status: 'deprecated' })
-        .where(eq(complianceRules.id, ruleId));
-
-      await this.workflowEngine.recordHistory({
-        workflowDefinitionId: definition.id,
-        entityType: 'compliance-rules',
-        entityId: ruleId,
-        fieldName: 'status',
-        fromState: rule.status,
-        toState: 'deprecated',
-        transitionId: ruleTransitionId,
-        actorId: params.actorId,
-        reason: REASON_RULE_DEPRECATED,
-        comment: params.comment,
-      }, tx);
+      await this.entityService.applyTransition(ctx, tx);
 
       if (!alsoCancelInFlight) return [];
 
@@ -631,6 +620,8 @@ export class ComplianceRulesService {
 
       return inFlight.map((f: { id: string }) => f.id);
     });
+
+    this.entityService.emitTransitionEvent(ctx);
 
     this.logger.log('Rule deprecated', {
       ruleId,
