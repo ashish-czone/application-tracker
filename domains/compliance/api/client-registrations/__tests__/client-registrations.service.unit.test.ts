@@ -6,7 +6,7 @@ import {
 } from '../client-registrations.service';
 import type { DomainEventEmitter } from '@packages/events';
 import type { AppLoggerService } from '@packages/logger';
-import type { ComplianceFilingsCancellationService } from '../../compliance-filings/compliance-filings-cancellation.service';
+import type { ComplianceFilingsCancellationService } from '../../compliance-filings/compliance-filings.cancellation.service';
 import type { ComplianceRulesService } from '../../rules';
 
 type AnyChain = Record<string, ReturnType<typeof vi.fn>>;

@@ -12,7 +12,7 @@ import {
   ClientRegistrationsService,
   type ClientRegistration,
 } from '../client-registrations/client-registrations.service';
-import { ComplianceFilingsLookupService } from '../compliance-filings/compliance-filings-lookup.service';
+import { ComplianceFilingsLookupService } from '../compliance-filings/compliance-filings.lookup.service';
 import { buildFilingExternalKey } from '../compliance-filings/compliance-filings.config';
 import { COMPLIANCE_FILING_GENERATED } from '../events/types';
 

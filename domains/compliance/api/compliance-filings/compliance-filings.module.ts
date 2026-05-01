@@ -3,9 +3,9 @@ import { EntityEngineModule } from '@packages/entity-engine';
 import { COMPLIANCE_FILINGS_CONFIG } from './compliance-filings.config';
 import { ComplianceFilingsController } from './compliance-filings.controller';
 import { ComplianceFilingsService } from './compliance-filings.service';
-import { ComplianceFilingsLookupService } from './compliance-filings-lookup.service';
-import { ComplianceFilingsCancellationService } from './compliance-filings-cancellation.service';
-import { ComplianceFilingsAssigneeCleanupService } from './compliance-filings-assignee-cleanup.service';
+import { ComplianceFilingsLookupService } from './compliance-filings.lookup.service';
+import { ComplianceFilingsCancellationService } from './compliance-filings.cancellation.service';
+import { ComplianceFilingsAssigneeCleanupService } from './compliance-filings.assignee-cleanup.service';
 import { LawsModule } from '../laws/laws.module';
 
 const filingsEntityEngineModule = EntityEngineModule.forEntity(COMPLIANCE_FILINGS_CONFIG);

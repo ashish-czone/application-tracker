@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
-import { ComplianceFilingsAssigneeCleanupService } from '../compliance-filings-assignee-cleanup.service';
+import { ComplianceFilingsAssigneeCleanupService } from '../compliance-filings.assignee-cleanup.service';
 import { COMPLIANCE_FILINGS_ASSIGNEE_CLEARED } from '../../events/types';
 
 interface MockUpdateChain {
