@@ -21,3 +21,5 @@ export { PermissionManifestRegistry } from './permission-manifest';
 export type { PermissionManifest } from './permission-manifest';
 export { RbacIntegrationModule } from './integration/rbac-integration.module';
 export type { RbacFeatureConfig } from './integration/rbac-integration.module';
+export { crudPermissionManifests } from './crud-permission-manifests';
+export type { CrudPermissionManifestOptions } from './crud-permission-manifests';
