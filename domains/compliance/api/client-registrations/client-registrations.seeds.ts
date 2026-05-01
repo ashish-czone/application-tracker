@@ -1,8 +1,8 @@
 import type { INestApplicationContext } from '@nestjs/common';
 import { DatabaseService, isNotNull } from '@packages/database';
-import { clients } from '../../clients/clients.schema';
-import { complianceClientRegistrations } from '../client-registrations.schema';
-import { ClientRegistrationsService } from '../client-registrations.service';
+import { clients } from '../clients/clients.schema';
+import { complianceClientRegistrations } from './client-registrations.schema';
+import { ClientRegistrationsService } from './client-registrations.service';
 
 /**
  * Each demo client registers against a curated mix of laws so the
