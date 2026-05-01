@@ -15,10 +15,10 @@ import { ClientDormancyService } from './clients.dormancy.service';
 import { ClientContactsService } from '../client-contacts/client-contacts.service';
 import {
   ClientsRollupService,
-  type ClientsListParams,
   type ClientsSummary,
   type HandlerOption,
 } from './clients.rollup.service';
+import type { ClientsListQuery } from './clients.dto';
 
 interface ClientGuardDeps {
   contacts: ClientContactsService;
@@ -165,7 +165,7 @@ export class ClientsService {
    * scope filter that `entityService.list(…, accessCtx)` would have applied
    * if the engine pipeline could express the rollup.
    */
-  async list(query: ClientsListParams, accessCtx?: DataAccessContext) {
+  async list(query: ClientsListQuery, accessCtx?: DataAccessContext) {
     const scopePredicate = accessCtx ? await this.entityService.getScopePredicate(accessCtx) : undefined;
     return this.rollup.list(query, scopePredicate);
   }

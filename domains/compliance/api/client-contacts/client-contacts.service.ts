@@ -5,6 +5,7 @@ import { AppLoggerService } from '@packages/logger';
 import { BaseCrudService } from '@packages/entity-engine';
 import { clientContacts } from './client-contacts.schema';
 import { CLIENT_CONTACTS_UPDATED } from '../events/types';
+import type { CreateClientContactDto } from './client-contacts.dto';
 
 type ContactRow = typeof clientContacts.$inferSelect;
 
@@ -35,6 +36,16 @@ export class ClientContactsService extends BaseCrudService(clientContacts, {
 }) {
   constructor(database: DatabaseService, events: DomainEventEmitter, appLogger: AppLoggerService) {
     super(database, events, appLogger);
+  }
+
+  /**
+   * Override `create` to inject `createdBy` from the actor — the directory
+   * `client_contacts` table requires it NOT NULL, but it never appears in
+   * the request body (the actor comes from the JWT). The narrow Zod input
+   * type stays clean for callers; the column merge happens here.
+   */
+  async create(input: CreateClientContactDto, actorId: string) {
+    return super.create({ ...input, createdBy: actorId }, actorId);
   }
 
   /**
