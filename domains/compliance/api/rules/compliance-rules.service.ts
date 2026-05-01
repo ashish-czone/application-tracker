@@ -2,7 +2,6 @@ import { forwardRef, Inject, Injectable, BadRequestException, NotFoundException 
 import { DatabaseService, and, count, eq, inArray, isNull, ne, not, sql, withScope } from '@packages/database';
 import { EntityService, type BaseListQuery } from '@packages/entity-engine';
 import type { DataAccessContext } from '@packages/rbac';
-import { withTenant } from '@packages/tenancy/helpers';
 import { AppLoggerService, type ContextLogger } from '@packages/logger';
 import {
   FREQUENCIES,
@@ -207,8 +206,9 @@ export class ComplianceRulesService {
    * lawGroup / jurisdiction filters that traverse the laws table.
    *
    * RBAC scope is unused here (rules don't declare data-access scopes), so
-   * we lose nothing by dropping the engine path. Tenant scoping flows
-   * through `withTenant`, a no-op when `compliance_rules` has no tenantId.
+   * we lose nothing by dropping the engine path. Soft-delete + tenant
+   * scoping flow through `withScope`, no-ops when `compliance_rules`
+   * carries neither column.
    */
   async list(
     params: ComplianceRulesListParams,
@@ -218,7 +218,7 @@ export class ComplianceRulesService {
     meta: { total: number; page: number; limit: number; totalPages: number };
   }> {
     const filterConditions = this.buildRulesFilters(params);
-    const where = withTenant(complianceRules, ...filterConditions);
+    const where = withScope(complianceRules, ...filterConditions);
     const whereSql = where ? sql`AND ${where}` : sql``;
 
     // Scope predicate (if any) is applied at CTE level — it references the

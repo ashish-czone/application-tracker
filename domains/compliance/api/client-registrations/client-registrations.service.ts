@@ -6,7 +6,6 @@ import {
   BadRequestException,
 } from '@nestjs/common';
 import { DatabaseService, and, count, eq, gt, inArray, isNull, lte, not, withScope } from '@packages/database';
-import { notDeleted } from '@packages/soft-delete';
 import { DomainEventEmitter } from '@packages/events';
 import { EntityService, type BaseListQuery } from '@packages/entity-engine';
 import type { DataAccessContext } from '@packages/rbac';
@@ -460,9 +459,9 @@ export class ClientRegistrationsService {
           complianceClientRegistrations,
           eq(complianceClientRegistrations.lawId, lawId),
           eq(clients.complianceStatus, 'active'),
-          // Joined soft-delete table needs its own predicate; withScope only
-          // covers the driver table.
-          notDeleted(clients),
+          // Joined soft-delete + tenanted table needs its own scope
+          // predicate; the outer withScope only covers the driver table.
+          withScope(clients),
         ),
       );
     return rows.map((r) => this.toRegistration(r.registration));
@@ -487,7 +486,7 @@ export class ClientRegistrationsService {
           eq(complianceClientRegistrations.lawId, lawId),
           isNull(complianceClientRegistrations.deactivatedAt),
           eq(clients.complianceStatus, 'active'),
-          notDeleted(clients),
+          withScope(clients),
         ),
       );
     return rows.map((r) => this.toRegistration(r.registration));

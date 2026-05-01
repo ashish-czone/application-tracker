@@ -1,8 +1,7 @@
 import { Inject, Injectable } from '@nestjs/common';
 import { eq, inArray, sql } from 'drizzle-orm';
 import { EntityService, type BaseListQuery } from '@packages/entity-engine';
-import { DatabaseService } from '@packages/database';
-import { withTenant } from '@packages/tenancy/helpers';
+import { DatabaseService, withScope } from '@packages/database';
 import type { DataAccessContext } from '@packages/rbac';
 import { complianceLaws } from '../schema/laws';
 import type { CreateLawDto, UpdateLawDto } from './laws.dto';
@@ -59,15 +58,13 @@ export class LawsService {
    * the bucket badges in the UI stay stable as the user changes filters.
    */
   async getTree(params?: { jurisdiction?: LawJurisdiction }): Promise<LawTreeResponse> {
-    const tenantWhere = withTenant(complianceLaws);
     const filterCondition = params?.jurisdiction
       ? eq(complianceLaws.jurisdiction, params.jurisdiction)
       : undefined;
+    const scopeWhere = withScope(complianceLaws);
     const whereClause = filterCondition
-      ? tenantWhere
-        ? sql`${tenantWhere} AND ${filterCondition}`
-        : filterCondition
-      : tenantWhere;
+      ? withScope(complianceLaws, filterCondition)
+      : scopeWhere;
 
     const flatRowsQuery = this.database.db
       .select({
@@ -86,7 +83,7 @@ export class LawsService {
     const countsResult = await this.database.db.execute(sql`
       SELECT jurisdiction, COUNT(*)::int AS count
       FROM ${complianceLaws}
-      ${tenantWhere ? sql`WHERE ${tenantWhere}` : sql``}
+      ${scopeWhere ? sql`WHERE ${scopeWhere}` : sql``}
       GROUP BY jurisdiction
     `);
 
@@ -116,8 +113,8 @@ export class LawsService {
   /**
    * Batch-fetch display columns for a set of law IDs. Used by other compliance
    * services that surface law metadata (code, jurisdiction) alongside their
-   * own list responses. Tenant-scoped via `withTenant`. Returns rows in
-   * unspecified order — caller maps by id.
+   * own list responses. Soft-delete + tenant-scoped via `withScope`. Returns
+   * rows in unspecified order — caller maps by id.
    */
   async findDisplayByIds(ids: readonly string[]): Promise<LawDisplayFields[]> {
     if (ids.length === 0) return [];
@@ -129,7 +126,7 @@ export class LawsService {
         jurisdiction: complianceLaws.jurisdiction,
       })
       .from(complianceLaws)
-      .where(withTenant(complianceLaws, inArray(complianceLaws.id, ids as string[])));
+      .where(withScope(complianceLaws, inArray(complianceLaws.id, ids as string[])));
   }
 
   create(input: CreateLawDto, actorId: string) {
