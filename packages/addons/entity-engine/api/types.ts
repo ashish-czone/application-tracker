@@ -1,6 +1,7 @@
 import type { PgTable } from 'drizzle-orm/pg-core';
 import type { SQL } from 'drizzle-orm';
 import type { Condition } from '@packages/common';
+import type { InlineScopeResolver } from '@packages/rbac';
 
 // ---------------------------------------------------------------------------
 // Field type system — defines what kinds of fields entities can have
@@ -502,13 +503,9 @@ export interface NestedRelationshipField {
  * they get picked up automatically for every entity that declares the
  * matching anchors.
  */
-export interface EntityScopeResolver {
-  /** Unique key referenced by RBAC permission scopes (e.g. 'hiring-manager') */
-  key: string;
+export interface EntityScopeResolver extends InlineScopeResolver {
   /** Human-readable label shown in RBAC admin UI */
   label: string;
-  /** Returns a SQL WHERE condition that restricts visible records for this user */
-  resolve(userId: string): Promise<SQL>;
 }
 
 /**

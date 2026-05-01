@@ -84,7 +84,7 @@ export const COMPLIANCE_FILINGS_CONFIG = defineEntity({
         // assigned to someone else (even if it's still pending).
         key: 'unassigned_in_unit',
         label: 'Unassigned filings in my teams',
-        resolve: async (userId: string) => and(
+        resolve: (userId: string) => and(
           isNull(complianceFilings.assigneeId),
           sql`${complianceFilings.assigneeTeamId} IN (SELECT ${orgUnitMembers.orgUnitId} FROM ${orgUnitMembers} WHERE ${orgUnitMembers.userId} = ${userId})`,
         )!,

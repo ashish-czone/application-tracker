@@ -251,7 +251,7 @@ export const JOB_OPENINGS_CONFIG: EntityConfig = {
       {
         key: 'hiring-manager',
         label: 'Where I am Hiring Manager',
-        resolve: async (userId) => eq(jobOpenings.hiringManager, userId),
+        resolve: (userId) => eq(jobOpenings.hiringManager, userId),
       },
     ],
   },

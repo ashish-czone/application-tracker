@@ -42,7 +42,7 @@ export const TASKS_CONFIG = defineEntity({
         // tasks / org-units cleanup listeners catch up.
         key: 'my-tasks',
         label: 'Assigned to me or unclaimed in my teams',
-        resolve: async (userId: string) => and(
+        resolve: (userId: string) => and(
           sql`EXISTS (SELECT 1 FROM ${users} WHERE ${users.id} = ${userId} AND ${users.deletedAt} IS NULL)`,
           or(
             eq(tasks.assigneeId, userId),

@@ -122,7 +122,7 @@ export const APPLICATIONS_CONFIG: EntityConfig = {
       {
         key: 'my-pipeline',
         label: 'Applications for my Job Openings',
-        resolve: async (userId) => sql`${applications.jobOpeningId} IN (
+        resolve: (userId) => sql`${applications.jobOpeningId} IN (
           SELECT ${jobOpenings.id} FROM ${jobOpenings} WHERE ${jobOpenings.hiringManager} = ${userId} AND ${jobOpenings.deletedAt} IS NULL
         )`,
       },
