@@ -1,7 +1,6 @@
 import { Inject, Injectable } from '@nestjs/common';
 import { eq, gte, lte, isNotNull, inArray, ilike, sql, count, notInArray } from 'drizzle-orm';
 import { DatabaseService, withScope } from '@packages/database';
-import { notDeleted } from '@packages/soft-delete';
 import { clients } from '@packages/directory';
 import { EntityService } from '@packages/entity-engine';
 import { OrgUnitService } from '@packages/org-units';
@@ -123,9 +122,10 @@ export class ComplianceReportsService {
       scopePredicate,
       gte(complianceFilings.dueDate, range.from),
       lte(complianceFilings.dueDate, range.to),
-      // Joined soft-delete table: withScope only filters the driver
-      // (complianceFilings); clients needs its own predicate.
-      notDeleted(clients),
+      // Joined soft-delete + tenanted table: the outer withScope only
+      // filters the driver (complianceFilings); clients needs its own
+      // scope predicate.
+      withScope(clients),
     ];
     if (options?.q && options.q.trim().length > 0) {
       baseConditions.push(ilike(clients.name, `%${options.q.trim()}%`));

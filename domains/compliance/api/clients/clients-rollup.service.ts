@@ -1,6 +1,5 @@
 import { Injectable } from '@nestjs/common';
 import { DatabaseService, users, asc, desc, eq, sql, withScope, type SQL } from '@packages/database';
-import { withTenant } from '@packages/tenancy/helpers';
 import { todayInTimezone } from '@packages/common';
 import { clients } from './clients-ref';
 
@@ -113,7 +112,7 @@ export class ClientsRollupService {
     const sevenDays = addDays(today, 7);
 
     const filterConditions = this.buildFilterConditions(params, today, sevenDays);
-    const where = withTenant(clients, ...filterConditions);
+    const where = withScope(clients, ...filterConditions);
     const whereSql = where ? sql`AND ${where}` : sql``;
 
     const sortKey = params.sort && SORTABLE_COLUMNS[params.sort] ? params.sort : 'name';
@@ -157,7 +156,7 @@ export class ClientsRollupService {
     const today = todayInTimezone(this.appTimezone);
     const sevenDays = addDays(today, 7);
 
-    const where = withTenant(clients);
+    const where = withScope(clients);
     const whereSql = where ? sql`AND ${where}` : sql``;
 
     const result = await this.database.db.execute(sql`
