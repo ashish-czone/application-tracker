@@ -11,6 +11,9 @@ const MANAGE = [
   'client-contacts.update',
   'client-contacts.delete',
 ];
+// Authenticated but holds zero compliance perms — drives 403 on the
+// pure-read endpoints whose only `@RequirePermission` is `*.read`.
+const NO_PERMS: string[] = [];
 
 describe('Client Contacts (integration)', () => {
   let ctx: PackageTestApp;
@@ -118,6 +121,106 @@ describe('Client Contacts (integration)', () => {
         .expect(200);
 
       expect(res.body.data).toHaveLength(2);
+    });
+  });
+
+  // 401 (anon) + 403 (insufficient perm) coverage for every endpoint on
+  // the client-contacts controller. Positive paths live above; this block
+  // is the mechanical sweep to satisfy the per-endpoint security-test
+  // mandate (audit S8/T6).
+  describe('auth coverage', () => {
+    const NIL_UUID = '00000000-0000-0000-0000-000000000000';
+
+    describe('GET /api/v1/client-contacts/layout/list', () => {
+      it('returns 401 without auth', async () => {
+        await request(ctx.httpServer).get('/api/v1/client-contacts/layout/list').expect(401);
+      });
+      it('returns 403 without client-contacts.read', async () => {
+        await request(ctx.httpServer)
+          .get('/api/v1/client-contacts/layout/list')
+          .set(withAuth(NO_PERMS))
+          .expect(403);
+      });
+    });
+
+    describe('GET /api/v1/client-contacts (auth)', () => {
+      it('returns 401 without auth', async () => {
+        await request(ctx.httpServer).get('/api/v1/client-contacts').expect(401);
+      });
+      it('returns 403 without client-contacts.read', async () => {
+        await request(ctx.httpServer)
+          .get('/api/v1/client-contacts')
+          .set(withAuth(NO_PERMS))
+          .expect(403);
+      });
+    });
+
+    describe('GET /api/v1/client-contacts/:id', () => {
+      it('returns 401 without auth', async () => {
+        await request(ctx.httpServer).get(`/api/v1/client-contacts/${NIL_UUID}`).expect(401);
+      });
+      it('returns 403 without client-contacts.read', async () => {
+        await request(ctx.httpServer)
+          .get(`/api/v1/client-contacts/${NIL_UUID}`)
+          .set(withAuth(NO_PERMS))
+          .expect(403);
+      });
+    });
+
+    describe('PATCH /api/v1/client-contacts/:id', () => {
+      it('returns 401 without auth', async () => {
+        await request(ctx.httpServer)
+          .patch(`/api/v1/client-contacts/${NIL_UUID}`)
+          .send({})
+          .expect(401);
+      });
+      it('returns 403 with read-only perms', async () => {
+        await request(ctx.httpServer)
+          .patch(`/api/v1/client-contacts/${NIL_UUID}`)
+          .set(withAuth(READ))
+          .send({})
+          .expect(403);
+      });
+    });
+
+    describe('DELETE /api/v1/client-contacts/:id', () => {
+      it('returns 401 without auth', async () => {
+        await request(ctx.httpServer).delete(`/api/v1/client-contacts/${NIL_UUID}`).expect(401);
+      });
+      it('returns 403 with read-only perms', async () => {
+        await request(ctx.httpServer)
+          .delete(`/api/v1/client-contacts/${NIL_UUID}`)
+          .set(withAuth(READ))
+          .expect(403);
+      });
+    });
+
+    describe('POST /api/v1/client-contacts/:id/clone', () => {
+      it('returns 401 without auth', async () => {
+        await request(ctx.httpServer)
+          .post(`/api/v1/client-contacts/${NIL_UUID}/clone`)
+          .expect(401);
+      });
+      it('returns 403 without create permission', async () => {
+        await request(ctx.httpServer)
+          .post(`/api/v1/client-contacts/${NIL_UUID}/clone`)
+          .set(withAuth(READ))
+          .expect(403);
+      });
+    });
+
+    describe('POST /api/v1/client-contacts/:id/restore', () => {
+      it('returns 401 without auth', async () => {
+        await request(ctx.httpServer)
+          .post(`/api/v1/client-contacts/${NIL_UUID}/restore`)
+          .expect(401);
+      });
+      it('returns 403 without update permission', async () => {
+        await request(ctx.httpServer)
+          .post(`/api/v1/client-contacts/${NIL_UUID}/restore`)
+          .set(withAuth(READ))
+          .expect(403);
+      });
     });
   });
 
