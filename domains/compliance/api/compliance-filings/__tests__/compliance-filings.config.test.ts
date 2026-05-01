@@ -2,6 +2,7 @@ import { describe, it, expect } from 'vitest';
 import { readNotesFeature } from '@packages/notes';
 import { readAttachmentsFeature } from '@packages/attachments';
 import { COMPLIANCE_FILINGS_CONFIG, buildFilingExternalKey } from '../compliance-filings.config';
+import { COMPLIANCE_FILINGS_WORKFLOW } from '../compliance-filings.workflow';
 
 type TargetObject = { state: string; requiredPermissions?: string[]; reasonRequired?: boolean; commentRequired?: boolean };
 
@@ -63,7 +64,9 @@ describe('COMPLIANCE_FILINGS_CONFIG', () => {
   });
 
   describe('workflow', () => {
-    const workflow = COMPLIANCE_FILINGS_CONFIG.fieldMeta.status.workflow!;
+    // Workflow def lives in compliance-filings.workflow.ts (camp-B path);
+    // assertions migrated to read from the standalone defineWorkflow constant.
+    const workflow = COMPLIANCE_FILINGS_WORKFLOW;
 
     it('uses the compliance-filing-status slug with pending as initial state', () => {
       expect(workflow.slug).toBe('compliance-filing-status');
