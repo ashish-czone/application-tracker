@@ -13,6 +13,9 @@ const MANAGE = [
   'law-handlers.update',
   'law-handlers.delete',
 ];
+// Authenticated but holds zero compliance perms — drives 403 on the
+// pure-read endpoints whose only `@RequirePermission` is `*.read`.
+const NO_PERMS: string[] = [];
 
 describe('Law Handlers (integration)', () => {
   let ctx: PackageTestApp;
@@ -112,6 +115,45 @@ describe('Law Handlers (integration)', () => {
 
       expect(res.body.data).toHaveLength(2);
     });
+
+    it('returns 401 without auth', async () => {
+      await request(ctx.httpServer).get('/api/v1/law-handlers').expect(401);
+    });
+
+    it('returns 403 without law-handlers.read', async () => {
+      await request(ctx.httpServer)
+        .get('/api/v1/law-handlers')
+        .set(withAuth(NO_PERMS))
+        .expect(403);
+    });
+  });
+
+  describe('GET /api/v1/law-handlers/layout/list', () => {
+    it('returns 401 without auth', async () => {
+      await request(ctx.httpServer).get('/api/v1/law-handlers/layout/list').expect(401);
+    });
+
+    it('returns 403 without law-handlers.read', async () => {
+      await request(ctx.httpServer)
+        .get('/api/v1/law-handlers/layout/list')
+        .set(withAuth(NO_PERMS))
+        .expect(403);
+    });
+  });
+
+  describe('GET /api/v1/law-handlers/:id', () => {
+    it('returns 401 without auth', async () => {
+      await request(ctx.httpServer)
+        .get('/api/v1/law-handlers/00000000-0000-0000-0000-000000000000')
+        .expect(401);
+    });
+
+    it('returns 403 without law-handlers.read', async () => {
+      await request(ctx.httpServer)
+        .get('/api/v1/law-handlers/00000000-0000-0000-0000-000000000000')
+        .set(withAuth(NO_PERMS))
+        .expect(403);
+    });
   });
 
   describe('PATCH /api/v1/law-handlers/:id', () => {
@@ -131,6 +173,21 @@ describe('Law Handlers (integration)', () => {
 
       expect(res.body.isPrimary).toBe(true);
     });
+
+    it('returns 401 without auth', async () => {
+      await request(ctx.httpServer)
+        .patch('/api/v1/law-handlers/00000000-0000-0000-0000-000000000000')
+        .send({ isPrimary: true })
+        .expect(401);
+    });
+
+    it('returns 403 with read-only perms', async () => {
+      await request(ctx.httpServer)
+        .patch('/api/v1/law-handlers/00000000-0000-0000-0000-000000000000')
+        .set(withAuth(READ))
+        .send({ isPrimary: true })
+        .expect(403);
+    });
   });
 
   describe('DELETE /api/v1/law-handlers/:id', () => {
@@ -146,6 +203,49 @@ describe('Law Handlers (integration)', () => {
         .delete(`/api/v1/law-handlers/${created.body.id}`)
         .set(withAuth(MANAGE))
         .expect(204);
+    });
+
+    it('returns 401 without auth', async () => {
+      await request(ctx.httpServer)
+        .delete('/api/v1/law-handlers/00000000-0000-0000-0000-000000000000')
+        .expect(401);
+    });
+
+    it('returns 403 with read-only perms', async () => {
+      await request(ctx.httpServer)
+        .delete('/api/v1/law-handlers/00000000-0000-0000-0000-000000000000')
+        .set(withAuth(READ))
+        .expect(403);
+    });
+  });
+
+  describe('POST /api/v1/law-handlers/:id/clone', () => {
+    it('returns 401 without auth', async () => {
+      await request(ctx.httpServer)
+        .post('/api/v1/law-handlers/00000000-0000-0000-0000-000000000000/clone')
+        .expect(401);
+    });
+
+    it('returns 403 without create permission', async () => {
+      await request(ctx.httpServer)
+        .post('/api/v1/law-handlers/00000000-0000-0000-0000-000000000000/clone')
+        .set(withAuth(READ))
+        .expect(403);
+    });
+  });
+
+  describe('POST /api/v1/law-handlers/:id/restore', () => {
+    it('returns 401 without auth', async () => {
+      await request(ctx.httpServer)
+        .post('/api/v1/law-handlers/00000000-0000-0000-0000-000000000000/restore')
+        .expect(401);
+    });
+
+    it('returns 403 without update permission', async () => {
+      await request(ctx.httpServer)
+        .post('/api/v1/law-handlers/00000000-0000-0000-0000-000000000000/restore')
+        .set(withAuth(READ))
+        .expect(403);
     });
   });
 });
