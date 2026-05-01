@@ -1,6 +1,6 @@
 import { Module } from '@nestjs/common';
 import { EntityEngineModule } from '@packages/entity-engine';
-import { ComplianceFilingsModule } from '../compliance-filings/compliance-filings.module';
+import { ComplianceFilingsModule } from '../compliance-filings';
 import { ComplianceRulesModule } from '../rules';
 import { CLIENT_REGISTRATIONS_CONFIG } from './client-registrations.config';
 import { ClientRegistrationsController } from './client-registrations.controller';

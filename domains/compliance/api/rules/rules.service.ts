@@ -14,7 +14,7 @@ import { complianceLawHandlers } from '../schema/law-handlers';
 import { complianceFilings } from '../schema/compliance-filings';
 import { complianceClientRegistrations } from '../schema/client-registrations';
 import { LawHandlersService } from '../law-handlers/law-handlers.service';
-import { ComplianceFilingsCancellationService } from '../compliance-filings/compliance-filings-cancellation.service';
+import { ComplianceFilingsCancellationService } from '../compliance-filings';
 import type {
   CreateComplianceRuleDto,
   RulesListQuery,
