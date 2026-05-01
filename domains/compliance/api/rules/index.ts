@@ -6,7 +6,9 @@
  * else is internal and free to be reorganised without breaking callers.
  *
  * Internals NOT exported (intentionally):
- * - `RULES_WORKFLOW`     — entity-engine config, wired only by rules.module
+ * - `RULES_ENTITY`       — entity-engine config, wired only by rules.module
+ * - `RULES_WORKFLOW`     — workflow definition, wired only by rules.module
+ *                          via WorkflowsModule.forFeature
  * - `rules.dto.*`        — request DTOs and the URL query schema, internal
  *                          to the controller
  * - `rules.schema.*`     — Drizzle table; re-exported via the schema barrel
