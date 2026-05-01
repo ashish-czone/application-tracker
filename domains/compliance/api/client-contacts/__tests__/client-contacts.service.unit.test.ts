@@ -24,15 +24,28 @@ interface TxMock {
   update: ReturnType<typeof vi.fn>;
 }
 
+/**
+ * After the BaseCrudService migration, the constructor signature is
+ * (database, events, appLogger) — entityService is no longer injected.
+ * The appLogger mock just needs `.forContext()` to return a logger-shaped
+ * object (the base service binds it once at construction).
+ */
+function makeLoggerMock() {
+  const logger = { log: vi.fn(), warn: vi.fn(), error: vi.fn(), debug: vi.fn() };
+  return { forContext: vi.fn().mockReturnValue(logger) };
+}
+
 describe('ClientContactsService', () => {
   let db: { db: { transaction: ReturnType<typeof vi.fn> } };
   let events: { emitDynamic: ReturnType<typeof vi.fn> };
+  let appLogger: ReturnType<typeof makeLoggerMock>;
   let service: ClientContactsService;
 
   beforeEach(() => {
     db = { db: { transaction: vi.fn() } };
     events = { emitDynamic: vi.fn() };
-    service = new ClientContactsService({} as never, db as never, events as never);
+    appLogger = makeLoggerMock();
+    service = new ClientContactsService(db as never, events as never, appLogger as never);
   });
 
   describe('setPrimary', () => {
@@ -139,7 +152,7 @@ describe('ClientContactsService', () => {
       const fromChain = { where: vi.fn().mockReturnValue(whereChain) };
       const selectChain = { from: vi.fn().mockReturnValue(fromChain) };
       const dbMock = { select: vi.fn().mockReturnValue(selectChain) };
-      const s = new ClientContactsService({} as never, { db: dbMock } as never, events as never);
+      const s = new ClientContactsService({ db: dbMock } as never, events as never, appLogger as never);
       void limitChain;
 
       await expect(s.hasPrimaryContact('cid-1')).resolves.toBe(true);
@@ -150,7 +163,7 @@ describe('ClientContactsService', () => {
       const fromChain = { where: vi.fn().mockReturnValue(whereChain) };
       const selectChain = { from: vi.fn().mockReturnValue(fromChain) };
       const dbMock = { select: vi.fn().mockReturnValue(selectChain) };
-      const s = new ClientContactsService({} as never, { db: dbMock } as never, events as never);
+      const s = new ClientContactsService({ db: dbMock } as never, events as never, appLogger as never);
 
       await expect(s.hasPrimaryContact('cid-1')).resolves.toBe(false);
     });

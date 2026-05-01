@@ -24,12 +24,6 @@ import { CreateClientContactSchema, UpdateClientContactSchema } from './client-c
 export class ClientContactsController {
   constructor(private readonly clientContacts: ClientContactsService) {}
 
-  @Get('layout/list')
-  @RequirePermission('client-contacts.read')
-  getListLayout() {
-    return this.clientContacts.getListLayout();
-  }
-
   @Get()
   @RequirePermission('client-contacts.read')
   list(@Query() query: Record<string, unknown>, @AccessContext() accessCtx?: DataAccessContext) {
@@ -48,7 +42,9 @@ export class ClientContactsController {
     @Param('id', ParseUUIDPipe) id: string,
     @AccessContext() accessCtx?: DataAccessContext,
   ) {
-    return this.clientContacts.findOne(id, accessCtx);
+    // findOneOrFail (not findOne) — BaseCrudService.findOne returns null
+    // on miss; the controller wants 404 to surface as NotFoundException.
+    return this.clientContacts.findOneOrFail(id, accessCtx);
   }
 
   @Post()
@@ -80,18 +76,5 @@ export class ClientContactsController {
     @AccessContext() accessCtx?: DataAccessContext,
   ) {
     await this.clientContacts.softDelete(id, user.userId, accessCtx);
-  }
-
-  @Post(':id/clone')
-  @RequirePermission('client-contacts.create')
-  @HttpCode(HttpStatus.CREATED)
-  clone(@Param('id', ParseUUIDPipe) id: string, @CurrentUser() user: JwtPayload) {
-    return this.clientContacts.clone(id, user.userId);
-  }
-
-  @Post(':id/restore')
-  @RequirePermission('client-contacts.update')
-  restore(@Param('id', ParseUUIDPipe) id: string) {
-    return this.clientContacts.restore(id);
   }
 }
