@@ -1,8 +1,10 @@
 import { Module } from '@nestjs/common';
 import { EntityEngineModule } from '@packages/entity-engine';
 import { WorkflowsModule } from '@packages/workflows';
+import { RbacIntegrationModule } from '@packages/rbac';
 import { COMPLIANCE_FILINGS_CONFIG } from './compliance-filings.config';
 import { COMPLIANCE_FILINGS_WORKFLOW } from './compliance-filings.workflow';
+import { COMPLIANCE_FILINGS_PERMISSION_MANIFESTS } from './compliance-filings.permissions';
 import { ComplianceFilingsController } from './compliance-filings.controller';
 import { ComplianceFilingsService } from './compliance-filings.service';
 import { ComplianceFilingsLookupService } from './compliance-filings.lookup.service';
@@ -35,6 +37,7 @@ const filingsEntityEngineModule = EntityEngineModule.forEntity(COMPLIANCE_FILING
   imports: [
     filingsEntityEngineModule,
     WorkflowsModule.forFeature(COMPLIANCE_FILINGS_WORKFLOW),
+    RbacIntegrationModule.forFeature({ manifests: COMPLIANCE_FILINGS_PERMISSION_MANIFESTS }),
     LawsModule,
   ],
   controllers: [ComplianceFilingsController],

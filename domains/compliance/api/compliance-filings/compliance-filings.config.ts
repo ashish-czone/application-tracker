@@ -55,14 +55,13 @@ export const COMPLIANCE_FILINGS_CONFIG = defineEntity({
     ...notesFeature(),
   },
 
-  extraPermissions: [
-    { action: 'pickup', description: 'Pick up a pending filing and move it to in-progress' },
-    { action: 'submit', description: 'Submit an in-progress filing for review' },
-    { action: 'complete', description: 'Approve a filing in review and mark it completed' },
-    { action: 'reject', description: 'Reject a filing in review back to the preparer' },
-    { action: 'reopen', description: 'Reopen completed or cancelled filings' },
-    { action: 'close', description: 'Cancel a non-terminal filing' },
-  ],
+  // Permissions live in compliance-filings.permissions.ts (CRUD via
+  // crudPermissionManifests + 6 extras inline) and are registered via
+  // RbacIntegrationModule.forFeature in compliance-filings.module.ts.
+  // The supportedScopes mirror what deriveSupportedScopes would produce
+  // for this entity (anchors: creator/assignee/team + inline
+  // unassigned_in_unit) — see comment header in the permissions file.
+  skipAutoRegistration: { permissions: true },
 
   dataAccess: {
     // Anchors drive the registered scope resolvers:

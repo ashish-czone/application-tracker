@@ -3,6 +3,7 @@ import { readNotesFeature } from '@packages/notes';
 import { readAttachmentsFeature } from '@packages/attachments';
 import { COMPLIANCE_FILINGS_CONFIG, buildFilingExternalKey } from '../compliance-filings.config';
 import { COMPLIANCE_FILINGS_WORKFLOW } from '../compliance-filings.workflow';
+import { COMPLIANCE_FILINGS_PERMISSION_MANIFESTS } from '../compliance-filings.permissions';
 
 type TargetObject = { state: string; requiredPermissions?: string[]; reasonRequired?: boolean; commentRequired?: boolean };
 
@@ -23,7 +24,9 @@ describe('COMPLIANCE_FILINGS_CONFIG', () => {
   });
 
   it('exposes the pickup/submit/complete/reject/reopen/close extra permissions', () => {
-    const actions = (COMPLIANCE_FILINGS_CONFIG.extraPermissions ?? []).map((p) => p.action);
+    // Permissions migrated to compliance-filings.permissions.ts (camp-B);
+    // assertions read from the standalone manifests array.
+    const actions = COMPLIANCE_FILINGS_PERMISSION_MANIFESTS.map((p) => p.action);
     expect(actions).toEqual(expect.arrayContaining([
       'pickup', 'submit', 'complete', 'reject', 'reopen', 'close',
     ]));
