@@ -1,7 +1,7 @@
 import { inArray } from 'drizzle-orm';
 import type { INestApplicationContext } from '@nestjs/common';
 import { DatabaseService } from '@packages/database';
-import { complianceLaws } from '../../schema/laws';
+import { complianceLaws } from './laws.schema';
 
 interface SystemLaw {
   code: string;

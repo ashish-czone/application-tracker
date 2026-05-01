@@ -1,4 +1,4 @@
-export { complianceLaws } from './laws';
+export { complianceLaws } from '../laws/laws.schema';
 export { complianceRules } from '../rules/rules.schema';
 export { complianceLawHandlers } from './law-handlers';
 export { complianceClientRegistrations } from '../client-registrations/client-registrations.schema';

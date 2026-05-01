@@ -18,7 +18,7 @@ import {
   type DataAccessContext,
 } from '@packages/rbac';
 import { LawsService } from './laws.service';
-import { CreateLawSchema, UpdateLawSchema } from './laws.dto';
+import { CreateLawSchema, LawsListQuerySchema, UpdateLawSchema } from './laws.dto';
 
 @Controller('laws')
 export class LawsController {
@@ -33,13 +33,7 @@ export class LawsController {
   @Get()
   @RequirePermission('laws.read')
   list(@Query() query: Record<string, unknown>, @AccessContext() accessCtx?: DataAccessContext) {
-    const parsed = {
-      ...query,
-      page: query.page ? Number(query.page) : undefined,
-      limit: query.limit ? Number(query.limit) : undefined,
-      includeDeleted: query.includeDeleted === 'true',
-    };
-    return this.laws.list(parsed, accessCtx);
+    return this.laws.list(LawsListQuerySchema.parse(query), accessCtx);
   }
 
   /**

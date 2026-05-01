@@ -6,7 +6,7 @@ import {
   OrgPositionService,
   orgUnits,
 } from '@packages/org-units';
-import { complianceLaws } from '../../schema/laws';
+import { complianceLaws } from '../../laws/laws.schema';
 import { complianceLawHandlers } from '../../schema/law-handlers';
 import { LawHandlersService } from '../law-handlers.service';
 import { DEMO_USER_EMAILS } from '../../users/seeds/demo-users';

@@ -3,7 +3,7 @@ import { DatabaseService, eq, inArray, sql, withScope } from '@packages/database
 import { EntityService, type BaseListQuery } from '@packages/entity-engine';
 import type { DataAccessContext } from '@packages/rbac';
 import { complianceFilings } from '../schema/compliance-filings';
-import { LawsService } from '../laws/laws.service';
+import { LawsService } from '../laws';
 import { buildFilingExternalKey } from './compliance-filings.config';
 import type { CreateComplianceFilingDto, UpdateComplianceFilingDto } from './compliance-filings.dto';
 

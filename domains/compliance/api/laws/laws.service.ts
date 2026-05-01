@@ -3,7 +3,7 @@ import { eq, inArray, sql } from 'drizzle-orm';
 import { EntityService, type BaseListQuery } from '@packages/entity-engine';
 import { DatabaseService, withScope } from '@packages/database';
 import type { DataAccessContext } from '@packages/rbac';
-import { complianceLaws } from '../schema/laws';
+import { complianceLaws } from './laws.schema';
 import type { CreateLawDto, UpdateLawDto } from './laws.dto';
 
 export interface LawDisplayFields {

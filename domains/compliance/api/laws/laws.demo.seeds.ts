@@ -3,7 +3,7 @@ import { eq } from 'drizzle-orm';
 import type { INestApplicationContext } from '@nestjs/common';
 import { DatabaseService } from '@packages/database';
 import { computePath, computeDepth } from '@packages/hierarchy';
-import { complianceLaws } from '../../schema/laws';
+import { complianceLaws } from './laws.schema';
 
 interface DemoLawNode {
   code: string;

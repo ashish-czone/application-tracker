@@ -9,7 +9,7 @@ import {
   type ComplianceFrequency,
 } from '@domains/compliance-contract';
 import { complianceRules } from './rules.schema';
-import { complianceLaws } from '../schema/laws';
+import { complianceLaws } from '../laws/laws.schema';
 import { complianceLawHandlers } from '../schema/law-handlers';
 import { complianceFilings } from '../schema/compliance-filings';
 import { complianceClientRegistrations } from '../client-registrations/client-registrations.schema';

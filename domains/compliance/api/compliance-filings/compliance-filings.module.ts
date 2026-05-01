@@ -6,7 +6,7 @@ import { ComplianceFilingsService } from './compliance-filings.service';
 import { ComplianceFilingsLookupService } from './compliance-filings.lookup.service';
 import { ComplianceFilingsCancellationService } from './compliance-filings.cancellation.service';
 import { ComplianceFilingsAssigneeCleanupService } from './compliance-filings.assignee-cleanup.service';
-import { LawsModule } from '../laws/laws.module';
+import { LawsModule } from '../laws';
 
 const filingsEntityEngineModule = EntityEngineModule.forEntity(COMPLIANCE_FILINGS_CONFIG);
 
