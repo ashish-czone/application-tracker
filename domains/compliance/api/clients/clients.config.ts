@@ -12,6 +12,14 @@ export const CLIENTS_CONFIG = defineEntity({
   timestamps: true,
   subtitleField: 'legalName',
 
+  extraPermissions: [
+    {
+      action: 'dormantise',
+      description:
+        'Move a client between active and dormant. Required for both directions of the destructive transition that cancels in-flight filings on entry and re-opens the pipeline on reversal.',
+    },
+  ],
+
   fields: {
     name: {
       type: 'text',
@@ -96,15 +104,31 @@ export const CLIENTS_CONFIG = defineEntity({
           // tx. Forcing a reason + comment makes the admin articulate *why*
           // and that explanation propagates into each filing's workflow
           // history so the audit trail reads standalone on every row.
+          // `clients.dormantise` gates the perm so junior users with plain
+          // `clients.update` can edit the client record without being able
+          // to trigger the cascade.
           {
             from: 'active',
             to: [{
               state: 'dormant',
+              requiredPermissions: ['clients.dormantise'],
               reasonRequired: true,
               commentRequired: true,
             }],
           },
-          { from: 'dormant', to: ['active'] },
+          // Reactivation is symmetric: same perm, same reason/comment
+          // requirements. Reopening a dormant client puts it back in the
+          // generation pipeline; the audit trail needs to capture why on
+          // both directions of the toggle.
+          {
+            from: 'dormant',
+            to: [{
+              state: 'active',
+              requiredPermissions: ['clients.dormantise'],
+              reasonRequired: true,
+              commentRequired: true,
+            }],
+          },
         ],
       },
     },
