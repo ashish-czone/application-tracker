@@ -36,10 +36,10 @@ export {
   entityPipelineAssignments,
 } from './schema';
 
-// Feature deriver + reader
+// Feature bag helpers (entity-engine-coupled deriver lives in
+// @packages/workflows-entity-engine)
 export {
   WORKFLOW_FEATURE_KEY,
-  workflowFeatureDeriver,
   readWorkflowFeature,
   type WorkflowFeatureBag,
 } from './feature';

@@ -1,18 +1,7 @@
 import { describe, it, expect, beforeAll, afterAll, beforeEach } from 'vitest';
 import request from 'supertest';
-import { Global, Module } from '@nestjs/common';
 import { createPackageTestApp, withAuth, cleanDatabase, type PackageTestApp } from '@packages/platform-testing';
-import { FeatureDeriverRegistry, featureDeriverRegistry } from '@packages/entity-engine';
 import { WorkflowsModule } from '../../workflows.module';
-
-// Mirror EntityCoreModule's @Global FeatureDeriverRegistry binding so
-// WorkflowsModule (which depends on it) can resolve the provider.
-@Global()
-@Module({
-  providers: [{ provide: FeatureDeriverRegistry, useValue: featureDeriverRegistry }],
-  exports: [FeatureDeriverRegistry],
-})
-class MockEntityCoreModule {}
 import { WORKFLOWS_PERMISSIONS } from '../../permissions';
 
 const READ = [WORKFLOWS_PERMISSIONS.READ];
@@ -23,7 +12,7 @@ describe('WorkflowsController (integration)', () => {
 
   beforeAll(async () => {
     ctx = await createPackageTestApp({
-      imports: [MockEntityCoreModule, WorkflowsModule],
+      imports: [WorkflowsModule],
     });
   });
 
