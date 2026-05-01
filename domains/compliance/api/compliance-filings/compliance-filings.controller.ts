@@ -19,9 +19,10 @@ import {
   type DataAccessContext,
 } from '@packages/rbac';
 import { ComplianceFilingsService } from './compliance-filings.service';
-import { expandBucketAlias, translateFilingsQuery } from './compliance-filings-query';
+import { buildBaseListQuery } from './compliance-filings.filters';
 import {
   CreateComplianceFilingSchema,
+  FilingsListQuerySchema,
   TransitionComplianceFilingSchema,
   UpdateComplianceFilingSchema,
 } from './compliance-filings.dto';
@@ -56,8 +57,8 @@ export class ComplianceFilingsController {
       typeof query.today === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(query.today)
         ? query.today
         : todayInTimezone(tz);
-    const expanded = expandBucketAlias(query, today);
-    return this.filings.list(translateFilingsQuery(expanded), accessCtx);
+    const parsed = FilingsListQuerySchema.parse(query);
+    return this.filings.list(buildBaseListQuery(parsed, today), accessCtx);
   }
 
   @Get(':id')
