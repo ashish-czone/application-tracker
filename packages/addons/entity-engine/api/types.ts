@@ -645,6 +645,16 @@ export interface EntityConfig<TTable extends PgTable = PgTable> {
    */
   extraPermissions?: { action: string; description: string; supportedScopes?: string[] }[];
 
+  /**
+   * Opt out of entity-engine auto-registration for specific concerns. Used
+   * by entities migrating to camp-B helpers so the engine doesn't double-
+   * register the same artefacts at boot. Each flag defaults to false.
+   */
+  skipAutoRegistration?: {
+    /** When true, the engine does NOT register the slug's CRUD permission manifests. The module is expected to register them externally. */
+    permissions?: boolean;
+  };
+
   // --- Events ---
 
   /** Additional events beyond created/updated/deleted (those are auto-generated) */

@@ -7,6 +7,10 @@ export const LAWS_CONFIG = defineEntity({
   timestamps: true,
   hierarchy: true,
 
+  // Permissions live in laws.permissions.ts; registered via
+  // RbacIntegrationModule.forFeature in laws.module.ts.
+  skipAutoRegistration: { permissions: true },
+
   fields: {
     name: {
       type: 'text',

@@ -6,6 +6,10 @@ export const LAW_HANDLERS_CONFIG = defineEntity({
   slug: 'law-handlers',
   timestamps: true,
 
+  // Permissions live in law-handlers.permissions.ts; registered via
+  // RbacIntegrationModule.forFeature in law-handlers.module.ts.
+  skipAutoRegistration: { permissions: true },
+
   fields: {
     lawId: {
       type: 'lookup',

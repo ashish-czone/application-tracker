@@ -6,6 +6,10 @@ export const CLIENT_CONTACTS_CONFIG = defineEntity({
   slug: 'client-contacts',
   timestamps: true,
 
+  // Permissions live in client-contacts.permissions.ts; registered via
+  // RbacIntegrationModule.forFeature in client-contacts.module.ts.
+  skipAutoRegistration: { permissions: true },
+
   fields: {
     complianceClientId: {
       type: 'lookup',

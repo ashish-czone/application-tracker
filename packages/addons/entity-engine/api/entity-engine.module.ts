@@ -180,16 +180,22 @@ export class EntityEngineModule implements OnApplicationBootstrap {
     //    resolvers (opt-in per entity) + inline entity scopes. extraPermissions
     //    may override with a narrower subset (e.g. `pickup` only makes sense
     //    on `unit` / `unassigned_in_unit`, not on `own`).
+    //
+    //    Honors `skipAutoRegistration.permissions` — entities migrating to
+    //    camp-B (RbacIntegrationModule.forFeature with crudPermissionManifests)
+    //    set this flag to true so the engine doesn't double-register.
     const derivedScopes = deriveSupportedScopes(config, this.scopeResolverRegistry.values());
     const plural = registered.pluralName.toLowerCase();
     const singular = registered.singularName.toLowerCase();
-    registerEntityCrudPermissions(this.rbac, {
-      slug: config.slug,
-      singular,
-      plural,
-      supportedScopes: derivedScopes,
-      extraPermissions: config.extraPermissions,
-    });
+    if (!config.skipAutoRegistration?.permissions) {
+      registerEntityCrudPermissions(this.rbac, {
+        slug: config.slug,
+        singular,
+        plural,
+        supportedScopes: derivedScopes,
+        extraPermissions: config.extraPermissions,
+      });
+    }
 
     // 3. Events — standard CRUD + one event per workflow field.
     const { created: createdEvent, updated: updatedEvent, deleted: deletedEvent } =

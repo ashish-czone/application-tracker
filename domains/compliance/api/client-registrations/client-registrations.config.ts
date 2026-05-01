@@ -6,6 +6,10 @@ export const CLIENT_REGISTRATIONS_CONFIG = defineEntity({
   slug: 'client-registrations',
   timestamps: true,
 
+  // Permissions live in client-registrations.permissions.ts; registered
+  // via RbacIntegrationModule.forFeature in client-registrations.module.ts.
+  skipAutoRegistration: { permissions: true },
+
   fields: {
     clientId: {
       type: 'lookup',

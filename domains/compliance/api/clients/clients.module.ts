@@ -1,8 +1,10 @@
 import { Module } from '@nestjs/common';
 import { EntityEngineModule } from '@packages/entity-engine';
 import { WorkflowsModule } from '@packages/workflows';
+import { RbacIntegrationModule } from '@packages/rbac';
 import { CLIENTS_CONFIG } from './clients.config';
 import { CLIENTS_WORKFLOW } from './clients.workflow';
+import { CLIENTS_PERMISSION_MANIFESTS } from './clients.permissions';
 import { ClientsController } from './clients.controller';
 import { ClientsService } from './clients.service';
 import { ClientDormancyService } from './clients.dormancy.service';
@@ -14,6 +16,7 @@ import { ClientRegistrationsModule } from '../client-registrations';
   imports: [
     EntityEngineModule.forEntity(CLIENTS_CONFIG),
     WorkflowsModule.forFeature(CLIENTS_WORKFLOW),
+    RbacIntegrationModule.forFeature({ manifests: CLIENTS_PERMISSION_MANIFESTS }),
     ClientContactsModule,
     ClientRegistrationsModule,
   ],

@@ -13,6 +13,10 @@ export const ORGANIZATIONS_CONFIG: EntityConfig<typeof organizations> = defineEn
   slug: 'organizations',
   timestamps: true,
 
+  // Permissions live in organizations.permissions.ts; registered via
+  // RbacIntegrationModule.forFeature in organizations.module.ts.
+  skipAutoRegistration: { permissions: true },
+
   fields: {
     name: {
       type: 'text',
