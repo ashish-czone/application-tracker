@@ -106,6 +106,15 @@ describe('COMPLIANCE_FILINGS_CONFIG', () => {
       expect(target?.requiredPermissions).toContain('compliance-filings.complete');
     });
 
+    it('requires comment (reviewer signoff) when approving from review', () => {
+      // Reviewer signoff has no failure-mode taxonomy (unlike rejection),
+      // so reason is intentionally NOT required — but the comment is the
+      // "why I'm approving" note that lands on the audit row.
+      const target = findTarget(workflow.transitions, 'review', 'completed') as TargetObject;
+      expect(target?.commentRequired).toBe(true);
+      expect(target?.reasonRequired).toBeFalsy();
+    });
+
     it('requires reason + comment when rejecting from review', () => {
       const target = findTarget(workflow.transitions, 'review', 'rejected') as TargetObject;
       expect(target?.reasonRequired).toBe(true);
@@ -127,6 +136,17 @@ describe('COMPLIANCE_FILINGS_CONFIG', () => {
       for (const from of ['completed', 'cancelled'] as const) {
         const target = findTarget(workflow.transitions, from, 'in_progress') as TargetObject;
         expect(target?.requiredPermissions).toContain('compliance-filings.reopen');
+      }
+    });
+
+    it('requires reason + comment to reopen a terminal filing (completed | cancelled)', () => {
+      // Reopening a closed filing reads as an unexplained resurrection in
+      // compliance reports without a recorded reason+comment, so both
+      // directions of the reopen flag the same audit-trail requirement.
+      for (const from of ['completed', 'cancelled'] as const) {
+        const target = findTarget(workflow.transitions, from, 'in_progress') as TargetObject;
+        expect(target?.reasonRequired).toBe(true);
+        expect(target?.commentRequired).toBe(true);
       }
     });
   });
