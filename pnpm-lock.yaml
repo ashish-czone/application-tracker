@@ -209,6 +209,9 @@ importers:
       '@packages/workflows':
         specifier: workspace:*
         version: link:../../packages/addons/workflows/api
+      '@packages/workflows-entity-engine':
+        specifier: workspace:*
+        version: link:../../packages/addons/workflows-entity-engine/api
       bcrypt:
         specifier: ^5.1.1
         version: 5.1.1
@@ -530,6 +533,12 @@ importers:
       '@packages/users':
         specifier: workspace:*
         version: link:../../packages/addons/users/api
+      '@packages/workflows':
+        specifier: workspace:*
+        version: link:../../packages/addons/workflows/api
+      '@packages/workflows-entity-engine':
+        specifier: workspace:*
+        version: link:../../packages/addons/workflows-entity-engine/api
       class-transformer:
         specifier: ^0.5.1
         version: 0.5.1
@@ -744,6 +753,9 @@ importers:
       '@packages/workflows':
         specifier: workspace:*
         version: link:../../packages/addons/workflows/api
+      '@packages/workflows-entity-engine':
+        specifier: workspace:*
+        version: link:../../packages/addons/workflows-entity-engine/api
       bcrypt:
         specifier: ^5.1.1
         version: 5.1.1
@@ -1052,6 +1064,9 @@ importers:
       '@packages/workflows':
         specifier: workspace:*
         version: link:../../packages/addons/workflows/api
+      '@packages/workflows-entity-engine':
+        specifier: workspace:*
+        version: link:../../packages/addons/workflows-entity-engine/api
       class-transformer:
         specifier: ^0.5.1
         version: 0.5.1
@@ -1382,6 +1397,9 @@ importers:
       '@packages/workflows':
         specifier: workspace:*
         version: link:../../packages/addons/workflows/api
+      '@packages/workflows-entity-engine':
+        specifier: workspace:*
+        version: link:../../packages/addons/workflows-entity-engine/api
       bcrypt:
         specifier: ^5.1.1
         version: 5.1.1
@@ -2003,6 +2021,9 @@ importers:
       '@packages/workflows':
         specifier: workspace:*
         version: link:../../../packages/addons/workflows/api
+      '@packages/workflows-entity-engine':
+        specifier: workspace:*
+        version: link:../../../packages/addons/workflows-entity-engine/api
       drizzle-zod:
         specifier: ^0.7.0
         version: 0.7.1(drizzle-orm@0.45.1(@prisma/client@6.19.2(prisma@6.19.2(typescript@5.9.3))(typescript@5.9.3))(@types/pg@8.18.0)(pg@8.20.0)(prisma@6.19.2(typescript@5.9.3)))(zod@3.25.76)
@@ -2285,6 +2306,9 @@ importers:
       '@packages/workflows':
         specifier: workspace:*
         version: link:../../../packages/addons/workflows/api
+      '@packages/workflows-entity-engine':
+        specifier: workspace:*
+        version: link:../../../packages/addons/workflows-entity-engine/api
       drizzle-orm:
         specifier: ^0.45.1
         version: 0.45.1(@prisma/client@6.19.2(prisma@6.19.2(typescript@5.9.3))(typescript@5.9.3))(@types/pg@8.18.0)(pg@8.20.0)(prisma@6.19.2(typescript@5.9.3))

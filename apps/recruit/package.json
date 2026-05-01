@@ -58,6 +58,7 @@
     "@packages/user-preferences": "workspace:*",
     "@packages/users": "workspace:*",
     "@packages/workflows": "workspace:*",
+    "@packages/workflows-entity-engine": "workspace:*",
     "@domains/recruit-api": "workspace:*",
     "@packages/app-shell": "workspace:*",
     "class-transformer": "^0.5.1",

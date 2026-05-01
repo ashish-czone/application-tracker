@@ -6,6 +6,7 @@ import {
 } from '@packages/platform-testing';
 import { hierarchyAddon, HierarchyModule } from '@packages/hierarchy';
 import { workflowsAddon } from '@packages/workflows';
+import { WorkflowsEntityEngineModule } from '@packages/workflows-entity-engine';
 import {
   OrgUnitService,
   OrgUnitLevelService,
@@ -109,7 +110,7 @@ export async function createComplianceTestApp(): Promise<TestAppContext> {
   const ctx = await createTestApp({
     domains: [complianceBackend],
     addons: [workflowsAddon, hierarchyAddon],
-    extraImports: [TestOrgUnitsModule],
+    extraImports: [WorkflowsEntityEngineModule, TestOrgUnitsModule],
   });
 
   await seedAllWorkflows(ctx);

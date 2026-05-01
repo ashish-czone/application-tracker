@@ -36,6 +36,7 @@
     "@packages/tasks": "workspace:*",
     "@packages/users": "workspace:*",
     "@packages/workflows": "workspace:*",
+    "@packages/workflows-entity-engine": "workspace:*",
     "drizzle-zod": "^0.7.0",
     "mustache": "^4.2.0",
     "zod": "^3.25.0"

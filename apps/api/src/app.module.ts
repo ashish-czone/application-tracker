@@ -15,6 +15,7 @@ import { AutomationsModule } from '@packages/automations';
 import { NotificationsModule } from '@packages/notifications';
 import { NotificationChannelsModule } from '@packages/notification-channels';
 import { WorkflowsModule } from '@packages/workflows';
+import { WorkflowsEntityEngineModule } from '@packages/workflows-entity-engine';
 import { AuditModule, AuditRegistryService } from '@packages/audit';
 import { AUDIT_EXTENSION } from '@packages/entity-engine';
 import { HierarchyModule } from '@packages/hierarchy';
@@ -92,6 +93,7 @@ import { validate } from './config/env.validation';
     HierarchyModule,
     OrderableModule,
     WorkflowsModule,
+    WorkflowsEntityEngineModule,
     TaxonomyModule,
     NotesModule,
     AttachmentsModule,

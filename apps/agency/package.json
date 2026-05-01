@@ -49,6 +49,7 @@
     "@packages/user-preferences": "workspace:*",
     "@packages/users": "workspace:*",
     "@packages/workflows": "workspace:*",
+    "@packages/workflows-entity-engine": "workspace:*",
     "@domains/agency-api": "workspace:*",
     "@domains/marketing-api": "workspace:*",
     "@domains/projects-api": "workspace:*",

@@ -4,6 +4,7 @@ import {
   type TestAppContext,
 } from '@packages/platform-testing';
 import { workflowsAddon, WorkflowRegistryService } from '@packages/workflows';
+import { WorkflowsEntityEngineModule } from '@packages/workflows-entity-engine';
 import {
   EntityRegistryService,
   FieldDefinitionService,
@@ -30,6 +31,7 @@ export async function createProjectsTestApp(): Promise<TestAppContext> {
   const ctx = await createTestApp({
     domains: [projectsBackend],
     addons: [workflowsAddon],
+    extraImports: [WorkflowsEntityEngineModule],
   });
 
   await seedAllEntityDefinitions(ctx);
