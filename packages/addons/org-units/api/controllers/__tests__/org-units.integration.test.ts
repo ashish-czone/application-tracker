@@ -3,7 +3,6 @@ import request from 'supertest';
 import { randomUUID } from 'crypto';
 import { sql } from 'drizzle-orm';
 import { createPackageTestApp, withAuth, cleanDatabase, type PackageTestApp } from '@packages/platform-testing';
-import { EntityEngineModule } from '@packages/entity-engine';
 import { HierarchyModule } from '@packages/hierarchy';
 import { TestOrgUnitsModule } from './helpers/test-org-units.module';
 import { ORG_UNIT_PERMISSIONS } from '../../permissions';
@@ -16,7 +15,7 @@ describe('OrgUnitController (integration)', () => {
 
   beforeAll(async () => {
     ctx = await createPackageTestApp({
-      imports: [EntityEngineModule, HierarchyModule, TestOrgUnitsModule],
+      imports: [HierarchyModule, TestOrgUnitsModule],
     });
   });
 

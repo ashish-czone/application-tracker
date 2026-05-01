@@ -15,7 +15,6 @@
     "@packages/auth-core": "workspace:*",
     "@packages/automation-contracts": "workspace:*",
     "@packages/database": "workspace:*",
-    "@packages/entity-engine": "workspace:*",
     "@packages/logger": "workspace:*",
     "@packages/rbac": "workspace:*",
     "@packages/tenancy": "workspace:*",
