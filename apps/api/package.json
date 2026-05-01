@@ -40,6 +40,7 @@
     "@packages/org-units": "workspace:*",
     "@packages/tasks": "workspace:*",
     "@packages/taxonomy": "workspace:*",
+    "@packages/taxonomy-entity-engine": "workspace:*",
     "@packages/users": "workspace:*",
     "@packages/workflows": "workspace:*",
     "@packages/workflows-entity-engine": "workspace:*",

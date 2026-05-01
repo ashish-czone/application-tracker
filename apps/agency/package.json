@@ -46,6 +46,7 @@
     "@packages/rbac": "workspace:*",
     "@packages/settings": "workspace:*",
     "@packages/taxonomy": "workspace:*",
+    "@packages/taxonomy-entity-engine": "workspace:*",
     "@packages/user-preferences": "workspace:*",
     "@packages/users": "workspace:*",
     "@packages/workflows": "workspace:*",

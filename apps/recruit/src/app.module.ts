@@ -3,6 +3,7 @@ import { ConfigService } from '@nestjs/config';
 import path from 'path';
 import { createAppModule } from '@packages/app-shell';
 import { WorkflowsEntityEngineModule } from '@packages/workflows-entity-engine';
+import { TaxonomyEntityEngineModule } from '@packages/taxonomy-entity-engine';
 import { ServiceAuthModule } from '@packages/service-auth';
 import { OAuthModule } from '@packages/oauth';
 import { PdfGeneratorModule } from '@packages/pdf-generator';
@@ -34,6 +35,7 @@ const serviceAuthImports = process.env.TENANCY_MODE
     extraImports: [
       ...serviceAuthImports,
       WorkflowsEntityEngineModule,
+      TaxonomyEntityEngineModule,
       UsersModule,
       OAuthModule.register(),
       OrgUnitsModule,

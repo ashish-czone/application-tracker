@@ -54,6 +54,7 @@
     "@packages/settings": "workspace:*",
     "@packages/tasks": "workspace:*",
     "@packages/taxonomy": "workspace:*",
+    "@packages/taxonomy-entity-engine": "workspace:*",
     "@packages/tenancy": "workspace:*",
     "@packages/user-preferences": "workspace:*",
     "@packages/users": "workspace:*",

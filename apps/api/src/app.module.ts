@@ -31,6 +31,7 @@ import { OrgUnitService } from '@packages/org-units';
 import { EntityEngineModule } from '@packages/entity-engine';
 import { TasksModule } from '@packages/tasks';
 import { TaxonomyModule } from '@packages/taxonomy';
+import { TaxonomyEntityEngineModule } from '@packages/taxonomy-entity-engine';
 import { NotesModule } from '@packages/notes';
 import { AttachmentsModule } from '@packages/attachments';
 import { SharedModule } from './modules/shared/shared.module';
@@ -95,6 +96,7 @@ import { validate } from './config/env.validation';
     WorkflowsModule,
     WorkflowsEntityEngineModule,
     TaxonomyModule,
+    TaxonomyEntityEngineModule,
     NotesModule,
     AttachmentsModule,
     EntityEngineModule,

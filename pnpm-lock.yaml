@@ -200,6 +200,9 @@ importers:
       '@packages/taxonomy':
         specifier: workspace:*
         version: link:../../packages/addons/taxonomy/api
+      '@packages/taxonomy-entity-engine':
+        specifier: workspace:*
+        version: link:../../packages/addons/taxonomy-entity-engine/api
       '@packages/user-preferences':
         specifier: workspace:*
         version: link:../../packages/platform/user-preferences
@@ -530,6 +533,9 @@ importers:
       '@packages/taxonomy':
         specifier: workspace:*
         version: link:../../packages/addons/taxonomy/api
+      '@packages/taxonomy-entity-engine':
+        specifier: workspace:*
+        version: link:../../packages/addons/taxonomy-entity-engine/api
       '@packages/users':
         specifier: workspace:*
         version: link:../../packages/addons/users/api
@@ -741,6 +747,9 @@ importers:
       '@packages/taxonomy':
         specifier: workspace:*
         version: link:../../packages/addons/taxonomy/api
+      '@packages/taxonomy-entity-engine':
+        specifier: workspace:*
+        version: link:../../packages/addons/taxonomy-entity-engine/api
       '@packages/tenancy':
         specifier: workspace:*
         version: link:../../packages/addons/tenancy
@@ -1055,6 +1064,9 @@ importers:
       '@packages/taxonomy':
         specifier: workspace:*
         version: link:../../packages/addons/taxonomy/api
+      '@packages/taxonomy-entity-engine':
+        specifier: workspace:*
+        version: link:../../packages/addons/taxonomy-entity-engine/api
       '@packages/tenancy':
         specifier: workspace:*
         version: link:../../packages/addons/tenancy
@@ -1385,6 +1397,9 @@ importers:
       '@packages/taxonomy':
         specifier: workspace:*
         version: link:../../packages/addons/taxonomy/api
+      '@packages/taxonomy-entity-engine':
+        specifier: workspace:*
+        version: link:../../packages/addons/taxonomy-entity-engine/api
       '@packages/tenancy':
         specifier: workspace:*
         version: link:../../packages/addons/tenancy
