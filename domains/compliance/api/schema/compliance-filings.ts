@@ -4,7 +4,7 @@ import { randomUUID } from 'crypto';
 import { orgUnits } from '@packages/org-units/schema/org-units';
 import { softDeleteColumns } from '@packages/soft-delete';
 import { complianceLaws } from './laws';
-import { complianceRules } from './rules';
+import { complianceRules } from '../rules/rules.schema';
 
 // `clientId` references the shared identity `clients` row. FK added at SQL
 // migration level — see note in client-registrations.ts.

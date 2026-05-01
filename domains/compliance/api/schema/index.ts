@@ -1,5 +1,5 @@
 export { complianceLaws } from './laws';
-export { complianceRules } from './rules';
+export { complianceRules } from '../rules/rules.schema';
 export { complianceLawHandlers } from './law-handlers';
 export { complianceClientRegistrations } from './client-registrations';
 export { complianceFilings } from './compliance-filings';

@@ -17,14 +17,14 @@ import {
   RequirePermission,
   type DataAccessContext,
 } from '@packages/rbac';
-import { ComplianceRulesService } from './compliance-rules.service';
+import { ComplianceRulesService } from './rules.service';
 import {
   CreateComplianceRuleSchema,
   DeprecateComplianceRuleSchema,
   TransitionComplianceRuleSchema,
   UpdateComplianceRuleSchema,
-} from './compliance-rules.dto';
-import { translateRulesQuery } from './compliance-rules-query';
+} from './rules.dto';
+import { translateRulesQuery } from './rules.query';
 
 @Controller('compliance-rules')
 export class ComplianceRulesController {

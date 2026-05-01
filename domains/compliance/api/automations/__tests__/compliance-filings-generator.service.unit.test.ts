@@ -3,7 +3,7 @@ import { ComplianceFilingsGeneratorService } from '../compliance-filings-generat
 import {
   AmbiguousHandlerError,
   type ComplianceRule,
-} from '../../rules/compliance-rules.service';
+} from '../../rules';
 
 type Mock = ReturnType<typeof vi.fn>;
 

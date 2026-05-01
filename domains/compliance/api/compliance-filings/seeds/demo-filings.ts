@@ -3,7 +3,7 @@ import { DatabaseService, asc, eq, users } from '@packages/database';
 import { DomainEventEmitter } from '@packages/events';
 import { EntityService } from '@packages/entity-engine';
 import { complianceFilings } from '../../schema/compliance-filings';
-import { ComplianceRulesService } from '../../rules/compliance-rules.service';
+import { ComplianceRulesService } from '../../rules';
 import { ClientRegistrationsService } from '../../client-registrations/client-registrations.service';
 import { ComplianceFilingsLookupService } from '../compliance-filings-lookup.service';
 import { buildFilingExternalKey } from '../compliance-filings.config';

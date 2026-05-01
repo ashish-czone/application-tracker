@@ -1,6 +1,6 @@
 import { createInsertSchema, createSelectSchema } from 'drizzle-zod';
 import { z } from 'zod';
-import { complianceRules } from '../schema/rules';
+import { complianceRules } from './rules.schema';
 
 export const ComplianceRuleRowSchema = createSelectSchema(complianceRules);
 

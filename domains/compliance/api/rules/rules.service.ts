@@ -8,15 +8,15 @@ import {
   lawCodesForGroups,
   type ComplianceFrequency,
 } from '@domains/compliance-contract';
-import { complianceRules } from '../schema/rules';
+import { complianceRules } from './rules.schema';
 import { complianceLaws } from '../schema/laws';
 import { complianceLawHandlers } from '../schema/law-handlers';
 import { complianceFilings } from '../schema/compliance-filings';
 import { complianceClientRegistrations } from '../schema/client-registrations';
 import { LawHandlersService } from '../law-handlers/law-handlers.service';
 import { ComplianceFilingsCancellationService } from '../compliance-filings/compliance-filings-cancellation.service';
-import type { CreateComplianceRuleDto, UpdateComplianceRuleDto } from './compliance-rules.dto';
-import type { ComplianceRulesListParams } from './compliance-rules-query';
+import type { CreateComplianceRuleDto, UpdateComplianceRuleDto } from './rules.dto';
+import type { ComplianceRulesListParams } from './rules.types';
 
 const TERMINAL_FILING_STATUSES = ['completed', 'cancelled'];
 

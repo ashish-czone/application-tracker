@@ -10,7 +10,7 @@ import { LawsModule } from './laws/laws.module';
 import { ClientsModule } from './clients/clients.module';
 import { ClientContactsModule } from './client-contacts/client-contacts.module';
 import { ClientRegistrationsModule } from './client-registrations/client-registrations.module';
-import { ComplianceRulesModule } from './rules/compliance-rules.module';
+import { ComplianceRulesModule } from './rules';
 import { LawHandlersModule } from './law-handlers/law-handlers.module';
 import { ComplianceFilingsModule } from './compliance-filings/compliance-filings.module';
 import { OrganizationsModule } from './organizations/organizations.module';
