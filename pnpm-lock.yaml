@@ -200,6 +200,9 @@ importers:
       '@packages/taxonomy':
         specifier: workspace:*
         version: link:../../packages/addons/taxonomy/api
+      '@packages/taxonomy-entity-engine':
+        specifier: workspace:*
+        version: link:../../packages/addons/taxonomy-entity-engine/api
       '@packages/user-preferences':
         specifier: workspace:*
         version: link:../../packages/platform/user-preferences
@@ -530,6 +533,9 @@ importers:
       '@packages/taxonomy':
         specifier: workspace:*
         version: link:../../packages/addons/taxonomy/api
+      '@packages/taxonomy-entity-engine':
+        specifier: workspace:*
+        version: link:../../packages/addons/taxonomy-entity-engine/api
       '@packages/users':
         specifier: workspace:*
         version: link:../../packages/addons/users/api
@@ -741,6 +747,9 @@ importers:
       '@packages/taxonomy':
         specifier: workspace:*
         version: link:../../packages/addons/taxonomy/api
+      '@packages/taxonomy-entity-engine':
+        specifier: workspace:*
+        version: link:../../packages/addons/taxonomy-entity-engine/api
       '@packages/tenancy':
         specifier: workspace:*
         version: link:../../packages/addons/tenancy
@@ -1055,6 +1064,9 @@ importers:
       '@packages/taxonomy':
         specifier: workspace:*
         version: link:../../packages/addons/taxonomy/api
+      '@packages/taxonomy-entity-engine':
+        specifier: workspace:*
+        version: link:../../packages/addons/taxonomy-entity-engine/api
       '@packages/tenancy':
         specifier: workspace:*
         version: link:../../packages/addons/tenancy
@@ -1385,6 +1397,9 @@ importers:
       '@packages/taxonomy':
         specifier: workspace:*
         version: link:../../packages/addons/taxonomy/api
+      '@packages/taxonomy-entity-engine':
+        specifier: workspace:*
+        version: link:../../packages/addons/taxonomy-entity-engine/api
       '@packages/tenancy':
         specifier: workspace:*
         version: link:../../packages/addons/tenancy
@@ -4335,6 +4350,25 @@ importers:
         specifier: ^5.7.0
         version: 5.9.3
 
+  packages/addons/taxonomy-entity-engine/api:
+    dependencies:
+      '@nestjs/common':
+        specifier: ^11.0.0
+        version: 11.1.16(class-transformer@0.5.1)(class-validator@0.14.4)(reflect-metadata@0.2.2)(rxjs@7.8.2)
+      '@packages/entity-engine':
+        specifier: workspace:*
+        version: link:../../entity-engine/api
+      '@packages/taxonomy':
+        specifier: workspace:*
+        version: link:../../taxonomy/api
+    devDependencies:
+      typescript:
+        specifier: ^5.7.0
+        version: 5.9.3
+      vitest:
+        specifier: ^3.2.0
+        version: 3.2.4(@types/node@22.19.15)(happy-dom@18.0.1)(jiti@2.6.1)(lightningcss@1.32.0)(terser@5.46.0)(tsx@4.21.0)
+
   packages/addons/taxonomy/api:
     dependencies:
       '@nestjs/common':
@@ -4346,15 +4380,9 @@ importers:
       '@packages/automation-contracts':
         specifier: workspace:*
         version: link:../../../platform/automation-contracts
-      '@packages/automations':
-        specifier: workspace:*
-        version: link:../../automations/api
       '@packages/database':
         specifier: workspace:*
         version: link:../../../core/database
-      '@packages/entity-engine':
-        specifier: workspace:*
-        version: link:../../entity-engine/api
       '@packages/hierarchy':
         specifier: workspace:*
         version: link:../../hierarchy/api

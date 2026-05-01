@@ -43,6 +43,7 @@
     "@packages/settings": "workspace:*",
     "@packages/soft-delete": "workspace:*",
     "@packages/taxonomy": "workspace:*",
+    "@packages/taxonomy-entity-engine": "workspace:*",
     "@packages/tenancy": "workspace:*",
     "@packages/users": "workspace:*",
     "@packages/workflows": "workspace:*",

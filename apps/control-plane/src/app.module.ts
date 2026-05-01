@@ -18,6 +18,7 @@ import { WorkflowsEntityEngineModule } from '@packages/workflows-entity-engine';
 import { AuditModule, AuditRegistryService } from '@packages/audit';
 import { AUDIT_EXTENSION } from '@packages/entity-engine';
 import { TaxonomyModule } from '@packages/taxonomy';
+import { TaxonomyEntityEngineModule } from '@packages/taxonomy-entity-engine';
 import { HierarchyModule } from '@packages/hierarchy';
 import { OrderableModule } from '@packages/orderable';
 import { EntityEngineModule } from '@packages/entity-engine';
@@ -63,6 +64,7 @@ import { validate } from './config/env.validation';
     WorkflowsModule,
     WorkflowsEntityEngineModule,
     TaxonomyModule,
+    TaxonomyEntityEngineModule,
     HierarchyModule,
     OrderableModule,
     EntityEngineModule,

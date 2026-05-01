@@ -2,6 +2,7 @@ import { Module } from '@nestjs/common';
 import path from 'path';
 import { createAppModule } from '@packages/app-shell';
 import { WorkflowsEntityEngineModule } from '@packages/workflows-entity-engine';
+import { TaxonomyEntityEngineModule } from '@packages/taxonomy-entity-engine';
 import { OrderableModule } from '@packages/orderable';
 import { agencyBackend } from '@domains/agency-api';
 import { marketingBackend } from '@domains/marketing-api';
@@ -18,6 +19,7 @@ import { TestHooksModule } from './modules/test-hooks/test-hooks.module';
     addons: agencyAddons,
     extraImports: [
       WorkflowsEntityEngineModule,
+      TaxonomyEntityEngineModule,
       UsersModule,
       OrderableModule,
       TestHooksModule.register(),
