@@ -231,14 +231,27 @@ describe('Compliance Filings (integration)', () => {
         .expect(201);
     });
 
-    it('complete: review → completed', async () => {
+    it('complete: review → completed requires the reviewer-signoff comment', async () => {
       const { filingId, userId } = await seedFiling();
       await submit(filingId, userId);
       const auth = await authForUser(userId, COMPLETE);
+
+      // Missing comment — reviewer-signoff requirement rejects.
+      const missingComment = await request(ctx.httpServer)
+        .post(`/api/v1/compliance-filings/${filingId}/transition`)
+        .set(auth)
+        .send({ fieldKey: 'status', to: 'completed' });
+      expect([400, 422]).toContain(missingComment.status);
+
+      // With comment — passes.
       await request(ctx.httpServer)
         .post(`/api/v1/compliance-filings/${filingId}/transition`)
         .set(auth)
-        .send({ fieldKey: 'status', to: 'completed' })
+        .send({
+          fieldKey: 'status',
+          to: 'completed',
+          comment: 'Reviewed against the source register; figures tie out.',
+        })
         .expect(201);
 
       const [row] = await ctx.db
@@ -277,21 +290,39 @@ describe('Compliance Filings (integration)', () => {
         .expect(201);
     });
 
-    it('reopen: completed → in_progress', async () => {
+    it('reopen: completed → in_progress requires reason + comment', async () => {
       const { filingId, userId } = await seedFiling();
       await submit(filingId, userId);
       const completeAuth = await authForUser(userId, COMPLETE);
       await request(ctx.httpServer)
         .post(`/api/v1/compliance-filings/${filingId}/transition`)
         .set(completeAuth)
-        .send({ fieldKey: 'status', to: 'completed' })
+        .send({
+          fieldKey: 'status',
+          to: 'completed',
+          comment: 'Approved.',
+        })
         .expect(201);
 
       const reopenAuth = await authForUser(userId, REOPEN);
+
+      // Missing both — reopen rejects so a "resurrected" terminal filing
+      // never lands without an explanation on the audit row.
+      const missingBoth = await request(ctx.httpServer)
+        .post(`/api/v1/compliance-filings/${filingId}/transition`)
+        .set(reopenAuth)
+        .send({ fieldKey: 'status', to: 'in_progress' });
+      expect([400, 422]).toContain(missingBoth.status);
+
       await request(ctx.httpServer)
         .post(`/api/v1/compliance-filings/${filingId}/transition`)
         .set(reopenAuth)
-        .send({ fieldKey: 'status', to: 'in_progress' })
+        .send({
+          fieldKey: 'status',
+          to: 'in_progress',
+          reason: 'Filed in error',
+          comment: 'Regulator returned the submission; need to amend.',
+        })
         .expect(201);
 
       const [row] = await ctx.db
@@ -301,13 +332,18 @@ describe('Compliance Filings (integration)', () => {
       expect(row.status).toBe('in_progress');
     });
 
-    it('close: pending → cancelled (terminal)', async () => {
+    it('close: pending → cancelled (terminal) requires reason + comment', async () => {
       const { filingId, userId } = await seedFiling();
       const auth = await authForUser(userId, CLOSE);
       await request(ctx.httpServer)
         .post(`/api/v1/compliance-filings/${filingId}/transition`)
         .set(auth)
-        .send({ fieldKey: 'status', to: 'cancelled' })
+        .send({
+          fieldKey: 'status',
+          to: 'cancelled',
+          reason: 'Not applicable',
+          comment: 'Client never registered for this rule.',
+        })
         .expect(201);
     });
 

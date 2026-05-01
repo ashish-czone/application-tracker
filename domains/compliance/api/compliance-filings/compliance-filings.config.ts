@@ -160,7 +160,16 @@ export const COMPLIANCE_FILINGS_CONFIG = defineEntity({
             from: 'review',
             to: [
               'in_progress',
-              { state: 'completed', requiredPermissions: ['compliance-filings.complete'] },
+              {
+                // Reviewer signoff: the comment is the explicit "why I'm
+                // approving" note that lands on the audit row. Reason is
+                // not required because approval has no failure-mode
+                // taxonomy (unlike rejection, which surfaces a reason
+                // dropdown). One free-text comment is enough.
+                state: 'completed',
+                requiredPermissions: ['compliance-filings.complete'],
+                commentRequired: true,
+              },
               {
                 state: 'rejected',
                 requiredPermissions: ['compliance-filings.reject'],
@@ -187,16 +196,31 @@ export const COMPLIANCE_FILINGS_CONFIG = defineEntity({
               },
             ],
           },
+          // Reopen pulls a terminal filing back into the work queue.
+          // Both directions need reason+comment so the audit trail
+          // captures *why* a closed filing was revived — without that,
+          // a `cancelled → in_progress` row reads as an unexplained
+          // resurrection in compliance reports.
           {
             from: 'completed',
             to: [
-              { state: 'in_progress', requiredPermissions: ['compliance-filings.reopen'] },
+              {
+                state: 'in_progress',
+                requiredPermissions: ['compliance-filings.reopen'],
+                reasonRequired: true,
+                commentRequired: true,
+              },
             ],
           },
           {
             from: 'cancelled',
             to: [
-              { state: 'in_progress', requiredPermissions: ['compliance-filings.reopen'] },
+              {
+                state: 'in_progress',
+                requiredPermissions: ['compliance-filings.reopen'],
+                reasonRequired: true,
+                commentRequired: true,
+              },
             ],
           },
         ],
