@@ -14,7 +14,7 @@ import { ComplianceRulesModule } from './rules';
 import { LawHandlersModule } from './law-handlers';
 import { ComplianceFilingsModule } from './compliance-filings';
 import { OrganizationsModule } from './organizations';
-import { ComplianceReportsModule } from './reports/reports.module';
+import { ComplianceReportsModule } from './reports';
 
 import { GenerateComplianceFilingsAction } from './automations/generate-compliance-filings.action';
 import { SendComplianceFilingDigestAction } from './automations/send-compliance-filing-digest.action';
