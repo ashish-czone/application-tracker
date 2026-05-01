@@ -2,20 +2,7 @@ import { Injectable } from '@nestjs/common';
 import { DatabaseService, users, asc, desc, eq, sql, withScope, type SQL } from '@packages/database';
 import { todayInTimezone } from '@packages/common';
 import { clients } from './clients.schema';
-
-export type ClientRiskLevel = 'healthy' | 'at-risk' | 'critical';
-export type ClientStatusKey = 'active' | 'onboarding' | 'dormant';
-
-export interface ClientsListParams {
-  page: number;
-  limit: number;
-  sort?: string;
-  order?: 'asc' | 'desc';
-  status?: ClientStatusKey;
-  handlerIds?: string[];
-  risks?: ClientRiskLevel[];
-  q?: string;
-}
+import type { ClientRiskLevel, ClientsListQuery } from './clients.dto';
 
 export interface ClientRollupRow extends Record<string, unknown> {
   id: string;
@@ -102,7 +89,7 @@ export class ClientsRollupService {
    * express.
    */
   async list(
-    params: ClientsListParams,
+    params: ClientsListQuery,
     scopePredicate?: SQL,
   ): Promise<{
     data: ClientRollupRow[];
@@ -316,7 +303,7 @@ export class ClientsRollupService {
   }
 
   private buildFilterConditions(
-    params: ClientsListParams,
+    params: ClientsListQuery,
     _today: string,
     _sevenDays: string,
   ): SQL[] {
