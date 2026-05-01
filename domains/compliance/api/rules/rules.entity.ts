@@ -20,13 +20,10 @@ export const RULES_ENTITY = defineEntity({
   slug: 'compliance-rules',
   timestamps: true,
 
-  extraPermissions: [
-    {
-      action: 'deprecate',
-      description:
-        'Deprecate a compliance rule and (optionally) cancel every in-flight filing generated from it. Required for both directions of the destructive `* ↔ deprecated` transition; reuse the same perm for reactivation so admins who can retire a rule can reverse it.',
-    },
-  ],
+  // Permissions live in rules.permissions.ts and are registered via
+  // RbacIntegrationModule.forFeature in rules.module.ts. Opt out of the
+  // engine's auto-registration so they're not double-registered.
+  skipAutoRegistration: { permissions: true },
 
   fields: {
     code: {

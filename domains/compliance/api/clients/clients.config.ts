@@ -12,13 +12,9 @@ export const CLIENTS_CONFIG = defineEntity({
   timestamps: true,
   subtitleField: 'legalName',
 
-  extraPermissions: [
-    {
-      action: 'dormantise',
-      description:
-        'Move a client between active and dormant. Required for both directions of the destructive transition that cancels in-flight filings on entry and re-opens the pipeline on reversal.',
-    },
-  ],
+  // Permissions live in clients.permissions.ts and are registered via
+  // RbacIntegrationModule.forFeature in clients.module.ts.
+  skipAutoRegistration: { permissions: true },
 
   fields: {
     name: {

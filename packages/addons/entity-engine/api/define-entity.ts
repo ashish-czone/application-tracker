@@ -199,6 +199,17 @@ export interface ModelDefinition<TTable extends PgTable = PgTable> {
   /** Additional permissions beyond CRUD */
   extraPermissions?: { action: string; description: string; supportedScopes?: string[] }[];
 
+  /**
+   * Opt out of entity-engine auto-registration for specific concerns. Used
+   * by entities migrating to camp-B helpers (registering perms via
+   * `RbacIntegrationModule.forFeature`, etc.) so the engine doesn't double-
+   * register the same artefacts at boot. Each flag defaults to false.
+   */
+  skipAutoRegistration?: {
+    /** When true, entity-engine does NOT register the slug's CRUD permission manifests at boot. The module is expected to register them externally (typically via `crudPermissionManifests` + `RbacIntegrationModule.forFeature`). */
+    permissions?: boolean;
+  };
+
   // --- Events ---
 
   /** Additional events beyond created/updated/deleted */
@@ -471,6 +482,7 @@ export function defineEntity<TTable extends PgTable>(model: ModelDefinition<TTab
     features: model.features,
     computedColumns: model.computedColumns,
     extraPermissions: model.extraPermissions,
+    skipAutoRegistration: model.skipAutoRegistration,
     extraEvents: model.extraEvents,
     actions: model.actions,
     nameField,

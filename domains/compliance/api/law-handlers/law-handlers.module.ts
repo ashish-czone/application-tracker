@@ -1,8 +1,10 @@
 import { forwardRef, Module } from '@nestjs/common';
 import { EntityEngineModule } from '@packages/entity-engine';
+import { RbacIntegrationModule } from '@packages/rbac';
 import { ComplianceRulesModule } from '../rules';
 import { LawsModule } from '../laws';
 import { LAW_HANDLERS_CONFIG } from './law-handlers.config';
+import { LAW_HANDLERS_PERMISSION_MANIFESTS } from './law-handlers.permissions';
 import { LawHandlersController } from './law-handlers.controller';
 import { LawHandlersService } from './law-handlers.service';
 
@@ -17,6 +19,7 @@ import { LawHandlersService } from './law-handlers.service';
 @Module({
   imports: [
     EntityEngineModule.forEntity(LAW_HANDLERS_CONFIG),
+    RbacIntegrationModule.forFeature({ manifests: LAW_HANDLERS_PERMISSION_MANIFESTS }),
     forwardRef(() => ComplianceRulesModule),
     LawsModule,
   ],
