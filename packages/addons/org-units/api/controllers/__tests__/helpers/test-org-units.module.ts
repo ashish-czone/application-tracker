@@ -1,7 +1,6 @@
 import { Module, type OnModuleInit } from '@nestjs/common';
 import { DatabaseService } from '@packages/database';
 import { PermissionManifestRegistry, ScopeResolverRegistry } from '@packages/rbac';
-import { LookupResolverService } from '@packages/entity-engine';
 import { UserResolverRegistry, EntityResolverRegistry } from '@packages/automation-contracts';
 import { OrgUnitService } from '../../../services/org-unit.service';
 import { OrgUnitLevelService } from '../../../services/org-unit-level.service';
@@ -17,12 +16,16 @@ import {
 import { OrgUnitHeadStrategy } from '../../../automation-resolvers/org-unit-head.strategy';
 import { ParentUnitHeadStrategy } from '../../../automation-resolvers/parent-unit-head.strategy';
 import { OrgUnitMembersStrategy } from '../../../automation-resolvers/org-unit-members.strategy';
-import { orgUnits } from '../../../schema/org-units';
 
 /**
  * Mirrors the app-level `OrgUnitsModule` apps build on top of `@packages/org-units`.
  * The library doesn't ship a NestJS module — each app composes one. Tests need
  * the same composition, so this module is the test harness equivalent.
+ *
+ * Org-units does NOT participate in entity-engine's lookup-resolver registry
+ * here. Apps that want an org-unit picker dropdown for entity-engine entities
+ * register it themselves at the app layer; that's their integration concern,
+ * not org-units'.
  */
 @Module({
   controllers: [OrgUnitController, OrgUnitLevelController, OrgPositionController],
@@ -39,7 +42,6 @@ import { orgUnits } from '../../../schema/org-units';
 export class TestOrgUnitsModule implements OnModuleInit {
   constructor(
     private readonly manifestRegistry: PermissionManifestRegistry,
-    private readonly lookupResolver: LookupResolverService,
     private readonly userResolverRegistry: UserResolverRegistry,
     private readonly entityResolverRegistry: EntityResolverRegistry,
     private readonly database: DatabaseService,
@@ -56,14 +58,6 @@ export class TestOrgUnitsModule implements OnModuleInit {
 
     this.scopeResolverRegistry.register(this.unitScopeResolver);
     this.scopeResolverRegistry.register(this.descendantsScopeResolver);
-
-    this.lookupResolver.register({
-      entity: 'org-units',
-      table: orgUnits,
-      labelField: 'name',
-      valueField: 'id',
-      searchFields: ['name'],
-    });
 
     const getResolver = (entityType: string) => this.entityResolverRegistry.get(entityType);
     this.userResolverRegistry.registerStrategy(new OrgUnitHeadStrategy(this.database, getResolver));
