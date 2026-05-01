@@ -1,4 +1,4 @@
-import { Global, Module, type OnModuleInit } from '@nestjs/common';
+import { type DynamicModule, Global, Module, type OnModuleInit } from '@nestjs/common';
 import { RbacIntegrationModule } from '@packages/rbac';
 import { ActionRegistry } from '@packages/automation-contracts';
 import { fieldTypeRegistry } from '@packages/field-types';
@@ -8,6 +8,8 @@ import { WorkflowEngineService } from './services/workflow-engine.service';
 import { PipelineResolverService } from './services/pipeline-resolver.service';
 import { TransitionWorkflowAction } from './services/transition-workflow.action';
 import { WorkflowsController } from './controllers/workflows.controller';
+import type { WorkflowDefinition } from './define-workflow';
+import { workflowsForFeature } from './workflows-feature.module';
 
 /**
  * Workflows runtime: registry + engine + pipeline resolver + REST surface.
@@ -55,5 +57,24 @@ export class WorkflowsModule implements OnModuleInit {
     }
 
     this.actionRegistry.register(this.transitionWorkflowAction);
+  }
+
+  /**
+   * Per-module helper for registering workflow definitions declared via
+   * `defineWorkflow()`. Returns a DynamicModule that, at module init,
+   * ensures the supplied definitions exist in the workflow registry.
+   *
+   * @example
+   *   import { defineWorkflow, WorkflowsModule } from '@packages/workflows';
+   *
+   *   export const RULES_WORKFLOW = defineWorkflow({ ... });
+   *
+   *   @Module({
+   *     imports: [WorkflowsModule.forFeature(RULES_WORKFLOW)],
+   *   })
+   *   export class RulesModule {}
+   */
+  static forFeature(...defs: WorkflowDefinition[]): DynamicModule {
+    return workflowsForFeature(...defs);
   }
 }
