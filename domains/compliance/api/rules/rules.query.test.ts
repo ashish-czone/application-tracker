@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { translateRulesQuery, __test__ } from '../rules.query';
+import { translateRulesQuery, __test__ } from './rules.query';
 
 describe('translateRulesQuery', () => {
   it('defaults page=1 and limit=DEFAULT', () => {

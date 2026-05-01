@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
-import { ComplianceRulesController } from '../rules.controller';
-import type { ComplianceRulesService } from '../rules.service';
+import { ComplianceRulesController } from './rules.controller';
+import type { ComplianceRulesService } from './rules.service';
 
 describe('ComplianceRulesController', () => {
   let rules: {
