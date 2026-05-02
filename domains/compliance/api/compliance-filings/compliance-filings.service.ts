@@ -1,11 +1,13 @@
 import { Inject, Injectable } from '@nestjs/common';
 import { DatabaseService, eq, inArray, sql, withScope } from '@packages/database';
 import { EntityService, type BaseListQuery } from '@packages/entity-engine';
+import { BaseCrudService } from '@packages/crud-base';
 import type { DataAccessContext } from '@packages/rbac';
 import { complianceFilings } from './compliance-filings.schema';
 import { LawsService } from '../laws';
 import { buildFilingExternalKey } from './compliance-filings.config';
 import { COMPLIANCE_FILINGS_WORKFLOW } from './compliance-filings.workflow';
+import { COMPLIANCE_FILINGS_CRUD_TOKEN } from './compliance-filings.crud-token';
 import type { CreateComplianceFilingDto, UpdateComplianceFilingDto } from './compliance-filings.dto';
 
 /**
@@ -57,6 +59,8 @@ function addDays(calendarDate: string, days: number): string {
 @Injectable()
 export class ComplianceFilingsService {
   constructor(
+    @Inject(COMPLIANCE_FILINGS_CRUD_TOKEN)
+    private readonly crud: BaseCrudService<typeof complianceFilings>,
     @Inject('ENTITY_SERVICE_compliance-filings') private readonly entityService: EntityService,
     private readonly lawsService: LawsService,
     private readonly database: DatabaseService,
@@ -72,8 +76,9 @@ export class ComplianceFilingsService {
    * across modules, never a JOIN.
    */
   async list(query: BaseListQuery, accessCtx?: DataAccessContext) {
-    const result = await this.entityService.list(query, accessCtx);
-    const lawIds = collectLawIds(result.data);
+    const result = await this.crud.list(query, accessCtx);
+    const data = result.data as Record<string, unknown>[];
+    const lawIds = collectLawIds(data);
     if (lawIds.size === 0) return result;
 
     const laws = await this.lawsService.findDisplayByIds([...lawIds]);
@@ -81,7 +86,7 @@ export class ComplianceFilingsService {
 
     return {
       ...result,
-      data: result.data.map((row) => {
+      data: data.map((row) => {
         const lawId = typeof row.lawId === 'string' ? row.lawId : null;
         const law = lawId ? byId.get(lawId) : undefined;
         if (!law) return row;
@@ -96,7 +101,7 @@ export class ComplianceFilingsService {
   }
 
   findOne(id: string, accessCtx?: DataAccessContext) {
-    return this.entityService.findOneOrFail(id, accessCtx);
+    return this.crud.findOneOrFail(id, accessCtx);
   }
 
   /**
@@ -114,16 +119,16 @@ export class ComplianceFilingsService {
       status: COMPLIANCE_FILINGS_WORKFLOW.initialState,
     };
     const finalPayload = applyCompletedAt(withInitialState);
-    return this.entityService.create(finalPayload, actorId);
+    return this.crud.create(finalPayload as never, actorId);
   }
 
   update(id: string, input: UpdateComplianceFilingDto, actorId: string, accessCtx?: DataAccessContext) {
     const finalPayload = applyCompletedAt(input as Record<string, unknown>);
-    return this.entityService.update(id, finalPayload, actorId, accessCtx);
+    return this.crud.update(id, finalPayload as never, actorId, accessCtx);
   }
 
   softDelete(id: string, actorId: string, accessCtx?: DataAccessContext) {
-    return this.entityService.softDelete(id, actorId, accessCtx);
+    return this.crud.softDelete(id, actorId, accessCtx);
   }
 
   clone(id: string, actorId: string) {
@@ -149,10 +154,6 @@ export class ComplianceFilingsService {
     accessCtx?: DataAccessContext,
   ) {
     return this.entityService.transition(id, fieldKey, toState, actorId, options, accessCtx);
-  }
-
-  getListLayout() {
-    return this.entityService.getListLayout();
   }
 
   /**

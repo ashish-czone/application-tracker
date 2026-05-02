@@ -31,12 +31,6 @@ import {
 export class ComplianceFilingsController {
   constructor(private readonly filings: ComplianceFilingsService) {}
 
-  @Get('layout/list')
-  @RequirePermission('compliance-filings.read')
-  getListLayout() {
-    return this.filings.getListLayout();
-  }
-
   @Get('summary')
   @RequirePermission('compliance-filings.read')
   getSummary(
