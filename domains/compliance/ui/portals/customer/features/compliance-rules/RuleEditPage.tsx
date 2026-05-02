@@ -1,8 +1,8 @@
-import { useEffect, useMemo, useState, useCallback } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useNavigate, useParams } from 'react-router';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { useQueryClient } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { ArrowLeft, Info, Loader2 } from 'lucide-react';
 import {
   Form,
@@ -14,29 +14,30 @@ import {
   DialogDescription,
   DialogFooter,
 } from '@packages/ui';
-import { DynamicField, buildFormSchema } from '@packages/eav-attributes-ui';
-import type { FieldDefinition } from '@packages/eav-attributes-ui';
+import { useEntityEngine } from '@packages/entity-engine-ui';
 import {
-  useEntityEngine,
-  useEntityHooks,
-  useEntityConfig,
-  useEntityLayout,
-} from '@packages/entity-engine-ui';
+  EntityFormFields,
+  buildFormSchema,
+  flattenFormFields,
+  type FormFieldOverride,
+  type LookupSearchFn,
+} from '@packages/entity-views-ui';
 import { InactiveStateBanner } from '../../../../components';
 import {
+  rulesQueries,
   useRuleEditConstraints,
   useUpdateComplianceRule,
 } from '../../../../hooks/useComplianceRulesApi';
+import { RULES_FORM_LAYOUT } from '../../../../entity-configs/rules.form-layout';
 
-const ENTITY_TYPE = 'compliance-rules';
+const ENTITY_SLUG = 'compliance-rules';
 const IMMUTABLE_IDENTITY_FIELDS = ['code', 'frequency', 'lawId'] as const;
 const FORWARD_ONLY_MATH_FIELDS = ['dueDayOfMonth', 'dueMonthOffset', 'gracePeriodDays'] as const;
 
-type ImmutableField = (typeof IMMUTABLE_IDENTITY_FIELDS)[number];
-
 /**
- * I15: custom edit page for compliance rules. Mirrors `EntityEditPage` for
- * layout + form wiring, but diverges where Q9 demands rule-specific UX:
+ * I15: custom edit page for compliance rules. Now consumes the static
+ * `RULES_FORM_LAYOUT` (post form-primitive migration); previously fetched
+ * `GET /layouts/compliance-rules` at runtime. Domain behaviour unchanged:
  *
  *   1. Fetches `/compliance-rules/:id/edit-constraints` up front. When the
  *      rule has generated filings, `code`/`frequency`/`lawId` render
@@ -47,67 +48,30 @@ type ImmutableField = (typeof IMMUTABLE_IDENTITY_FIELDS)[number];
  *      changed against the loaded row. If so and filings exist, intercepts
  *      the mutation and surfaces a forward-only confirm dialog first.
  *   3. PATCHes via `useUpdateComplianceRule` (the domain controller) rather
- *      than the generic `hooks.useUpdate`. Keeps the compliance-rules URL
- *      family (preview / deprecate / constraints / update) on one root.
+ *      than a generic update — keeps the compliance-rules URL family
+ *      (preview / deprecate / constraints / update) on one root.
  */
 export function RuleEditPage() {
   const navigate = useNavigate();
   const { id } = useParams<{ id: string }>();
-  const entity = useEntityConfig(ENTITY_TYPE);
-  const hooks = useEntityHooks(ENTITY_TYPE);
   const { apiFn } = useEntityEngine();
   const queryClient = useQueryClient();
-  const { data: layout, isLoading: layoutLoading } = useEntityLayout(ENTITY_TYPE);
-  const { data: row, isLoading: rowLoading } = hooks.useDetail(id);
+  const { data: row, isLoading: rowLoading } = useQuery(rulesQueries(apiFn).detail(id));
   const { data: constraints, isLoading: constraintsLoading } = useRuleEditConstraints(id);
 
   const locked = constraints?.hasGeneratedFilings === true;
   const filingCount = constraints?.generatedFilingCount ?? 0;
 
-  const sections = useMemo(() => {
-    if (!layout) return [];
-    return layout.sections
-      .filter((s) => s.id !== '__unassigned__')
-      .map((s) => ({
-        ...s,
-        editableFields: s.fields.filter(
-          (f) => !f.isReadonly && f.fieldType !== 'auto_number',
-        ),
-      }))
-      .filter((s) => s.editableFields.length > 0);
-  }, [layout]);
-
-  const editableFields = useMemo(
-    () => sections.flatMap((s) => s.editableFields),
-    [sections],
+  const editableFields = useMemo(() => flattenFormFields(RULES_FORM_LAYOUT), []);
+  const schema = useMemo(
+    () => buildFormSchema(editableFields, RULES_FORM_LAYOUT.entity),
+    [editableFields],
   );
-
-  // DynamicField fires `onSearch` per keystroke for every lookup field on the
-  // form. Routing through `queryClient.fetchQuery` gives us two wins for free:
-  // identical (entity, query) pairs are deduped while in flight, and recent
-  // results stay in cache for 30s — so backspacing or re-typing a previous
-  // value resolves instantly without another network round-trip. Per-keystroke
-  // debouncing belongs in the lookup field's input component (DynamicField),
-  // not here.
-  const searchLookup = useCallback(
-    (entityName: string, query: string) =>
-      queryClient.fetchQuery({
-        queryKey: ['rule-edit-lookup', entityName, query],
-        queryFn: () =>
-          apiFn.get<{ label: string; value: string }[]>(
-            `/lookups/${entityName}?search=${encodeURIComponent(query)}&limit=20`,
-          ),
-        staleTime: 30_000,
-      }),
-    [apiFn, queryClient],
-  );
-
-  const schema = useMemo(() => buildFormSchema(editableFields), [editableFields]);
 
   const defaultValues = useMemo(() => {
     const defaults: Record<string, unknown> = {};
     for (const field of editableFields) {
-      const raw = row?.[field.fieldKey];
+      const raw = (row as Record<string, unknown> | undefined)?.[field.fieldKey];
       defaults[field.fieldKey] = raw ?? field.defaultValue ?? '';
     }
     return defaults;
@@ -125,15 +89,46 @@ export function RuleEditPage() {
   const updateMutation = useUpdateComplianceRule({
     onSuccess: () => {
       setPendingData(null);
-      navigate(`/${entity.slug}/${id}`);
+      navigate(`/${ENTITY_SLUG}/${id}`);
     },
   });
+
+  // Lookup-search wrapper. Reuses the same fetchQuery shape the previous
+  // useEntityLayout-driven path used: identical (entity, query) pairs are
+  // deduped while in flight, recent results stay in cache for 30s.
+  const lookupSearch: LookupSearchFn = (entityName, query) =>
+    queryClient.fetchQuery({
+      queryKey: ['rule-edit-lookup', entityName, query],
+      queryFn: () =>
+        apiFn.get<{ label: string; value: string }[]>(
+          `/lookups/${entityName}?search=${encodeURIComponent(query)}&limit=20`,
+        ),
+      staleTime: 30_000,
+    });
+
+  // I15: build per-field override map for the immutable identity fields
+  // when the rule has generated filings. The server-side guard (I14) is
+  // still the backstop; this is purely a UX affordance.
+  const fieldOverrides = useMemo<Record<string, FormFieldOverride> | undefined>(() => {
+    if (!locked) return undefined;
+    const map: Record<string, FormFieldOverride> = {};
+    for (const key of IMMUTABLE_IDENTITY_FIELDS) {
+      const fieldLabel = editableFields.find((f) => f.fieldKey === key)?.label ?? key;
+      map[key] = {
+        disabled: true,
+        disabledTooltip: `Cannot change — this rule has generated ${filingCount} filing${
+          filingCount === 1 ? '' : 's'
+        }. Deprecate this rule and create a new one to change ${fieldLabel}.`,
+      };
+    }
+    return map;
+  }, [locked, filingCount, editableFields]);
 
   function hasTouchedMath(data: Record<string, unknown>): boolean {
     if (!row) return false;
     return FORWARD_ONLY_MATH_FIELDS.some((k) => {
       const next = data[k];
-      const current = row[k];
+      const current = (row as Record<string, unknown>)[k];
       return next !== undefined && String(next) !== String(current);
     });
   }
@@ -153,7 +148,7 @@ export function RuleEditPage() {
     submitDirect(data);
   }
 
-  const loading = layoutLoading || rowLoading || constraintsLoading;
+  const loading = rowLoading || constraintsLoading;
 
   if (loading) {
     return (
@@ -171,50 +166,12 @@ export function RuleEditPage() {
     );
   }
 
-  function renderField(field: FieldDefinition) {
-    const isImmutable = IMMUTABLE_IDENTITY_FIELDS.includes(field.fieldKey as ImmutableField);
-    const disabled = locked && isImmutable;
-    const tooltip = disabled
-      ? `Cannot change — this rule has generated ${filingCount} filing${filingCount === 1 ? '' : 's'}. Deprecate this rule and create a new one to change ${field.label}.`
-      : undefined;
-    return (
-      <DynamicField
-        key={field.fieldKey}
-        field={field}
-        mode="edit"
-        disabled={disabled}
-        disabledTooltip={tooltip}
-        onSearch={
-          field.fieldType === 'lookup' && field.lookupEntity
-            ? (q: string) => searchLookup(field.lookupEntity!, q)
-            : undefined
-        }
-      />
-    );
-  }
-
-  function renderSection(section: (typeof sections)[number]) {
-    return (
-      <div key={section.id} className="rounded-lg border border-border bg-card">
-        <div className="px-4 py-3 border-b border-border bg-muted/30">
-          <h2 className="text-sm font-medium text-foreground">{section.name}</h2>
-        </div>
-        <div
-          className="grid gap-4 p-4"
-          style={{ gridTemplateColumns: section.columns === 1 ? '1fr' : 'repeat(2, 1fr)' }}
-        >
-          {section.editableFields.map(renderField)}
-        </div>
-      </div>
-    );
-  }
-
   return (
     <div>
       <div className="mb-6 flex items-center gap-4">
         <button
           type="button"
-          onClick={() => navigate(`/${entity.slug}/${id}`)}
+          onClick={() => navigate(`/${ENTITY_SLUG}/${id}`)}
           className="p-1.5 rounded-md text-muted-foreground hover:text-foreground hover:bg-accent transition-colors"
           aria-label="Back to detail"
         >
@@ -230,7 +187,9 @@ export function RuleEditPage() {
         </div>
       </div>
 
-      {row?.status === 'deprecated' && <InactiveStateBanner kind="deprecated" />}
+      {(row as Record<string, unknown> | undefined)?.status === 'deprecated' && (
+        <InactiveStateBanner kind="deprecated" />
+      )}
 
       {locked && (
         <div className="mb-4 flex items-start gap-2 rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-900">
@@ -244,7 +203,11 @@ export function RuleEditPage() {
       )}
 
       <Form form={form} onSubmit={form.handleSubmit(onSubmit)}>
-        <div className="space-y-8">{sections.map(renderSection)}</div>
+        <EntityFormFields
+          layout={RULES_FORM_LAYOUT}
+          fieldOverrides={fieldOverrides}
+          lookupSearch={lookupSearch}
+        />
 
         {updateMutation.isError && (
           <p className="text-sm text-destructive mt-4" aria-live="polite">
@@ -257,7 +220,7 @@ export function RuleEditPage() {
           <Button
             type="button"
             variant="outline"
-            onClick={() => navigate(`/${entity.slug}/${id}`)}
+            onClick={() => navigate(`/${ENTITY_SLUG}/${id}`)}
             disabled={updateMutation.isPending}
           >
             Cancel
