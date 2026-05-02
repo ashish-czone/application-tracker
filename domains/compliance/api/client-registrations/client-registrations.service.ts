@@ -7,8 +7,7 @@ import {
 } from '@nestjs/common';
 import { DatabaseService, and, count, eq, gt, inArray, isNull, lte, not, withScope } from '@packages/database';
 import { DomainEventEmitter } from '@packages/events';
-import { EntityService, type BaseListQuery } from '@packages/entity-engine';
-import { BaseCrudService } from '@packages/crud-base';
+import { BaseCrudService, type BaseListQuery } from '@packages/crud-base';
 import { CLIENT_REGISTRATIONS_CRUD_TOKEN } from './client-registrations.crud-token';
 import type { DataAccessContext } from '@packages/rbac';
 import { AppLoggerService, type ContextLogger } from '@packages/logger';
@@ -101,7 +100,6 @@ export class ClientRegistrationsService {
   constructor(
     @Inject(CLIENT_REGISTRATIONS_CRUD_TOKEN)
     private readonly crud: BaseCrudService<typeof complianceClientRegistrations>,
-    @Inject('ENTITY_SERVICE_client-registrations') private readonly entityService: EntityService,
     private readonly database: DatabaseService,
     private readonly events: DomainEventEmitter,
     private readonly filingsCancellation: ComplianceFilingsCancellationService,
@@ -140,14 +138,6 @@ export class ClientRegistrationsService {
 
   softDelete(id: string, actorId: string, accessCtx?: DataAccessContext) {
     return this.crud.softDelete(id, actorId, accessCtx);
-  }
-
-  clone(id: string, actorId: string) {
-    return this.entityService.clone(id, actorId);
-  }
-
-  restore(id: string) {
-    return this.entityService.restore(id);
   }
 
   // ---- Domain verbs --------------------------------------------------------

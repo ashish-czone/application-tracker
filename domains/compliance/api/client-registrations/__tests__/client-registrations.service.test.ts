@@ -69,7 +69,6 @@ describe('ClientRegistrationsService', () => {
     rules = { canResolveAssignee: vi.fn().mockResolvedValue(true) };
     service = new ClientRegistrationsService(
       {} as never, // crud
-      {} as never, // entityService
       db as never,
       events as unknown as DomainEventEmitter,
       filingsCancellation as unknown as ComplianceFilingsCancellationService,
@@ -144,7 +143,6 @@ describe('ClientRegistrationsService', () => {
       const crud = { create: vi.fn() };
       const guardedService = new ClientRegistrationsService(
         crud as never,
-        {} as never, // entityService
         db as never,
         events as unknown as DomainEventEmitter,
         filingsCancellation as unknown as ComplianceFilingsCancellationService,

@@ -1,8 +1,10 @@
-import { Module } from '@nestjs/common';
-import { EntityEngineModule } from '@packages/entity-engine';
+import { Module, type OnModuleInit } from '@nestjs/common';
+import {
+  LookupResolverService,
+  registerEntityLookup,
+} from '@packages/entity-engine';
 import { RbacIntegrationModule } from '@packages/rbac';
 import { createCrudProvider } from '@packages/crud-base';
-import { LAWS_CONFIG } from './laws.config';
 import { LAWS_PERMISSION_MANIFESTS } from './laws.permissions';
 import { LawsController } from './laws.controller';
 import { LawsService } from './laws.service';
@@ -11,7 +13,6 @@ import { complianceLaws } from './laws.schema';
 
 @Module({
   imports: [
-    EntityEngineModule.forEntity(LAWS_CONFIG),
     RbacIntegrationModule.forFeature({ manifests: LAWS_PERMISSION_MANIFESTS }),
   ],
   controllers: [LawsController],
@@ -28,4 +29,15 @@ import { complianceLaws } from './laws.schema';
   ],
   exports: [LawsService],
 })
-export class LawsModule {}
+export class LawsModule implements OnModuleInit {
+  constructor(private readonly lookupResolver: LookupResolverService) {}
+
+  onModuleInit(): void {
+    registerEntityLookup(this.lookupResolver, {
+      entityType: 'laws',
+      table: complianceLaws,
+      labelField: 'name',
+      searchFields: ['name', 'code'],
+    });
+  }
+}

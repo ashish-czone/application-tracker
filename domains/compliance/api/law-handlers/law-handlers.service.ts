@@ -1,7 +1,6 @@
 import { Inject, Injectable } from '@nestjs/common';
 import { DatabaseService, and, eq, isNull, sql } from '@packages/database';
-import { EntityService, type BaseListQuery } from '@packages/entity-engine';
-import { BaseCrudService } from '@packages/crud-base';
+import { BaseCrudService, type BaseListQuery } from '@packages/crud-base';
 import type { DataAccessContext } from '@packages/rbac';
 import { LawsService } from '../laws';
 import { complianceLawHandlers } from './law-handlers.schema';
@@ -37,7 +36,6 @@ export class LawHandlersService {
   constructor(
     @Inject(LAW_HANDLERS_CRUD_TOKEN)
     private readonly crud: BaseCrudService<typeof complianceLawHandlers>,
-    @Inject('ENTITY_SERVICE_law-handlers') private readonly entityService: EntityService,
     private readonly database: DatabaseService,
     private readonly lawsService: LawsService,
   ) {}
@@ -91,14 +89,6 @@ export class LawHandlersService {
 
   softDelete(id: string, actorId: string, accessCtx?: DataAccessContext) {
     return this.crud.softDelete(id, actorId, accessCtx);
-  }
-
-  clone(id: string, actorId: string) {
-    return this.entityService.clone(id, actorId);
-  }
-
-  restore(id: string) {
-    return this.entityService.restore(id);
   }
 
   // ---- Programmatic / specialized ------------------------------------------

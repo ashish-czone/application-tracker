@@ -1,8 +1,7 @@
 import { NotFoundException } from '@nestjs/common';
-import type { ModuleRef } from '@nestjs/core';
-import { EntityService } from '@packages/entity-engine';
 import { buildAccessContext } from '@packages/rbac';
 import type { AuditModuleRegistration, AuditRegistryService } from '@packages/audit';
+import type { DataAccessContext } from '@packages/rbac';
 import type { JwtPayload } from '@packages/auth-core';
 
 import {
@@ -13,10 +12,17 @@ import {
 } from '../events/types';
 
 /**
- * Every compliance-owned event namespace that should land in `audit_logs`.
- * Order follows Q22 in domains/compliance/todos.md: one registration per slug
- * (entity type), plus one for the custom `compliance.*` generator events.
+ * A scope-aware reader for one compliance entity slug. Throws
+ * `NotFoundException` when the row doesn't exist OR when the caller's
+ * access context excludes it. The audit `authoriseRead` callback uses this
+ * to short-circuit "you can read the audit row only if you can read the
+ * underlying entity" without depending on entity-engine's per-slug DI tokens.
  */
+export type ComplianceEntityReader = (
+  id: string,
+  accessCtx: DataAccessContext,
+) => Promise<unknown>;
+
 const COMPLIANCE_ENTITY_REGISTRATIONS: { slug: string; sensitiveFields?: string[] }[] = [
   { slug: 'clients', sensitiveFields: ['taxId'] },
   { slug: 'client-contacts' },
@@ -30,18 +36,18 @@ const COMPLIANCE_ENTITY_REGISTRATIONS: { slug: string; sensitiveFields?: string[
 
 /**
  * Register every compliance-owned module with the audit registry. Per-entity
- * audit reads delegate to the entity's own scope-aware `findOneOrFail`, so the
- * user only sees audit rows for entities already visible to them.
+ * audit reads delegate to the entity's own scope-aware reader, so the user
+ * only sees audit rows for entities already visible to them.
  */
 export function registerComplianceAudit(
   auditRegistry: AuditRegistryService,
-  moduleRef: ModuleRef,
+  readers: Map<string, ComplianceEntityReader>,
 ): void {
   const authoriseRead: AuditModuleRegistration['authoriseRead'] = async ({
     user,
     entityType,
     entityId,
-  }) => canReadEntity(moduleRef, user, entityType, entityId);
+  }) => canReadEntity(readers, user, entityType, entityId);
 
   for (const { slug, sensitiveFields } of COMPLIANCE_ENTITY_REGISTRATIONS) {
     auditRegistry.register(slug, { events: '*', sensitiveFields, authoriseRead });
@@ -61,31 +67,23 @@ export function registerComplianceAudit(
 }
 
 async function canReadEntity(
-  moduleRef: ModuleRef,
+  readers: Map<string, ComplianceEntityReader>,
   user: JwtPayload,
   entityType: string,
   entityId: string,
 ): Promise<boolean> {
-  const entityService = safeGet<EntityService>(moduleRef, `ENTITY_SERVICE_${entityType}`);
-  if (!entityService) return false;
+  const reader = readers.get(entityType);
+  if (!reader) return false;
 
   const readPermission = `${entityType}.read`;
   const accessCtx = buildAccessContext(user, readPermission);
   if (!accessCtx) return false;
 
   try {
-    await entityService.findOneOrFail(entityId, accessCtx);
+    await reader(entityId, accessCtx);
     return true;
   } catch (error) {
     if (error instanceof NotFoundException) return false;
     throw error;
-  }
-}
-
-function safeGet<T>(moduleRef: ModuleRef, token: string | symbol): T | null {
-  try {
-    return moduleRef.get<T>(token as never, { strict: false });
-  } catch {
-    return null;
   }
 }

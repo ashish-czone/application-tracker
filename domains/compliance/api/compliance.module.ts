@@ -1,19 +1,20 @@
 import { Module, type OnModuleInit } from '@nestjs/common';
-import { ModuleRef } from '@nestjs/core';
 import { AuditRegistryService } from '@packages/audit';
 import { ActionRegistry } from '@packages/automation-contracts';
 import { RbacIntegrationModule } from '@packages/rbac';
 
-import { registerComplianceAudit } from './audit/register-compliance-audit';
+import { registerComplianceAudit, type ComplianceEntityReader } from './audit/register-compliance-audit';
 
-import { LawsModule } from './laws';
-import { ClientsModule } from './clients';
+import { LawsModule, LawsService } from './laws';
+import { ClientsModule, ClientsService } from './clients';
 import { ClientContactsModule } from './client-contacts/client-contacts.module';
-import { ClientRegistrationsModule } from './client-registrations';
-import { ComplianceRulesModule } from './rules';
-import { LawHandlersModule } from './law-handlers';
-import { ComplianceFilingsModule } from './compliance-filings';
+import { ClientContactsService } from './client-contacts/client-contacts.service';
+import { ClientRegistrationsModule, ClientRegistrationsService } from './client-registrations';
+import { ComplianceRulesModule, ComplianceRulesService } from './rules';
+import { LawHandlersModule, LawHandlersService } from './law-handlers';
+import { ComplianceFilingsModule, ComplianceFilingsService } from './compliance-filings';
 import { OrganizationsModule } from './organizations';
+import { OrganizationsService } from './organizations/organizations.service';
 
 import { GenerateComplianceFilingsAction } from './automations/generate-compliance-filings.action';
 import { SendComplianceFilingDigestAction } from './automations/send-compliance-filing-digest.action';
@@ -32,8 +33,9 @@ import { COMPLIANCE_PERMISSION_MANIFESTS } from './permissions';
     ComplianceFilingsModule,
     OrganizationsModule,
     // Permissions for compliance UI surfaces that don't yet have backing
-    // entities. CRUD perms for entities (clients, laws, etc.) are auto-
-    // registered by EntityEngineModule.forEntity() inside each entity's module.
+    // entities. CRUD perms for entities (clients, laws, etc.) are
+    // registered by `RbacIntegrationModule.forFeature` inside each
+    // entity's module.
     RbacIntegrationModule.forFeature({ manifests: COMPLIANCE_PERMISSION_MANIFESTS }),
   ],
   providers: [
@@ -49,13 +51,35 @@ export class ComplianceDomainModule implements OnModuleInit {
     private readonly generateFilingsAction: GenerateComplianceFilingsAction,
     private readonly sendDigestAction: SendComplianceFilingDigestAction,
     private readonly auditRegistry: AuditRegistryService,
-    private readonly moduleRef: ModuleRef,
+    private readonly lawsService: LawsService,
+    private readonly clientsService: ClientsService,
+    private readonly clientContactsService: ClientContactsService,
+    private readonly clientRegistrationsService: ClientRegistrationsService,
+    private readonly rulesService: ComplianceRulesService,
+    private readonly lawHandlersService: LawHandlersService,
+    private readonly filingsService: ComplianceFilingsService,
+    private readonly organizationsService: OrganizationsService,
   ) {}
 
   onModuleInit() {
     this.actionRegistry.register(this.generateFilingsAction);
     this.actionRegistry.register(this.sendDigestAction);
 
-    registerComplianceAudit(this.auditRegistry, this.moduleRef);
+    // Build the slug → scope-aware reader map the audit registration uses
+    // to gate per-entity audit-log reads. Each entity's findOne / findOneOrFail
+    // already applies the caller's `accessCtx`, so the audit row is visible
+    // only when the underlying entity is.
+    const readers = new Map<string, ComplianceEntityReader>([
+      ['laws', (id, ctx) => this.lawsService.findOne(id, ctx)],
+      ['clients', (id, ctx) => this.clientsService.findOne(id, ctx)],
+      ['client-contacts', (id, ctx) => this.clientContactsService.findOneOrFail(id, ctx)],
+      ['client-registrations', (id, ctx) => this.clientRegistrationsService.findOne(id, ctx)],
+      ['compliance-rules', (id, ctx) => this.rulesService.findOne(id, ctx)],
+      ['law-handlers', (id, ctx) => this.lawHandlersService.findOne(id, ctx)],
+      ['compliance-filings', (id, ctx) => this.filingsService.findOne(id, ctx)],
+      ['organizations', (id, ctx) => this.organizationsService.findOneOrFail(id, ctx)],
+    ]);
+
+    registerComplianceAudit(this.auditRegistry, readers);
   }
 }
