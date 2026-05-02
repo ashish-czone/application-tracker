@@ -82,17 +82,4 @@ export class LawHandlersController {
     await this.rules.assertHandlerCanBeDeleted(id);
     await this.lawHandlers.softDelete(id, user.userId, accessCtx);
   }
-
-  @Post(':id/clone')
-  @RequirePermission('law-handlers.create')
-  @HttpCode(HttpStatus.CREATED)
-  clone(@Param('id', ParseUUIDPipe) id: string, @CurrentUser() user: JwtPayload) {
-    return this.lawHandlers.clone(id, user.userId);
-  }
-
-  @Post(':id/restore')
-  @RequirePermission('law-handlers.update')
-  restore(@Param('id', ParseUUIDPipe) id: string) {
-    return this.lawHandlers.restore(id);
-  }
 }

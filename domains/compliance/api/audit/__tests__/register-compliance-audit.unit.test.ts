@@ -2,7 +2,10 @@ import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { AuditRegistryService } from '@packages/audit';
 import { NotFoundException } from '@nestjs/common';
 
-import { registerComplianceAudit } from '../register-compliance-audit';
+import {
+  registerComplianceAudit,
+  type ComplianceEntityReader,
+} from '../register-compliance-audit';
 
 const EXPECTED_SLUGS = [
   'clients',
@@ -17,15 +20,15 @@ const EXPECTED_SLUGS = [
 
 describe('registerComplianceAudit', () => {
   let registry: AuditRegistryService;
-  let moduleRef: { get: ReturnType<typeof vi.fn> };
+  let readers: Map<string, ComplianceEntityReader>;
 
   beforeEach(() => {
     registry = new AuditRegistryService();
-    moduleRef = { get: vi.fn().mockReturnValue(null) };
+    readers = new Map();
   });
 
   it('registers every compliance entity slug with wildcard events', () => {
-    registerComplianceAudit(registry, moduleRef as never);
+    registerComplianceAudit(registry, readers);
 
     for (const slug of EXPECTED_SLUGS) {
       const match = registry.findRegistrationByEntityType(slug);
@@ -35,7 +38,7 @@ describe('registerComplianceAudit', () => {
   });
 
   it('redacts taxId on clients and registrationNumber on client-registrations (Q24)', () => {
-    registerComplianceAudit(registry, moduleRef as never);
+    registerComplianceAudit(registry, readers);
 
     expect(
       registry.findRegistrationByEntityType('clients')!.registration.sensitiveFields,
@@ -46,7 +49,7 @@ describe('registerComplianceAudit', () => {
   });
 
   it('non-PII-bearing modules have no sensitive fields configured', () => {
-    registerComplianceAudit(registry, moduleRef as never);
+    registerComplianceAudit(registry, readers);
 
     for (const slug of ['client-contacts', 'laws', 'compliance-rules', 'compliance-filings', 'law-handlers', 'organizations']) {
       const reg = registry.findRegistrationByEntityType(slug)!.registration;
@@ -55,7 +58,7 @@ describe('registerComplianceAudit', () => {
   });
 
   it('registers the compliance.* custom-event namespace for generator events', () => {
-    registerComplianceAudit(registry, moduleRef as never);
+    registerComplianceAudit(registry, readers);
 
     const match = registry.findRegistration('compliance.ComplianceFilingGenerated');
     expect(match).not.toBeNull();
@@ -64,8 +67,8 @@ describe('registerComplianceAudit', () => {
     expect(match!.registration.authoriseRead).toBeUndefined();
   });
 
-  it('authoriseRead returns false when entity-service is not registered', async () => {
-    registerComplianceAudit(registry, moduleRef as never);
+  it('authoriseRead returns false when no reader is registered for the slug', async () => {
+    registerComplianceAudit(registry, readers);
 
     const { authoriseRead } = registry.findRegistrationByEntityType('clients')!.registration;
     const result = await authoriseRead!({
@@ -77,14 +80,11 @@ describe('registerComplianceAudit', () => {
     expect(result).toBe(false);
   });
 
-  it('authoriseRead returns true when findOneOrFail resolves', async () => {
-    const findOneOrFail = vi.fn().mockResolvedValue({ id: 'c1' });
-    moduleRef.get.mockImplementation((token: string) => {
-      if (token === 'ENTITY_SERVICE_clients') return { findOneOrFail };
-      return null;
-    });
+  it('authoriseRead returns true when the reader resolves', async () => {
+    const reader = vi.fn().mockResolvedValue({ id: 'c1' });
+    readers.set('clients', reader);
 
-    registerComplianceAudit(registry, moduleRef as never);
+    registerComplianceAudit(registry, readers);
     const { authoriseRead } = registry.findRegistrationByEntityType('clients')!.registration;
 
     const result = await authoriseRead!({
@@ -94,17 +94,14 @@ describe('registerComplianceAudit', () => {
     });
 
     expect(result).toBe(true);
-    expect(findOneOrFail).toHaveBeenCalledWith('c1', expect.objectContaining({ userId: 'u1' }));
+    expect(reader).toHaveBeenCalledWith('c1', expect.objectContaining({ userId: 'u1' }));
   });
 
-  it('authoriseRead returns false when findOneOrFail throws NotFoundException (out-of-scope)', async () => {
-    const findOneOrFail = vi.fn().mockRejectedValue(new NotFoundException('Client not found'));
-    moduleRef.get.mockImplementation((token: string) => {
-      if (token === 'ENTITY_SERVICE_clients') return { findOneOrFail };
-      return null;
-    });
+  it('authoriseRead returns false when the reader throws NotFoundException (out-of-scope)', async () => {
+    const reader = vi.fn().mockRejectedValue(new NotFoundException('Client not found'));
+    readers.set('clients', reader);
 
-    registerComplianceAudit(registry, moduleRef as never);
+    registerComplianceAudit(registry, readers);
     const { authoriseRead } = registry.findRegistrationByEntityType('clients')!.registration;
 
     const result = await authoriseRead!({
@@ -117,13 +114,10 @@ describe('registerComplianceAudit', () => {
   });
 
   it('authoriseRead returns false when user has no matching permission', async () => {
-    const findOneOrFail = vi.fn().mockResolvedValue({ id: 'c1' });
-    moduleRef.get.mockImplementation((token: string) => {
-      if (token === 'ENTITY_SERVICE_clients') return { findOneOrFail };
-      return null;
-    });
+    const reader = vi.fn().mockResolvedValue({ id: 'c1' });
+    readers.set('clients', reader);
 
-    registerComplianceAudit(registry, moduleRef as never);
+    registerComplianceAudit(registry, readers);
     const { authoriseRead } = registry.findRegistrationByEntityType('clients')!.registration;
 
     const result = await authoriseRead!({
@@ -133,6 +127,6 @@ describe('registerComplianceAudit', () => {
     });
 
     expect(result).toBe(false);
-    expect(findOneOrFail).not.toHaveBeenCalled();
+    expect(reader).not.toHaveBeenCalled();
   });
 });

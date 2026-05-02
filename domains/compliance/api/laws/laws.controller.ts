@@ -85,17 +85,4 @@ export class LawsController {
   ) {
     await this.laws.softDelete(id, user.userId, accessCtx);
   }
-
-  @Post(':id/clone')
-  @RequirePermission('laws.create')
-  @HttpCode(HttpStatus.CREATED)
-  clone(@Param('id', ParseUUIDPipe) id: string, @CurrentUser() user: JwtPayload) {
-    return this.laws.clone(id, user.userId);
-  }
-
-  @Post(':id/restore')
-  @RequirePermission('laws.update')
-  restore(@Param('id', ParseUUIDPipe) id: string) {
-    return this.laws.restore(id);
-  }
 }

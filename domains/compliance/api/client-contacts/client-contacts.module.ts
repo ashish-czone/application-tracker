@@ -1,8 +1,10 @@
-import { Module } from '@nestjs/common';
-import { EntityEngineModule } from '@packages/entity-engine';
+import { Module, type OnModuleInit } from '@nestjs/common';
+import {
+  LookupResolverService,
+  registerEntityLookup,
+} from '@packages/entity-engine';
 import { RbacIntegrationModule } from '@packages/rbac';
 import { createCrudProvider } from '@packages/crud-base';
-import { CLIENT_CONTACTS_CONFIG } from './client-contacts.config';
 import { CLIENT_CONTACTS_PERMISSION_MANIFESTS } from './client-contacts.permissions';
 import { ClientContactsController } from './client-contacts.controller';
 import { ClientContactsService } from './client-contacts.service';
@@ -11,7 +13,6 @@ import { clientContacts } from './client-contacts.schema';
 
 @Module({
   imports: [
-    EntityEngineModule.forEntity(CLIENT_CONTACTS_CONFIG),
     RbacIntegrationModule.forFeature({ manifests: CLIENT_CONTACTS_PERMISSION_MANIFESTS }),
   ],
   controllers: [ClientContactsController],
@@ -28,4 +29,15 @@ import { clientContacts } from './client-contacts.schema';
   ],
   exports: [ClientContactsService],
 })
-export class ClientContactsModule {}
+export class ClientContactsModule implements OnModuleInit {
+  constructor(private readonly lookupResolver: LookupResolverService) {}
+
+  onModuleInit(): void {
+    registerEntityLookup(this.lookupResolver, {
+      entityType: 'client-contacts',
+      table: clientContacts,
+      labelField: 'fullName',
+      searchFields: ['fullName'],
+    });
+  }
+}

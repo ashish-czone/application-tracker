@@ -1,7 +1,6 @@
 import { Inject, Injectable } from '@nestjs/common';
 import { eq, inArray, sql } from 'drizzle-orm';
-import { EntityService, type BaseListQuery } from '@packages/entity-engine';
-import { BaseCrudService } from '@packages/crud-base';
+import { BaseCrudService, type BaseListQuery } from '@packages/crud-base';
 import { DatabaseService, withScope } from '@packages/database';
 import type { DataAccessContext } from '@packages/rbac';
 import { complianceLaws } from './laws.schema';
@@ -36,7 +35,6 @@ export interface LawTreeResponse {
 export class LawsService {
   constructor(
     @Inject(LAWS_CRUD_TOKEN) private readonly crud: BaseCrudService<typeof complianceLaws>,
-    @Inject('ENTITY_SERVICE_laws') private readonly entityService: EntityService,
     private readonly database: DatabaseService,
   ) {}
 
@@ -142,14 +140,6 @@ export class LawsService {
 
   softDelete(id: string, actorId: string, accessCtx?: DataAccessContext) {
     return this.crud.softDelete(id, actorId, accessCtx);
-  }
-
-  clone(id: string, actorId: string) {
-    return this.entityService.clone(id, actorId);
-  }
-
-  restore(id: string) {
-    return this.entityService.restore(id);
   }
 }
 
