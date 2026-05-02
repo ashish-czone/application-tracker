@@ -1,49 +1,56 @@
 import { useEffect, useMemo } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Form, Button, ScreenLayout, toast } from '@packages/ui';
+import { useEntityEngine } from '@packages/entity-engine-ui';
 import {
-  DynamicField,
+  EntityFormFields,
   buildFormSchema,
-  buildEntityPayload,
-  type FieldDefinition,
-} from '@packages/eav-attributes-ui';
-import { useEntityHooks, useEntityLayout } from '@packages/entity-engine-ui';
+  flattenFormFields,
+  type LookupSearchFn,
+} from '@packages/entity-views-ui';
 import { ScreenPreviewTopBar } from '../shared/ScreenPreviewTopBar';
+import { ORGANIZATIONS_FORM_LAYOUT } from '../../../../entity-configs/organizations.form-layout';
 
-const ENTITY_TYPE = 'organizations';
+interface PaginatedResponse<T> {
+  data: T[];
+  meta: { total: number; page: number; limit: number; totalPages: number };
+}
+
+type OrganizationRow = Record<string, unknown> & { id: string };
+
+const ORGANIZATIONS_QUERY_KEY = ['organizations'] as const;
 
 export function OrganizationPage() {
-  const orgHooks = useEntityHooks(ENTITY_TYPE);
-  const { data: layout, isLoading: layoutLoading } = useEntityLayout(ENTITY_TYPE);
-  const { data: listPage, isLoading: listLoading, isError: listError } = orgHooks.useList({
-    page: 1,
-    limit: 1,
+  const { apiFn } = useEntityEngine();
+  const queryClient = useQueryClient();
+
+  // Singleton — fetch the lone row via list({page:1,limit:1}). Same shape
+  // as the prior useEntityHooks-driven path; just sourced directly.
+  const { data: listPage, isLoading: listLoading, isError: listError } = useQuery({
+    queryKey: [...ORGANIZATIONS_QUERY_KEY, 'list', { page: 1, limit: 1 }],
+    queryFn: () =>
+      apiFn.get<PaginatedResponse<OrganizationRow>>('/organizations?limit=1'),
   });
 
-  const singletonId = listPage?.data?.[0]?.id as string | undefined;
+  const singletonId = listPage?.data?.[0]?.id;
 
-  const { data: row, isLoading: rowLoading } = orgHooks.useDetail(singletonId);
-
-  const sections = useMemo(() => {
-    if (!layout) return [];
-    return layout.sections
-      .filter((s) => s.id !== '__unassigned__')
-      .map((s) => ({
-        ...s,
-        editableFields: s.fields.filter(
-          (f) => !f.isReadonly && f.fieldType !== 'auto_number',
-        ),
-      }))
-      .filter((s) => s.editableFields.length > 0);
-  }, [layout]);
+  const { data: row, isLoading: rowLoading } = useQuery({
+    queryKey: [...ORGANIZATIONS_QUERY_KEY, 'detail', singletonId],
+    queryFn: () => apiFn.get<OrganizationRow>(`/organizations/${singletonId}`),
+    enabled: !!singletonId,
+  });
 
   const editableFields = useMemo(
-    () => sections.flatMap((s) => s.editableFields),
-    [sections],
+    () => flattenFormFields(ORGANIZATIONS_FORM_LAYOUT),
+    [],
   );
 
-  const schema = useMemo(() => buildFormSchema(editableFields), [editableFields]);
+  const schema = useMemo(
+    () => buildFormSchema(editableFields, ORGANIZATIONS_FORM_LAYOUT.entity),
+    [editableFields],
+  );
 
   const defaultValues = useMemo(() => {
     const defaults: Record<string, unknown> = {};
@@ -61,17 +68,52 @@ export function OrganizationPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [row]);
 
-  const updateMutation = orgHooks.useUpdate({
-    onSuccess: () => toast.success('Organization saved'),
+  const updateMutation = useMutation({
+    mutationFn: ({ id, data }: { id: string; data: Record<string, unknown> }) =>
+      apiFn.patch<OrganizationRow>(`/organizations/${id}`, data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ORGANIZATIONS_QUERY_KEY });
+      toast.success('Organization saved');
+    },
+    onError: (error: unknown) => {
+      const message =
+        (error as { body?: { message?: string } } | null)?.body?.message ??
+        'Failed to save organization.';
+      toast.error(message);
+    },
   });
 
+  // Lookup-search wrapper — routes lookup-typed field onSearch calls through
+  // the shared apiFn + queryClient so de-dup + 30s short-cache apply per
+  // (entity, query) pair. Org form has no lookup fields today, but the
+  // primitive accepts the prop unconditionally; cheap to wire so future
+  // additions don't have to retrofit.
+  const lookupSearch: LookupSearchFn = (entityName, query) =>
+    queryClient.fetchQuery({
+      queryKey: ['org-lookup', entityName, query],
+      queryFn: () =>
+        apiFn.get<{ label: string; value: string }[]>(
+          `/lookups/${entityName}?search=${encodeURIComponent(query)}&limit=20`,
+        ),
+      staleTime: 30_000,
+    });
+
   function onSubmit(data: Record<string, unknown>) {
-    if (!layout || !singletonId) return;
-    const payload = buildEntityPayload(data, layout);
+    if (!singletonId) return;
+    // Drop empty strings + undefined so the partial-update DTO doesn't
+    // overwrite existing values with blanks. Mirrors the behaviour the
+    // prior `buildEntityPayload` provided for non-nested fields; the org
+    // entity has no `nestedPath` fields so the simpler inline filter is
+    // sufficient.
+    const payload: Record<string, unknown> = {};
+    for (const [key, value] of Object.entries(data)) {
+      if (value === '' || value === undefined) continue;
+      payload[key] = value;
+    }
     updateMutation.mutate({ id: singletonId, data: payload });
   }
 
-  const isLoading = layoutLoading || listLoading || rowLoading;
+  const isLoading = listLoading || rowLoading;
 
   return (
     <ScreenLayout
@@ -87,11 +129,10 @@ export function OrganizationPage() {
           <OrganizationLoadError />
         ) : (
           <Form form={form} onSubmit={form.handleSubmit(onSubmit)}>
-            <div className="space-y-8">
-              {sections.map((section) => (
-                <OrganizationSection key={section.id} name={section.name} fields={section.editableFields} />
-              ))}
-            </div>
+            <EntityFormFields
+              layout={ORGANIZATIONS_FORM_LAYOUT}
+              lookupSearch={lookupSearch}
+            />
 
             {updateMutation.isError && (
               <p className="mt-4 text-sm text-destructive" aria-live="polite">
@@ -117,21 +158,6 @@ export function OrganizationPage() {
         )}
       </div>
     </ScreenLayout>
-  );
-}
-
-function OrganizationSection({ name, fields }: { name: string; fields: FieldDefinition[] }) {
-  return (
-    <div className="rounded-md border border-rule bg-paper">
-      <div className="border-b border-rule bg-paper-raised/30 px-4 py-3">
-        <h2 className="text-sm font-medium text-ink">{name}</h2>
-      </div>
-      <div className="grid grid-cols-1 gap-4 p-4 md:grid-cols-2">
-        {fields.map((field) => (
-          <DynamicField key={field.fieldKey} field={field} mode="edit" />
-        ))}
-      </div>
-    </div>
   );
 }
 
