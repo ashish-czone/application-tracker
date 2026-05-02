@@ -11,6 +11,8 @@ import {
   ScreenLayout,
   type ActiveFilter,
 } from '@packages/ui';
+import { useQuery } from '@tanstack/react-query';
+import { useEntityEngine } from '@packages/entity-engine-ui';
 import { ScreenPreviewTopBar } from '../shared/ScreenPreviewTopBar';
 import {
   type ClientRow,
@@ -23,7 +25,7 @@ import { ClientPreviewPopover } from './components/ClientPreviewPopover';
 import { RISK_LABEL } from './components/RiskPill';
 import { CLIENT_COLUMNS, REQUIRED_CLIENT_COLUMN_KEYS } from './components/clientColumns';
 import {
-  useClientsList,
+  clientsQueries,
   useClientsSummary,
   useClientHandlerOptions,
 } from '../../../../hooks/useClientsApi';
@@ -76,14 +78,17 @@ export function ClientsPage() {
     setPage(1);
   }, [statusTab, riskFilter, handlerFilter, debouncedSearch]);
 
-  const { data, isLoading, isError } = useClientsList({
-    page,
-    limit: PAGE_LIMIT,
-    status: statusTab === 'all' ? undefined : statusTab,
-    risk: riskFilter.length > 0 ? riskFilter.join(',') : undefined,
-    handlerId: handlerFilter.length > 0 ? handlerFilter.join(',') : undefined,
-    q: debouncedSearch || undefined,
-  });
+  const { apiFn } = useEntityEngine();
+  const { data, isLoading, isError } = useQuery(
+    clientsQueries(apiFn).list({
+      page,
+      limit: PAGE_LIMIT,
+      status: statusTab === 'all' ? undefined : statusTab,
+      risk: riskFilter.length > 0 ? riskFilter.join(',') : undefined,
+      handlerId: handlerFilter.length > 0 ? handlerFilter.join(',') : undefined,
+      q: debouncedSearch || undefined,
+    }),
+  );
   const { data: summary } = useClientsSummary();
   const { data: handlerOptionsRaw } = useClientHandlerOptions();
 
