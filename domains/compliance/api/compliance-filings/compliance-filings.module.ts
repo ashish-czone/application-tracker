@@ -1,9 +1,11 @@
-import { Module } from '@nestjs/common';
-import { EntityEngineModule } from '@packages/entity-engine';
+import { Module, type OnModuleInit } from '@nestjs/common';
+import {
+  LookupResolverService,
+  registerEntityLookup,
+} from '@packages/entity-engine';
 import { WorkflowsModule } from '@packages/workflows';
 import { RbacIntegrationModule } from '@packages/rbac';
 import { createCrudProvider } from '@packages/crud-base';
-import { COMPLIANCE_FILINGS_CONFIG } from './compliance-filings.config';
 import { COMPLIANCE_FILINGS_WORKFLOW } from './compliance-filings.workflow';
 import { COMPLIANCE_FILINGS_PERMISSION_MANIFESTS } from './compliance-filings.permissions';
 import { COMPLIANCE_FILINGS_CRUD_TOKEN } from './compliance-filings.crud-token';
@@ -17,35 +19,32 @@ import { ComplianceFilingsCancellationService } from './compliance-filings.cance
 import { ComplianceFilingsAssigneeCleanupService } from './compliance-filings.assignee-cleanup.service';
 import { LawsModule } from '../laws';
 
-const filingsEntityEngineModule = EntityEngineModule.forEntity(COMPLIANCE_FILINGS_CONFIG);
-
 /**
- * Compliance filings module.
+ * Compliance filings module — fully de-engined. Five services co-exist
+ * here because they serve genuinely distinct concerns:
  *
- * Five services co-exist here because they serve genuinely distinct
- * concerns:
  *  - ComplianceFilingsService — CRUD + create-time externalKey derivation
- *    and completedAt stamping (moved out of beforeCreate/beforeUpdate
- *    hooks so all create-time logic lives in one place)
+ *    and completedAt stamping; workflow transitions (handled directly
+ *    via WorkflowEngineService post-lift, no engine indirection).
  *  - ComplianceFilingsReportsService — single-domain aggregations over
  *    `compliance_filings` (trend, by-client, aging, severity) plus the
  *    `getCountsByTeam` primitive consumed by the app-level org-units
- *    reports composition
+ *    reports composition. Scope predicates built directly via
+ *    DataAccessScopeService + the canonical anchors/inline-scopes from
+ *    `compliance-filings.scope.ts`.
  *  - ComplianceFilingsLookupService — read-only lookups used by the
- *    generate-compliance-filings automation to dedupe before insert
+ *    generate-compliance-filings automation to dedupe before insert.
  *  - ComplianceFilingsCancellationService — batch-cancellation called
- *    from the dormancy cascade and from registration deactivation
+ *    from the dormancy cascade and from registration deactivation.
  *  - ComplianceFilingsAssigneeCleanupService — clears assigneeId on
- *    non-terminal filings when the assigned user is deactivated
- *    (US-7.4 / US-12.2 / US-12.3)
+ *    non-terminal filings when the assigned user is deactivated.
  *
- * Reports + lookup + cancellation + assignee-cleanup are exported so
- * consumers (rules, dormancy, AppUsersService, app-level org-units
- * reports) can inject them.
+ * Lookup registration (so other entities can resolve `?include=filingTitle`)
+ * happens via `registerEntityLookup` in `onModuleInit` — no `defineEntity`
+ * config and no `EntityEngineModule.forEntity` call.
  */
 @Module({
   imports: [
-    filingsEntityEngineModule,
     WorkflowsModule.forFeature(COMPLIANCE_FILINGS_WORKFLOW),
     RbacIntegrationModule.forFeature({ manifests: COMPLIANCE_FILINGS_PERMISSION_MANIFESTS }),
     LawsModule,
@@ -67,7 +66,6 @@ const filingsEntityEngineModule = EntityEngineModule.forEntity(COMPLIANCE_FILING
     ComplianceFilingsAssigneeCleanupService,
   ],
   exports: [
-    filingsEntityEngineModule,
     ComplianceFilingsService,
     ComplianceFilingsReportsService,
     ComplianceFilingsLookupService,
@@ -75,4 +73,15 @@ const filingsEntityEngineModule = EntityEngineModule.forEntity(COMPLIANCE_FILING
     ComplianceFilingsAssigneeCleanupService,
   ],
 })
-export class ComplianceFilingsModule {}
+export class ComplianceFilingsModule implements OnModuleInit {
+  constructor(private readonly lookupResolver: LookupResolverService) {}
+
+  onModuleInit(): void {
+    registerEntityLookup(this.lookupResolver, {
+      entityType: 'compliance-filings',
+      table: complianceFilings,
+      labelField: 'title',
+      searchFields: ['title', 'description'],
+    });
+  }
+}

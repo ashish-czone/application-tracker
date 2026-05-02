@@ -7,8 +7,6 @@
  * callers.
  *
  * Internals NOT exported (intentionally):
- * - `COMPLIANCE_FILINGS_CONFIG` — entity-engine workflow definition,
- *                                   wired only by compliance-filings.module
  * - `compliance-filings.dto.*`  — request DTOs and the URL query schema,
  *                                   internal to the controller
  * - `compliance-filings.filters.*` — domain query translation, internal
@@ -40,4 +38,4 @@ export { ComplianceFilingsCancellationService } from './compliance-filings.cance
 
 export { ComplianceFilingsAssigneeCleanupService } from './compliance-filings.assignee-cleanup.service';
 
-export { buildFilingExternalKey } from './compliance-filings.config';
+export { buildFilingExternalKey } from './compliance-filings.external-key';

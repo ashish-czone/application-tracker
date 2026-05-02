@@ -1,10 +1,10 @@
-import { Inject, Injectable } from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
 import { eq, gte, lte, isNotNull, inArray, ilike, sql, count, notInArray } from 'drizzle-orm';
 import { DatabaseService, withScope } from '@packages/database';
 import { clients } from '@packages/directory';
-import { EntityService } from '@packages/entity-engine';
-import type { DataAccessContext } from '@packages/rbac';
+import { type DataAccessContext, DataAccessScopeService } from '@packages/rbac';
 import { complianceFilings } from './compliance-filings.schema';
+import { buildFilingsScopePredicate } from './compliance-filings.scope';
 
 const NOT_COMPLETED_STATES = ['pending', 'in_progress', 'review', 'rejected'];
 
@@ -72,8 +72,7 @@ export interface ReportRange {
 export class ComplianceFilingsReportsService {
   constructor(
     private readonly database: DatabaseService,
-    @Inject('ENTITY_SERVICE_compliance-filings')
-    private readonly filingsEntity: EntityService,
+    private readonly dataAccessScope: DataAccessScopeService,
   ) {}
 
   /**
@@ -88,7 +87,7 @@ export class ComplianceFilingsReportsService {
     today: string,
     accessCtx?: DataAccessContext,
   ): Promise<TrendBucket[]> {
-    const scopePredicate = accessCtx ? await this.filingsEntity.getScopePredicate(accessCtx) : undefined;
+    const scopePredicate = await buildFilingsScopePredicate(this.dataAccessScope, accessCtx);
     const rows = await this.database.db
       .select({
         month: sql<string>`to_char(${complianceFilings.dueDate}::date, 'YYYY-MM')`,
@@ -132,7 +131,7 @@ export class ComplianceFilingsReportsService {
     // Joining the shared identity `clients` table is allowed per
     // module-boundaries.md → "Shared Identity Tables". Embeds the client
     // name on each row so the frontend doesn't need a side fetch.
-    const scopePredicate = accessCtx ? await this.filingsEntity.getScopePredicate(accessCtx) : undefined;
+    const scopePredicate = await buildFilingsScopePredicate(this.dataAccessScope, accessCtx);
     const baseConditions = [
       scopePredicate,
       gte(complianceFilings.dueDate, range.from),
@@ -183,7 +182,7 @@ export class ComplianceFilingsReportsService {
    * cancelled, dueDate < today). Single GROUP BY with CASE WHEN bands.
    */
   async getOverdueAging(today: string, accessCtx?: DataAccessContext): Promise<AgingBucket[]> {
-    const scopePredicate = accessCtx ? await this.filingsEntity.getScopePredicate(accessCtx) : undefined;
+    const scopePredicate = await buildFilingsScopePredicate(this.dataAccessScope, accessCtx);
     const rows = await this.database.db
       .select({
         range: sql<string>`CASE
@@ -218,7 +217,7 @@ export class ComplianceFilingsReportsService {
    * Severity breakdown of currently-overdue filings, grouped by priority.
    */
   async getOverdueSeverity(today: string, accessCtx?: DataAccessContext): Promise<SeverityBreakdownRow[]> {
-    const scopePredicate = accessCtx ? await this.filingsEntity.getScopePredicate(accessCtx) : undefined;
+    const scopePredicate = await buildFilingsScopePredicate(this.dataAccessScope, accessCtx);
     const rows = await this.database.db
       .select({
         priority: complianceFilings.priority,
@@ -253,7 +252,7 @@ export class ComplianceFilingsReportsService {
     today: string,
     accessCtx?: DataAccessContext,
   ): Promise<TeamFilingCounts[]> {
-    const scopePredicate = accessCtx ? await this.filingsEntity.getScopePredicate(accessCtx) : undefined;
+    const scopePredicate = await buildFilingsScopePredicate(this.dataAccessScope, accessCtx);
     const rows = await this.database.db
       .select({
         assigneeTeamId: complianceFilings.assigneeTeamId,

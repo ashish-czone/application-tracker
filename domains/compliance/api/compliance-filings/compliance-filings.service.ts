@@ -1,13 +1,15 @@
-import { Inject, Injectable } from '@nestjs/common';
-import { DatabaseService, eq, inArray, sql, withScope } from '@packages/database';
-import { EntityService, type BaseListQuery } from '@packages/entity-engine';
-import { BaseCrudService } from '@packages/crud-base';
-import type { DataAccessContext } from '@packages/rbac';
+import { BadRequestException, Inject, Injectable } from '@nestjs/common';
+import { DatabaseService, eq, sql, withScope } from '@packages/database';
+import { BaseCrudService, type BaseListQuery } from '@packages/crud-base';
+import { WorkflowEngineService, WorkflowRegistryService } from '@packages/workflows';
+import { DomainEventEmitter } from '@packages/events';
+import { type DataAccessContext, DataAccessScopeService } from '@packages/rbac';
 import { complianceFilings } from './compliance-filings.schema';
 import { LawsService } from '../laws';
-import { buildFilingExternalKey } from './compliance-filings.config';
+import { buildFilingExternalKey } from './compliance-filings.external-key';
 import { COMPLIANCE_FILINGS_WORKFLOW } from './compliance-filings.workflow';
 import { COMPLIANCE_FILINGS_CRUD_TOKEN } from './compliance-filings.crud-token';
+import { buildFilingsScopePredicate } from './compliance-filings.scope';
 import type { CreateComplianceFilingDto, UpdateComplianceFilingDto } from './compliance-filings.dto';
 
 /**
@@ -61,9 +63,12 @@ export class ComplianceFilingsService {
   constructor(
     @Inject(COMPLIANCE_FILINGS_CRUD_TOKEN)
     private readonly crud: BaseCrudService<typeof complianceFilings>,
-    @Inject('ENTITY_SERVICE_compliance-filings') private readonly entityService: EntityService,
     private readonly lawsService: LawsService,
     private readonly database: DatabaseService,
+    private readonly events: DomainEventEmitter,
+    private readonly workflowEngine: WorkflowEngineService,
+    private readonly workflowRegistry: WorkflowRegistryService,
+    private readonly dataAccessScope: DataAccessScopeService,
   ) {}
 
   /**
@@ -131,38 +136,134 @@ export class ComplianceFilingsService {
     return this.crud.softDelete(id, actorId, accessCtx);
   }
 
-  clone(id: string, actorId: string) {
-    return this.entityService.clone(id, actorId);
-  }
-
-  restore(id: string) {
-    return this.entityService.restore(id);
-  }
-
   /**
    * Generic workflow transition. The filing workflow has many transitions
    * (pending → in_progress, in_progress → review, review → completed/rejected,
-   * etc.); the engine carries permission checks and history rows so this
-   * service stays a thin pass-through.
+   * etc.). Loads the entity, validates via `WorkflowEngineService.validateAndThrow`
+   * (permissions + reason/comment + conditions), then writes the column
+   * update + workflow_transition_history row in a single tx and emits
+   * `compliance-filings.<Field>Changed` after commit.
    */
-  transition(
+  async transition(
     id: string,
     fieldKey: string,
     toState: string,
     actorId: string,
     options?: { reason?: string; comment?: string },
     accessCtx?: DataAccessContext,
-  ) {
-    return this.entityService.transition(id, fieldKey, toState, actorId, options, accessCtx);
+  ): Promise<Record<string, unknown>> {
+    const entity = await this.crud.findOneOrFail(id, accessCtx) as Record<string, unknown>;
+    const fromState = entity[fieldKey] as string | null;
+    if (!fromState) {
+      throw new BadRequestException(`Entity has no current state for field '${fieldKey}'`);
+    }
+
+    const workflow = this.workflowRegistry.getByEntityField('compliance-filings', fieldKey);
+    if (!workflow) {
+      throw new BadRequestException(
+        `No workflow registered for compliance-filings field '${fieldKey}'`,
+      );
+    }
+
+    const validated = await this.workflowEngine.validateAndThrow({
+      workflowSlug: workflow.slug,
+      entityType: 'compliance-filings',
+      entityId: id,
+      fromState,
+      toState,
+      actorId,
+      reason: options?.reason,
+      comment: options?.comment,
+      entityData: entity,
+    });
+
+    // Stamp `completedAt` based on the destination state so the column
+    // reflects when the filing reached its terminal state. Mirrors the
+    // create/update path's `applyCompletedAt` shim.
+    const setValues: Record<string, unknown> = { [fieldKey]: toState };
+    if (fieldKey === 'status') {
+      setValues.completedAt = toState === 'completed' ? new Date() : null;
+    }
+
+    await this.database.db.transaction(async (tx) => {
+      await tx
+        .update(complianceFilings)
+        .set(setValues)
+        .where(withScope(complianceFilings, eq(complianceFilings.id, id)));
+
+      await this.workflowEngine.recordHistory(
+        {
+          workflowDefinitionId: validated.workflowDefinitionId,
+          entityType: 'compliance-filings',
+          entityId: id,
+          fieldName: validated.fieldName,
+          fromState,
+          toState,
+          transitionId: validated.transitionId,
+          actorId,
+          reason: options?.reason,
+          comment: options?.comment,
+        },
+        tx,
+      );
+    });
+
+    this.emitTransitionEvent({
+      fieldKey,
+      entityId: id,
+      fromState,
+      toState,
+      transitionId: validated.transitionId,
+      transitionName: validated.transitionName,
+      actorId,
+      reason: options?.reason,
+      comment: options?.comment,
+    });
+
+    return this.crud.findOneOrFail(id);
+  }
+
+  private emitTransitionEvent(params: {
+    fieldKey: string;
+    entityId: string;
+    fromState: string;
+    toState: string;
+    transitionId: string;
+    transitionName: string;
+    actorId: string | null;
+    reason?: string;
+    comment?: string;
+  }): void {
+    const pascalField = params.fieldKey.charAt(0).toUpperCase() + params.fieldKey.slice(1);
+    this.events.emitDynamic(`compliance-filings.${pascalField}Changed`, {
+      entityType: 'compliance-filings',
+      entityId: params.entityId,
+      actorId: params.actorId,
+      payload: {
+        fieldKey: params.fieldKey,
+        fromState: params.fromState,
+        toState: params.toState,
+        transitionId: params.transitionId,
+        transitionName: params.transitionName,
+        reason: params.reason,
+        comment: params.comment,
+      },
+    });
   }
 
   /**
-   * Aggregated KPI counts for the filings list page header. Single wire call,
-   * fans out internally to 7 parallel `entityService.list({limit: 1})` queries
-   * — each computes COUNT under the same RBAC + tenant + soft-delete scope as
-   * the list endpoint, so users only see counts for filings they can read.
-   * `today` is a calendar date string in app-tz; caller (controller) resolves
-   * it from APP_TIMEZONE.
+   * Aggregated KPI counts for the filings list page header.
+   *
+   * Pre-lift this fanned out to 7 parallel `entityService.list({limit:1})`
+   * queries plus a separate DISTINCT-count query — 8 round-trips for what
+   * is fundamentally a single aggregation. Post-lift the same shape is one
+   * SQL with `COUNT(*) FILTER (WHERE …)` per bucket — same scope (tenant +
+   * soft-delete via `withScope`, optional actor scope via
+   * `DataAccessScopeService`, optional clientId pin), one round-trip,
+   * one consistent snapshot.
+   *
+   * `today` is a calendar date string in app-tz; caller (controller)
+   * resolves it from APP_TIMEZONE.
    */
   async getSummary(
     today: string,
@@ -171,111 +272,58 @@ export class ComplianceFilingsService {
   ): Promise<FilingsSummary> {
     const inSevenDays = addDays(today, 7);
     const notCompletedStates = ['pending', 'in_progress', 'review', 'rejected'];
-    const scopeFilter: Array<{ field: string; operator: string; value: unknown }> = options?.clientId
-      ? [{ field: 'clientId', operator: 'eq', value: options.clientId }]
-      : [];
 
-    const buildQuery = (extra: Array<{ field: string; operator: string; value: unknown }>): BaseListQuery => ({
-      page: 1,
-      limit: 1,
-      filters: JSON.stringify([...scopeFilter, ...extra]),
-    });
-
-    const [
-      total,
-      overdue,
-      dueToday,
-      dueThisWeek,
-      upcoming,
-      completed,
-      cancelled,
-      overdueClientCount,
-    ] = await Promise.all([
-      this.entityService.list(buildQuery([]), accessCtx),
-      this.entityService.list(
-        buildQuery([
-          { field: 'status', operator: 'in', value: notCompletedStates },
-          { field: 'dueDate', operator: 'lt', value: today },
-        ]),
-        accessCtx,
-      ),
-      this.entityService.list(
-        buildQuery([
-          { field: 'status', operator: 'in', value: notCompletedStates },
-          { field: 'dueDate', operator: 'eq', value: today },
-        ]),
-        accessCtx,
-      ),
-      this.entityService.list(
-        buildQuery([
-          { field: 'status', operator: 'in', value: notCompletedStates },
-          { field: 'dueDate', operator: 'gt', value: today },
-          { field: 'dueDate', operator: 'lte', value: inSevenDays },
-        ]),
-        accessCtx,
-      ),
-      this.entityService.list(
-        buildQuery([
-          { field: 'status', operator: 'in', value: notCompletedStates },
-          { field: 'dueDate', operator: 'gt', value: inSevenDays },
-        ]),
-        accessCtx,
-      ),
-      this.entityService.list(
-        buildQuery([{ field: 'status', operator: 'eq', value: 'completed' }]),
-        accessCtx,
-      ),
-      this.entityService.list(
-        buildQuery([{ field: 'status', operator: 'eq', value: 'cancelled' }]),
-        accessCtx,
-      ),
-      this.countOverdueDistinctClients(today, options?.clientId, accessCtx),
-    ]);
-
-    return {
-      total: total.meta.total,
-      overdue: overdue.meta.total,
-      dueToday: dueToday.meta.total,
-      dueThisWeek: dueThisWeek.meta.total,
-      upcoming: upcoming.meta.total,
-      completed: completed.meta.total,
-      cancelled: cancelled.meta.total,
-      overdueClientCount,
-    };
-  }
-
-  /**
-   * COUNT(DISTINCT client_id) for non-terminal filings whose due date has
-   * passed. Lives outside the entity-engine's `list` path because it asks a
-   * shape `entityService.list({limit:1}).meta.total` cannot answer.
-   *
-   * Scope: tenant + soft-delete via `withScope`, plus the actor's row-level
-   * RBAC predicate from `entityService.getScopePredicate(ctx)` interpolated
-   * into the WHERE — same scope `entityService.list({…}, accessCtx)` would
-   * apply if the engine could express DISTINCT count. The clientId option
-   * is the existing per-client scope filter from the summary endpoint.
-   */
-  private async countOverdueDistinctClients(
-    today: string,
-    clientId: string | undefined,
-    accessCtx?: DataAccessContext,
-  ): Promise<number> {
-    const scopePredicate = accessCtx ? await this.entityService.getScopePredicate(accessCtx) : undefined;
+    const scopePredicate = await buildFilingsScopePredicate(this.dataAccessScope, accessCtx);
     const where = withScope(
       complianceFilings,
       scopePredicate,
-      inArray(complianceFilings.status, ['pending', 'in_progress', 'review', 'rejected']),
-      sql`${complianceFilings.dueDate}::date < ${today}::date`,
-      ...(clientId ? [eq(complianceFilings.clientId, clientId)] : []),
+      ...(options?.clientId ? [eq(complianceFilings.clientId, options.clientId)] : []),
     );
     const whereSql = where ? sql`WHERE ${where}` : sql``;
+
     const result = await this.database.db.execute(sql`
-      SELECT COUNT(DISTINCT client_id)::int AS count
+      SELECT
+        COUNT(*)::int AS total,
+        COUNT(*) FILTER (
+          WHERE ${complianceFilings.status} IN ${sql.raw(`(${notCompletedStates.map((s) => `'${s}'`).join(', ')})`)}
+            AND ${complianceFilings.dueDate}::date < ${today}::date
+        )::int AS overdue,
+        COUNT(*) FILTER (
+          WHERE ${complianceFilings.status} IN ${sql.raw(`(${notCompletedStates.map((s) => `'${s}'`).join(', ')})`)}
+            AND ${complianceFilings.dueDate}::date = ${today}::date
+        )::int AS due_today,
+        COUNT(*) FILTER (
+          WHERE ${complianceFilings.status} IN ${sql.raw(`(${notCompletedStates.map((s) => `'${s}'`).join(', ')})`)}
+            AND ${complianceFilings.dueDate}::date > ${today}::date
+            AND ${complianceFilings.dueDate}::date <= ${inSevenDays}::date
+        )::int AS due_this_week,
+        COUNT(*) FILTER (
+          WHERE ${complianceFilings.status} IN ${sql.raw(`(${notCompletedStates.map((s) => `'${s}'`).join(', ')})`)}
+            AND ${complianceFilings.dueDate}::date > ${inSevenDays}::date
+        )::int AS upcoming,
+        COUNT(*) FILTER (WHERE ${complianceFilings.status} = 'completed')::int AS completed,
+        COUNT(*) FILTER (WHERE ${complianceFilings.status} = 'cancelled')::int AS cancelled,
+        COUNT(DISTINCT ${complianceFilings.clientId}) FILTER (
+          WHERE ${complianceFilings.status} IN ${sql.raw(`(${notCompletedStates.map((s) => `'${s}'`).join(', ')})`)}
+            AND ${complianceFilings.dueDate}::date < ${today}::date
+        )::int AS overdue_client_count
       FROM ${complianceFilings}
       ${whereSql}
     `);
-    const row = result.rows[0] as { count: number | string } | undefined;
-    return Number(row?.count ?? 0);
+
+    const row = (result.rows[0] ?? {}) as Record<string, number | string | null>;
+    const num = (key: string): number => Number(row[key] ?? 0);
+
+    return {
+      total: num('total'),
+      overdue: num('overdue'),
+      dueToday: num('due_today'),
+      dueThisWeek: num('due_this_week'),
+      upcoming: num('upcoming'),
+      completed: num('completed'),
+      cancelled: num('cancelled'),
+      overdueClientCount: num('overdue_client_count'),
+    };
   }
 
   private ensureExternalKey(payload: Record<string, unknown>): Record<string, unknown> {

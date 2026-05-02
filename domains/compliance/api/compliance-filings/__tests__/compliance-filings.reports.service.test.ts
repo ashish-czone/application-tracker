@@ -39,15 +39,15 @@ describe('ComplianceFilingsReportsService', () => {
   let database: {
     db: { select: ReturnType<typeof vi.fn> };
   };
-  let filingsEntity: { getScopePredicate: ReturnType<typeof vi.fn> };
+  let dataAccessScope: { buildPredicate: ReturnType<typeof vi.fn> };
   let service: ComplianceFilingsReportsService;
 
   beforeEach(() => {
     database = { db: { select: vi.fn() } };
-    filingsEntity = { getScopePredicate: vi.fn().mockResolvedValue(undefined) };
+    dataAccessScope = { buildPredicate: vi.fn().mockResolvedValue(undefined) };
     service = new ComplianceFilingsReportsService(
       database as never,
-      filingsEntity as never,
+      dataAccessScope as never,
     );
   });
 
@@ -74,13 +74,13 @@ describe('ComplianceFilingsReportsService', () => {
 
       await service.getTrend({ from: '2026-01-01', to: '2026-04-30' }, '2026-04-30', accessCtx);
 
-      expect(filingsEntity.getScopePredicate).toHaveBeenCalledWith(accessCtx);
+      expect(dataAccessScope.buildPredicate).toHaveBeenCalledWith(accessCtx, expect.objectContaining({ anchors: expect.any(Object), inlineResolvers: expect.any(Array) }));
     });
 
     it('skips scope resolution when no accessCtx is supplied', async () => {
       database.db.select.mockReturnValueOnce(chainResolving([]));
       await service.getTrend({ from: '2026-01-01', to: '2026-04-30' }, '2026-04-30');
-      expect(filingsEntity.getScopePredicate).not.toHaveBeenCalled();
+      expect(dataAccessScope.buildPredicate).not.toHaveBeenCalled();
     });
   });
 
@@ -137,7 +137,7 @@ describe('ComplianceFilingsReportsService', () => {
 
       await service.getByClient({ from: '2026-01-01', to: '2026-04-30' }, '2026-04-30', undefined, accessCtx);
 
-      expect(filingsEntity.getScopePredicate).toHaveBeenCalledWith(accessCtx);
+      expect(dataAccessScope.buildPredicate).toHaveBeenCalledWith(accessCtx, expect.objectContaining({ anchors: expect.any(Object), inlineResolvers: expect.any(Array) }));
     });
 
     it('passes the search query through unchanged when supplied', async () => {
@@ -188,7 +188,7 @@ describe('ComplianceFilingsReportsService', () => {
 
       await service.getOverdueAging('2026-04-30', accessCtx);
 
-      expect(filingsEntity.getScopePredicate).toHaveBeenCalledWith(accessCtx);
+      expect(dataAccessScope.buildPredicate).toHaveBeenCalledWith(accessCtx, expect.objectContaining({ anchors: expect.any(Object), inlineResolvers: expect.any(Array) }));
     });
   });
 
@@ -215,7 +215,7 @@ describe('ComplianceFilingsReportsService', () => {
 
       await service.getOverdueSeverity('2026-04-30', accessCtx);
 
-      expect(filingsEntity.getScopePredicate).toHaveBeenCalledWith(accessCtx);
+      expect(dataAccessScope.buildPredicate).toHaveBeenCalledWith(accessCtx, expect.objectContaining({ anchors: expect.any(Object), inlineResolvers: expect.any(Array) }));
     });
   });
 
@@ -294,7 +294,7 @@ describe('ComplianceFilingsReportsService', () => {
         accessCtx,
       );
 
-      expect(filingsEntity.getScopePredicate).toHaveBeenCalledWith(accessCtx);
+      expect(dataAccessScope.buildPredicate).toHaveBeenCalledWith(accessCtx, expect.objectContaining({ anchors: expect.any(Object), inlineResolvers: expect.any(Array) }));
     });
   });
 });
