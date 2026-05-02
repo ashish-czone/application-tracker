@@ -8,6 +8,8 @@ import {
 import { DatabaseService, and, count, eq, gt, inArray, isNull, lte, not, withScope } from '@packages/database';
 import { DomainEventEmitter } from '@packages/events';
 import { EntityService, type BaseListQuery } from '@packages/entity-engine';
+import { BaseCrudService } from '@packages/crud-base';
+import { CLIENT_REGISTRATIONS_CRUD_TOKEN } from './client-registrations.crud-token';
 import type { DataAccessContext } from '@packages/rbac';
 import { AppLoggerService, type ContextLogger } from '@packages/logger';
 import { todayInTimezone } from '@packages/common';
@@ -97,6 +99,8 @@ export class ClientRegistrationsService {
   private readonly appTimezone: string;
 
   constructor(
+    @Inject(CLIENT_REGISTRATIONS_CRUD_TOKEN)
+    private readonly crud: BaseCrudService<typeof complianceClientRegistrations>,
     @Inject('ENTITY_SERVICE_client-registrations') private readonly entityService: EntityService,
     private readonly database: DatabaseService,
     private readonly events: DomainEventEmitter,
@@ -111,11 +115,11 @@ export class ClientRegistrationsService {
   // ---- CRUD delegates (vendors template) -----------------------------------
 
   list(query: BaseListQuery, accessCtx?: DataAccessContext) {
-    return this.entityService.list(query, accessCtx);
+    return this.crud.list(query, accessCtx);
   }
 
   findOne(id: string, accessCtx?: DataAccessContext) {
-    return this.entityService.findOneOrFail(id, accessCtx);
+    return this.crud.findOneOrFail(id, accessCtx);
   }
 
   async create(input: CreateClientRegistrationDto, actorId: string) {
@@ -127,15 +131,15 @@ export class ClientRegistrationsService {
       ...input,
       effectiveFrom: input.effectiveFrom ?? todayInTimezone(this.appTimezone),
     };
-    return this.entityService.create(normalised, actorId);
+    return this.crud.create(normalised as never, actorId);
   }
 
   update(id: string, input: UpdateClientRegistrationDto, actorId: string, accessCtx?: DataAccessContext) {
-    return this.entityService.update(id, input, actorId, accessCtx);
+    return this.crud.update(id, input as never, actorId, accessCtx);
   }
 
   softDelete(id: string, actorId: string, accessCtx?: DataAccessContext) {
-    return this.entityService.softDelete(id, actorId, accessCtx);
+    return this.crud.softDelete(id, actorId, accessCtx);
   }
 
   clone(id: string, actorId: string) {
@@ -144,10 +148,6 @@ export class ClientRegistrationsService {
 
   restore(id: string) {
     return this.entityService.restore(id);
-  }
-
-  getListLayout() {
-    return this.entityService.getListLayout();
   }
 
   // ---- Domain verbs --------------------------------------------------------

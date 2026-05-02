@@ -68,7 +68,8 @@ describe('ClientRegistrationsService', () => {
     filingsCancellation = { cancelFilings: vi.fn().mockResolvedValue(undefined) };
     rules = { canResolveAssignee: vi.fn().mockResolvedValue(true) };
     service = new ClientRegistrationsService(
-      {} as never,
+      {} as never, // crud
+      {} as never, // entityService
       db as never,
       events as unknown as DomainEventEmitter,
       filingsCancellation as unknown as ComplianceFilingsCancellationService,
@@ -139,10 +140,11 @@ describe('ClientRegistrationsService', () => {
       expect(events.emitDynamic).not.toHaveBeenCalled();
     });
 
-    it('create() throws NoResolvableAssigneeError without invoking the entity service', async () => {
-      const entityService = { create: vi.fn() };
+    it('create() throws NoResolvableAssigneeError without invoking the crud service', async () => {
+      const crud = { create: vi.fn() };
       const guardedService = new ClientRegistrationsService(
-        entityService as never,
+        crud as never,
+        {} as never, // entityService
         db as never,
         events as unknown as DomainEventEmitter,
         filingsCancellation as unknown as ComplianceFilingsCancellationService,
@@ -155,7 +157,7 @@ describe('ClientRegistrationsService', () => {
         guardedService.create({ clientId: 'c1', lawId: 'l1' } as never, 'user-1'),
       ).rejects.toBeInstanceOf(NoResolvableAssigneeError);
 
-      expect(entityService.create).not.toHaveBeenCalled();
+      expect(crud.create).not.toHaveBeenCalled();
     });
   });
 
