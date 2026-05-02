@@ -1,12 +1,12 @@
 import type { INestApplicationContext } from '@nestjs/common';
 import { DatabaseService, asc, eq, users } from '@packages/database';
 import { DomainEventEmitter } from '@packages/events';
-import { EntityService } from '@packages/entity-engine';
 import { complianceFilings } from './compliance-filings.schema';
 import { ComplianceRulesService } from '../rules';
 import { ClientRegistrationsService } from '../client-registrations';
 import { ComplianceFilingsLookupService } from './compliance-filings.lookup.service';
-import { buildFilingExternalKey } from './compliance-filings.config';
+import { ComplianceFilingsService } from './compliance-filings.service';
+import { buildFilingExternalKey } from './compliance-filings.external-key';
 import { COMPLIANCE_FILING_GENERATED } from '../events/types';
 
 /**
@@ -26,7 +26,7 @@ export const seedDemoFilings = async (ctx: INestApplicationContext): Promise<voi
   const ruleService = ctx.get(ComplianceRulesService);
   const registrationService = ctx.get(ClientRegistrationsService);
   const lookup = ctx.get(ComplianceFilingsLookupService);
-  const entityService = ctx.get<EntityService>('ENTITY_SERVICE_compliance-filings');
+  const filingsService = ctx.get(ComplianceFilingsService);
   const events = ctx.get(DomainEventEmitter);
 
   // Idempotency short-circuit: if any filing exists, skip.
@@ -72,7 +72,7 @@ export const seedDemoFilings = async (ctx: INestApplicationContext): Promise<voi
         const periodEnd = toIsoDate(occ.periodEnd);
         const dueDate = toIsoDate(occ.dueDate);
 
-        const row = await entityService.create(
+        const row = await filingsService.create(
           {
             title: `${rule.name} — ${periodStart} to ${periodEnd}`,
             dueDate,
@@ -83,7 +83,7 @@ export const seedDemoFilings = async (ctx: INestApplicationContext): Promise<voi
             periodStart,
             periodEnd,
             assigneeTeamId: assigneeOrgId,
-          },
+          } as never,
           admin.id,
         );
 

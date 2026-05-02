@@ -1,6 +1,5 @@
-import { Inject, Injectable } from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
 import { DomainEventEmitter } from '@packages/events';
-import { EntityService } from '@packages/entity-engine';
 import { AppLoggerService, type ContextLogger } from '@packages/logger';
 
 import {
@@ -14,6 +13,7 @@ import {
 } from '../client-registrations';
 import {
   ComplianceFilingsLookupService,
+  ComplianceFilingsService,
   buildFilingExternalKey,
 } from '../compliance-filings';
 import { COMPLIANCE_FILING_GENERATED } from '../events/types';
@@ -42,8 +42,7 @@ export class ComplianceFilingsGeneratorService {
     private readonly ruleService: ComplianceRulesService,
     private readonly registrationService: ClientRegistrationsService,
     private readonly lookup: ComplianceFilingsLookupService,
-    @Inject('ENTITY_SERVICE_compliance-filings')
-    private readonly filings: EntityService,
+    private readonly filings: ComplianceFilingsService,
     private readonly events: DomainEventEmitter,
     appLogger: AppLoggerService,
   ) {

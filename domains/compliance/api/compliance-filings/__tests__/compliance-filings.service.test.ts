@@ -2,10 +2,12 @@ import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { ComplianceFilingsService } from '../compliance-filings.service';
 
 describe('ComplianceFilingsService', () => {
-  // After the BaseCrudService migration, list/findOneOrFail/create/update/
-  // softDelete delegate to `crud`. getSummary's filter-based list calls and
-  // getScopePredicate stay on `entityService` (the engine's filter shape
-  // doesn't have a base equivalent yet).
+  // After the workflow-lift, the service no longer injects EntityService.
+  // CRUD goes through `crud` (BaseCrudService). Workflow ops go through
+  // `workflowEngine` + `workflowRegistry`. Scope predicates come from
+  // `dataAccessScope` directly. getSummary is a single raw SQL with
+  // COUNT FILTER, so its tests now mock `database.db.execute` rather than
+  // 7 entityService.list calls.
   let crud: {
     list: ReturnType<typeof vi.fn>;
     findOneOrFail: ReturnType<typeof vi.fn>;
@@ -13,14 +15,15 @@ describe('ComplianceFilingsService', () => {
     update: ReturnType<typeof vi.fn>;
     softDelete: ReturnType<typeof vi.fn>;
   };
-  let entityService: {
-    create: ReturnType<typeof vi.fn>;
-    update: ReturnType<typeof vi.fn>;
-    list: ReturnType<typeof vi.fn>;
-    getScopePredicate: ReturnType<typeof vi.fn>;
+  let workflowEngine: {
+    validateAndThrow: ReturnType<typeof vi.fn>;
+    recordHistory: ReturnType<typeof vi.fn>;
   };
+  let workflowRegistry: { getByEntityField: ReturnType<typeof vi.fn> };
+  let dataAccessScope: { buildPredicate: ReturnType<typeof vi.fn> };
+  let events: { emitDynamic: ReturnType<typeof vi.fn> };
   let lawsService: { findDisplayByIds: ReturnType<typeof vi.fn> };
-  let database: { db: { execute: ReturnType<typeof vi.fn> } };
+  let database: { db: { execute: ReturnType<typeof vi.fn>; transaction: ReturnType<typeof vi.fn> } };
   let service: ComplianceFilingsService;
 
   beforeEach(() => {
@@ -31,23 +34,30 @@ describe('ComplianceFilingsService', () => {
       update: vi.fn().mockResolvedValue({ id: 'filing-1' }),
       softDelete: vi.fn(),
     };
-    entityService = {
-      create: vi.fn().mockResolvedValue({ id: 'filing-1' }),
-      update: vi.fn().mockResolvedValue({ id: 'filing-1' }),
-      list: vi.fn(),
-      getScopePredicate: vi.fn().mockResolvedValue(undefined),
+    workflowEngine = {
+      validateAndThrow: vi.fn(),
+      recordHistory: vi.fn().mockResolvedValue({ historyId: 'h1', recordedAt: '2026-04-30T00:00:00Z' }),
     };
+    workflowRegistry = { getByEntityField: vi.fn() };
+    dataAccessScope = { buildPredicate: vi.fn().mockResolvedValue(undefined) };
+    events = { emitDynamic: vi.fn() };
     lawsService = {
       findDisplayByIds: vi.fn().mockResolvedValue([]),
     };
     database = {
-      db: { execute: vi.fn().mockResolvedValue({ rows: [{ count: 0 }] }) },
+      db: {
+        execute: vi.fn().mockResolvedValue({ rows: [{}] }),
+        transaction: vi.fn(),
+      },
     };
     service = new ComplianceFilingsService(
       crud as never,
-      entityService as never,
       lawsService as never,
       database as never,
+      events as never,
+      workflowEngine as never,
+      workflowRegistry as never,
+      dataAccessScope as never,
     );
   });
 
@@ -199,24 +209,26 @@ describe('ComplianceFilingsService', () => {
   });
 
   describe('getSummary — KPI counts', () => {
-    function metaWith(total: number) {
-      return { data: [], meta: { total, page: 1, limit: 1, totalPages: total > 0 ? 1 : 0 } };
-    }
-
-    it('issues seven parallel filtered list queries plus a distinct-client aggregation and returns counts from meta.total', async () => {
-      entityService.list
-        .mockResolvedValueOnce(metaWith(100)) // total
-        .mockResolvedValueOnce(metaWith(12))  // overdue
-        .mockResolvedValueOnce(metaWith(3))   // dueToday
-        .mockResolvedValueOnce(metaWith(8))   // dueThisWeek
-        .mockResolvedValueOnce(metaWith(45))  // upcoming
-        .mockResolvedValueOnce(metaWith(28))  // completed
-        .mockResolvedValueOnce(metaWith(4));  // cancelled
-      database.db.execute.mockResolvedValueOnce({ rows: [{ count: 7 }] });
+    // Single raw SQL replaces the 7 list-call fan-out. The test mocks
+    // `database.db.execute` with the aggregated row shape and verifies
+    // mapping. SQL-shape correctness is exercised by integration tests
+    // against a real database.
+    it('returns mapped counts from the single aggregation query', async () => {
+      database.db.execute.mockResolvedValueOnce({
+        rows: [{
+          total: 100,
+          overdue: 12,
+          due_today: 3,
+          due_this_week: 8,
+          upcoming: 45,
+          completed: 28,
+          cancelled: 4,
+          overdue_client_count: 7,
+        }],
+      });
 
       const summary = await service.getSummary('2026-04-30');
 
-      expect(entityService.list).toHaveBeenCalledTimes(7);
       expect(database.db.execute).toHaveBeenCalledTimes(1);
       expect(summary).toEqual({
         total: 100,
@@ -230,59 +242,46 @@ describe('ComplianceFilingsService', () => {
       });
     });
 
-    it('passes the access context to every internal list query so RBAC filtering applies to counts', async () => {
-      const accessCtx = { userId: 'u1' } as never;
-      entityService.list.mockResolvedValue(metaWith(0));
-
-      await service.getSummary('2026-04-30', undefined, accessCtx);
-
-      const ctxArgs = entityService.list.mock.calls.map((c) => c[1]);
-      expect(ctxArgs).toEqual(Array(7).fill(accessCtx));
-    });
-
-    it('returns 0 distinct overdue clients when the aggregation is empty', async () => {
-      entityService.list.mockResolvedValue(metaWith(0));
+    it('returns zeroes when the aggregation row is empty', async () => {
       database.db.execute.mockResolvedValueOnce({ rows: [] });
 
       const summary = await service.getSummary('2026-04-30');
 
-      expect(summary.overdueClientCount).toBe(0);
+      expect(summary).toEqual({
+        total: 0,
+        overdue: 0,
+        dueToday: 0,
+        dueThisWeek: 0,
+        upcoming: 0,
+        completed: 0,
+        cancelled: 0,
+        overdueClientCount: 0,
+      });
     });
 
-    it('scopes every query to a specific clientId when provided', async () => {
-      entityService.list.mockResolvedValue(metaWith(0));
+    it('builds the scope predicate via DataAccessScopeService when accessCtx is supplied', async () => {
+      const accessCtx = { userId: 'u1', scopes: [{ type: 'unit' }] } as never;
+      const fakePredicate = { __tag: 'scope-sql' } as never;
+      dataAccessScope.buildPredicate.mockResolvedValueOnce(fakePredicate);
+      database.db.execute.mockResolvedValueOnce({ rows: [{}] });
 
-      await service.getSummary('2026-04-30', { clientId: 'client-1' });
+      await service.getSummary('2026-04-30', undefined, accessCtx);
 
-      for (const call of entityService.list.mock.calls) {
-        const filters = JSON.parse((call[0] as { filters: string }).filters) as Array<{ field: string; operator: string; value: unknown }>;
-        expect(filters[0]).toEqual({ field: 'clientId', operator: 'eq', value: 'client-1' });
-      }
+      expect(dataAccessScope.buildPredicate).toHaveBeenCalledWith(
+        accessCtx,
+        expect.objectContaining({
+          anchors: expect.any(Object),
+          inlineResolvers: expect.any(Array),
+        }),
+      );
     });
 
-    it('builds the dueThisWeek window as today < dueDate <= today + 7', async () => {
-      entityService.list.mockResolvedValue(metaWith(0));
+    it('skips DataAccessScopeService entirely when accessCtx is omitted', async () => {
+      database.db.execute.mockResolvedValueOnce({ rows: [{}] });
 
       await service.getSummary('2026-04-30');
 
-      const dueThisWeekCall = entityService.list.mock.calls[3][0] as { filters: string };
-      const filters = JSON.parse(dueThisWeekCall.filters) as Array<{ field: string; operator: string; value: unknown }>;
-      expect(filters).toEqual([
-        { field: 'status', operator: 'in', value: ['pending', 'in_progress', 'review', 'rejected'] },
-        { field: 'dueDate', operator: 'gt', value: '2026-04-30' },
-        { field: 'dueDate', operator: 'lte', value: '2026-05-07' },
-      ]);
-    });
-
-    it('handles month/year rollover when computing today + 7', async () => {
-      entityService.list.mockResolvedValue(metaWith(0));
-
-      await service.getSummary('2026-12-28');
-
-      const upcomingCall = entityService.list.mock.calls[4][0] as { filters: string };
-      const filters = JSON.parse(upcomingCall.filters) as Array<{ field: string; operator: string; value: unknown }>;
-      const dueAfter = filters.find((f) => f.operator === 'gt');
-      expect(dueAfter?.value).toBe('2027-01-04');
+      expect(dataAccessScope.buildPredicate).not.toHaveBeenCalled();
     });
   });
 });
