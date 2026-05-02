@@ -1,0 +1,38 @@
+# Files grandfathered by `.claude/rules/data-access-scope.md`.
+#
+# Each line is a workspace-relative path that pre-dates the rule and contains
+# raw `db.select/update/delete/execute` queries without importing a scope
+# primitive (`withScope`, `BaseCrudService`, `buildPredicate`,
+# `getScopePredicate`).
+#
+# The lint (`pnpm lint:scoping`) exempts these paths so the rule can ratchet:
+# - new code can never add a violation,
+# - existing offenders are removed from this file as they're fixed.
+#
+# This file shrinks over time. Never add to it. When fixing a path, delete
+# its line in the same commit that brings the file into compliance.
+#
+# Lines starting with `#` are comments. Blank lines are ignored.
+
+# Test infrastructure — runs as system principal, scope intentionally bypassed.
+packages/core/testing/db-helpers.ts
+packages/platform/testing/default-test-user.ts
+
+# E2E test-hooks endpoints — truncate + re-seed the DB between specs.
+# Privileged by design (the e2e suite is the actor, not a real user).
+apps/agency/src/modules/test-hooks/test-hooks.service.ts
+apps/compliance/src/modules/test-hooks/test-hooks.service.ts
+
+# Addon services predating the rule. Each is forward-compat work
+# (most queries hit non-soft-delete, non-tenanted tables where withScope is
+# a no-op) plus a few real bugs (directory clients/contacts have soft-delete
+# columns and need fixes). Track per-file in follow-up PRs.
+packages/platform/settings/api/services/settings-store.service.ts
+packages/addons/hierarchy/api/services/hierarchy.service.ts
+packages/addons/entity-layout/api/services/layout.service.ts
+packages/addons/org-units/api/services/org-unit.service.ts
+packages/addons/directory/api/services/client-contacts.service.ts
+packages/addons/directory/api/services/clients.service.ts
+packages/addons/taxonomy/api/services/taxonomy.service.ts
+packages/addons/taxonomy/api/services/category.service.ts
+packages/addons/document-templates/api/services/document-templates.service.ts

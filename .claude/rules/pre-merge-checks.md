@@ -26,20 +26,25 @@ pnpm --filter @apps/recruit-web build
 
 Build failures indicate broken imports, type errors, or missing exports. Fix before merging.
 
-### 3. Dependency boundary lint
+### 3. Lint pipeline
 
-Verify no cross-package dependency violations were introduced. Run from the repo root:
+Verify no cross-package dependency violations or data-scoping drift were introduced. Run from the repo root:
 
 ```bash
 pnpm lint
 ```
 
-This runs ESLint across the workspace. Additionally, manually verify:
+This runs two checks:
+
+- `pnpm lint:boundaries` — ESLint dependency-direction rules across the workspace.
+- `pnpm lint:scoping` — structural check that every service file with raw `db.select/update/delete/execute` chains imports a scope primitive (`withScope`, `BaseCrudService`, `buildPredicate`, …). Grandfathered offenders are listed in `tools/data-access-scope-allowlist.txt` and exempted; new code cannot add to that file. See `.claude/rules/data-scoping.md` and `.claude/rules/data-access-scope.md`.
+
+Additionally, manually verify:
 - **No addon → addon imports** — grep the PR diff for imports from `@packages/addons/*` inside other addon packages
 - **No package → app imports** — packages must never import from `apps/*`
 - **No frontend → backend imports** — `apps/recruit-web` and `*-ui` packages must not import backend modules
 
-If lint or boundary checks fail, fix the import before merging.
+If any lint check fails, fix the issue before merging. For `lint:scoping` failures, the script prints the file paths and the fix instructions.
 
 ### Execution
 

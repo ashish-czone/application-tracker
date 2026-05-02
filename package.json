@@ -16,8 +16,9 @@
   "scripts": {
     "build": "turbo run build",
     "dev": "turbo run dev",
-    "lint": "pnpm lint:boundaries",
+    "lint": "pnpm lint:boundaries && pnpm lint:scoping",
     "lint:boundaries": "eslint -c eslint.boundaries.config.mjs apps packages domains",
+    "lint:scoping": "node tools/lint-data-scoping.mjs",
     "test": "turbo run test",
     "db:generate": "pnpm --filter @packages/database db:generate",
     "db:migrate": "pnpm --filter @packages/database db:migrate",
