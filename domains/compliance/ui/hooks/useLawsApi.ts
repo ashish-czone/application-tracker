@@ -1,5 +1,6 @@
-import { useQuery } from '@tanstack/react-query';
-import { useEntityEngine, useEntityHooks } from '@packages/entity-engine-ui';
+import { queryOptions, useMutation, useQueryClient } from '@tanstack/react-query';
+import { toast } from '@packages/ui';
+import { useEntityEngine } from '@packages/entity-engine-ui';
 
 interface PaginatedResponse<T> {
   data: T[];
@@ -39,33 +40,69 @@ export interface LawTreeResponse {
   counts: Record<LawJurisdiction, number>;
 }
 
-type LawsListResult = Omit<ReturnType<ReturnType<typeof useEntityHooks>['useList']>, 'data'> & {
-  data?: PaginatedResponse<LawApiRecord>;
+type ApiFn = {
+  get: <T>(path: string) => Promise<T>;
+  post: <T>(path: string, body?: unknown) => Promise<T>;
+  patch: <T>(path: string, body?: unknown) => Promise<T>;
+  delete: <T>(path: string) => Promise<T>;
 };
 
-/**
- * Generic flat laws list. Callers must pass an explicit `limit` sized to the
- * surface they're rendering — the previous default `limit: 500` was the
- * data-fetching rule's prohibition (silent truncation past 500).
- */
-export function useLawsList(params: Record<string, unknown> = {}): LawsListResult {
-  const hooks = useEntityHooks('laws');
-  return hooks.useList(params) as unknown as LawsListResult;
-}
+const BASE = '/laws';
+
+export const lawsQueryKey = ['laws'] as const;
 
 /**
- * Server-built law hierarchy + per-jurisdiction counts. Replaces the prior
- * pattern of `useLawsList({ limit: 500 })` + client-side `buildLawTree`,
- * which silently truncated past 500 and computed jurisdiction counts off
- * the truncated set.
+ * `queryOptions` factory for the laws entity. Pages call
+ * `useQuery(lawsQueries(apiFn).list(params))` rather than going through the
+ * entity-engine FE registry. Keeps queryKey + URL + caching defaults
+ * colocated so multiple call sites can't drift to incompatible keys.
  */
-export function useLawsTree(params: { jurisdiction?: LawJurisdiction } = {}) {
+export function lawsQueries(apiFn: ApiFn) {
+  return {
+    list: (params: Record<string, unknown> = {}) =>
+      queryOptions({
+        queryKey: [...lawsQueryKey, 'list', params] as const,
+        queryFn: () =>
+          apiFn.get<PaginatedResponse<LawApiRecord>>(`${BASE}${buildQuery(params)}`),
+      }),
+    tree: (params: { jurisdiction?: LawJurisdiction } = {}) =>
+      queryOptions({
+        queryKey: [...lawsQueryKey, 'tree', params.jurisdiction ?? null] as const,
+        queryFn: () => {
+          const search = params.jurisdiction
+            ? `?jurisdiction=${encodeURIComponent(params.jurisdiction)}`
+            : '';
+          return apiFn.get<LawTreeResponse>(`${BASE}/tree${search}`);
+        },
+      }),
+  };
+}
+
+function buildQuery(params: Record<string, unknown>): string {
+  const sp = new URLSearchParams();
+  for (const [k, v] of Object.entries(params)) {
+    if (v != null && v !== '' && v !== false) sp.set(k, String(v));
+  }
+  if (sp.get('page') === '1') sp.delete('page');
+  const qs = sp.toString();
+  return qs ? `?${qs}` : '';
+}
+
+export function useCreateLaw(options?: { onSuccess?: (law: LawApiRecord) => void }) {
   const { apiFn } = useEntityEngine();
-  const search = params.jurisdiction
-    ? `?jurisdiction=${encodeURIComponent(params.jurisdiction)}`
-    : '';
-  return useQuery({
-    queryKey: ['laws', 'tree', params.jurisdiction ?? null],
-    queryFn: () => apiFn.get<LawTreeResponse>(`/laws/tree${search}`),
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (data: Record<string, unknown>) =>
+      apiFn.post<LawApiRecord>(BASE, data),
+    onSuccess: (law) => {
+      qc.invalidateQueries({ queryKey: lawsQueryKey });
+      toast.success('Law created');
+      options?.onSuccess?.(law);
+    },
+    onError: (error: unknown) => {
+      const message =
+        (error as { body?: { message?: string } })?.body?.message ?? 'Failed to create law';
+      toast.error(message);
+    },
   });
 }

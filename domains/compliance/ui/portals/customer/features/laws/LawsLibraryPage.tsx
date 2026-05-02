@@ -2,13 +2,14 @@ import { useEffect, useMemo, useState } from 'react';
 import { AnimatePresence } from 'framer-motion';
 import { Search, Plus, BookOpen, FileText } from 'lucide-react';
 import { Eyebrow, toast } from '@packages/ui';
-import { useEntityHooks } from '@packages/entity-engine-ui';
+import { useQuery } from '@tanstack/react-query';
+import { useEntityEngine } from '@packages/entity-engine-ui';
 import { JurisdictionTag } from '../../../../components';
 import { ScreenPreviewTopBar } from '../shared/ScreenPreviewTopBar';
 import { type LawNode } from './types';
 import { LawTreeRow } from './components/LawTreeRow';
 import { NewLawDrawer, type NewLawValues } from './components/NewLawDrawer';
-import { useLawsList, useLawsTree } from '../../../../hooks/useLawsApi';
+import { lawsQueries, useCreateLaw } from '../../../../hooks/useLawsApi';
 import { flattenLawTree, mapTreeApiNodes } from './api/mapLawRecord';
 
 // Limit for the new-law drawer's parent-law picker. Bounded reference data;
@@ -23,10 +24,11 @@ function formatDate(iso?: string): string {
 
 export function LawsLibraryPage() {
   const [drawerOpen, setDrawerOpen] = useState(false);
-  const { data: treeData, isLoading, isError } = useLawsTree();
-  const { data: lawsPage } = useLawsList({ limit: DRAWER_PARENT_PICKER_LIMIT });
-  const lawsHooks = useEntityHooks('laws');
-  const createLaw = lawsHooks.useCreate({ onSuccess: () => setDrawerOpen(false) });
+  const { apiFn } = useEntityEngine();
+  const queries = lawsQueries(apiFn);
+  const { data: treeData, isLoading, isError } = useQuery(queries.tree());
+  const { data: lawsPage } = useQuery(queries.list({ limit: DRAWER_PARENT_PICKER_LIMIT }));
+  const createLaw = useCreateLaw({ onSuccess: () => setDrawerOpen(false) });
 
   const tree = useMemo<LawNode[]>(
     () => mapTreeApiNodes(treeData?.tree ?? []),

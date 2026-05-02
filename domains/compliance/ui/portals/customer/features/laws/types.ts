@@ -1,6 +1,6 @@
 // Hierarchy node for the laws library tree view. The real screen reads
-// the flat list of laws via `useLawsList` and then composes a tree
-// client-side using parentId — see `mapLawRecord.ts`.
+// the server-built tree via `lawsQueries(apiFn).tree()` — see
+// `mapLawRecord.ts` for the API → UI mapping.
 export type LawJurisdiction = 'central' | 'state' | 'municipal' | 'international';
 
 export interface LawNode {
