@@ -27,12 +27,6 @@ import { PermissionManifestRegistry, ScopeResolverRegistry } from '@packages/rba
 import { LookupResolverService } from '@packages/entity-engine';
 import { UserResolverRegistry, EntityResolverRegistry } from '@packages/automation-contracts';
 import { WorkflowRegistryService } from '@packages/workflows';
-import {
-  EntityRegistryService,
-  WORKFLOW_EXTENSION,
-  seedWorkflows,
-  type EntityConfig,
-} from '@packages/entity-engine';
 import { complianceBackend } from '../../index';
 
 /**
@@ -107,51 +101,26 @@ class TestOrgUnitsModule implements OnModuleInit {
  *    `USERS_POSITIONS_READER` token, which it provides itself.
  */
 export async function createComplianceTestApp(): Promise<TestAppContext> {
-  const ctx = await createTestApp({
+  return createTestApp({
     domains: [complianceBackend],
     addons: [workflowsAddon, hierarchyAddon],
     extraImports: [WorkflowsEntityEngineModule, TestOrgUnitsModule],
   });
-
-  await seedAllWorkflows(ctx);
-  return ctx;
 }
 
 /**
- * Seeds workflow definitions from every registered entity config into the DB.
+ * Truncates all tables. Use in `beforeEach` so each test starts from a
+ * clean DB.
  *
- * The platform's EntityEngineSeedService skips non-adminConfigurable entities
- * (the default), which would leave workflow-backed transitions broken.
- * Calling `seedWorkflows` directly gives transition endpoints the DB rows
- * they read at request time.
- */
-async function seedAllWorkflows(ctx: TestAppContext): Promise<void> {
-  const registry = ctx.module.get(EntityRegistryService);
-  const workflowExt = ctx.module.get(WORKFLOW_EXTENSION);
-  for (const entry of registry.getAll() as EntityConfig[]) {
-    await seedWorkflows(entry, workflowExt);
-  }
-}
-
-/**
- * Truncates all tables and re-seeds workflow defs. Use in `beforeEach` so
- * each test starts from a clean DB but still has the workflow rows the
- * transition endpoint needs.
- *
- * The WorkflowRegistryService caches definitions in memory at boot; after a
- * truncate + reseed the IDs change, so we reload its cache too — otherwise
- * `workflow_transition_history.workflow_definition_id` FK checks against
- * stale cached IDs.
+ * Compliance's workflow definitions are code-defined (registered via
+ * `WorkflowsModule.forFeature(...)` at module init) and live in the
+ * `WorkflowRegistryService` in-memory cache for the lifetime of the test
+ * app. They survive `cleanDatabase` because they are never DB rows.
+ * `loadAll()` is still called so any admin-defined workflows the test
+ * created itself are dropped from the cache before the next test runs.
  */
 export async function resetComplianceTestDb(ctx: TestAppContext): Promise<void> {
   await cleanDatabase(ctx.db);
-  // Reload registry BEFORE seeding: seedWorkflows' "already seeded?" check
-  // consults the in-memory cache (`workflowExt.getBySlug`), which still
-  // holds the previous test's stale workflow row after cleanDatabase wiped
-  // the DB. Reloading against the now-empty DB clears the cache so
-  // seedWorkflows actually re-inserts the rows.
   const workflowRegistry = ctx.module.get(WorkflowRegistryService);
-  await workflowRegistry.loadAll();
-  await seedAllWorkflows(ctx);
   await workflowRegistry.loadAll();
 }

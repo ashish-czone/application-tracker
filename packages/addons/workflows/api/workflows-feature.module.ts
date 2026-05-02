@@ -13,17 +13,19 @@ const WORKFLOW_FEATURE_DEFS = Symbol('WORKFLOW_FEATURE_DEFS');
 
 /**
  * Per-module workflow registrar. Receives one or more `WorkflowDefinition`s
- * and ensures each one exists in the workflow registry at module init.
+ * and registers each into the in-memory `WorkflowRegistryService` at module
+ * init.
  *
- * Idempotency contract for v1:
- *   - First-time registration creates the definition + states + transitions.
- *   - Subsequent boots find the slug already present and skip re-registration.
+ * Code-defined workflows are NOT persisted to the database — they live only
+ * in the registry's in-memory cache for the lifetime of the process. The DB
+ * is reserved for admin-created workflows. This is the rule documented in
+ * `.claude/rules/init-vs-seed.md`: `onModuleInit` is for in-memory registry
+ * registration only; DB writes belong in `cli/seed.ts`.
  *
- * Updates to an existing workflow's states/transitions via re-running
- * `forFeature` are NOT applied automatically in v1 — admins edit via the
- * workflows UI, or operators apply a manual SQL migration. A future iteration
- * may add a diff-based reconciliation, but it has to interact carefully with
- * any concurrent edits made via the admin UI.
+ * Idempotency: re-calling `forFeature(def)` (e.g. across hot module reloads
+ * in dev, or in test setups that recreate the app) replaces the cached entry
+ * for that slug. There is no "first-boot vs second-boot" branching because
+ * there is no DB state to reconcile.
  */
 @Injectable()
 class WorkflowFeatureRegistrations implements OnModuleInit {
@@ -37,82 +39,13 @@ class WorkflowFeatureRegistrations implements OnModuleInit {
     this.logger = appLogger.forContext('WorkflowFeatureRegistrations');
   }
 
-  async onModuleInit(): Promise<void> {
+  onModuleInit(): void {
     for (const def of this.defs) {
-      await this.registerOnce(def);
+      this.registry.registerInMemory(def);
+      this.logger.log(
+        `Registered code-defined workflow '${def.slug}' (${def.states.length} states, ${def.transitions.length} from-state groups)`,
+      );
     }
-  }
-
-  private async registerOnce(def: WorkflowDefinition): Promise<void> {
-    if (this.registry.getBySlug(def.slug)) {
-      // Already in registry — first-boot creation already done. Subsequent
-      // boots no-op. See module docstring for the v1 idempotency contract.
-      return;
-    }
-
-    const definition = await this.registry.createDefinition({
-      slug: def.slug,
-      name: def.name ?? def.slug,
-      entityType: def.entityType,
-      fieldName: def.fieldName,
-      initialState: def.initialState,
-    });
-
-    const stateIdByName = new Map<string, string>();
-    for (let i = 0; i < def.states.length; i++) {
-      const s = def.states[i];
-      const state = await this.registry.createState(definition.id, {
-        name: s.name,
-        label: s.label,
-        color: s.color,
-        sortOrder: i,
-        isSystem: s.isSystem ?? false,
-      });
-      stateIdByName.set(s.name, state.id);
-    }
-
-    for (const transition of def.transitions) {
-      const fromStateId = stateIdByName.get(transition.from);
-      if (!fromStateId) {
-        this.logger.warn(
-          `Skipping transition with unknown from-state '${transition.from}' on workflow '${def.slug}'`,
-        );
-        continue;
-      }
-
-      for (let i = 0; i < transition.to.length; i++) {
-        const target = transition.to[i];
-        const isString = typeof target === 'string';
-        const targetName = isString ? target : target.state;
-        const targetDef = isString ? undefined : target;
-
-        const toStateId = stateIdByName.get(targetName);
-        if (!toStateId) {
-          this.logger.warn(
-            `Skipping transition with unknown to-state '${targetName}' on workflow '${def.slug}'`,
-          );
-          continue;
-        }
-
-        const targetState = def.states.find((s) => s.name === targetName);
-        const name = targetState?.label ?? targetName;
-
-        await this.registry.createTransition(definition.id, {
-          fromStateId,
-          toStateId,
-          name,
-          requiredPermissions: targetDef?.requiredPermissions,
-          sortOrder: i,
-          reasonRequired: targetDef?.reasonRequired,
-          commentRequired: targetDef?.commentRequired,
-          reasonOptions: targetDef?.reasonOptions,
-        });
-      }
-    }
-
-    this.logger.log(
-      `Registered workflow '${def.slug}' (${def.states.length} states, ${def.transitions.length} from-state groups)`,
-    );
   }
 }
 

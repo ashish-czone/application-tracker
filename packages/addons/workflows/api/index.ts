@@ -11,7 +11,7 @@ export { WORKFLOWS_PERMISSIONS } from './permissions';
 // Services
 export { WorkflowEngineService } from './services/workflow-engine.service';
 export { TransitionWorkflowAction } from './services/transition-workflow.action';
-export { WorkflowRegistryService } from './services/workflow-registry.service';
+export { WorkflowRegistryService, isCodeDefinedWorkflowId } from './services/workflow-registry.service';
 export { PipelineResolverService } from './services/pipeline-resolver.service';
 
 // Types

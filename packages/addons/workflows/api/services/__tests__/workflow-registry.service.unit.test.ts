@@ -1,6 +1,7 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
-import { NotFoundException } from '@nestjs/common';
-import { WorkflowRegistryService } from '../workflow-registry.service';
+import { BadRequestException, NotFoundException } from '@nestjs/common';
+import { WorkflowRegistryService, isCodeDefinedWorkflowId } from '../workflow-registry.service';
+import { defineWorkflow } from '../../define-workflow';
 
 // Creates a thenable object that also has query builder methods
 // This simulates Drizzle's query builder which is both a promise and has chainable methods
@@ -174,6 +175,91 @@ describe('WorkflowRegistryService', () => {
       });
 
       await expect(service.deleteDefinition('unknown-id')).rejects.toThrow(NotFoundException);
+    });
+  });
+
+  describe('registerInMemory (code-defined workflows)', () => {
+    const TEST_WORKFLOW = defineWorkflow({
+      slug: 'test-status',
+      entityType: 'tests',
+      fieldName: 'status',
+      initialState: 'draft',
+      states: [
+        { name: 'draft', label: 'Draft', isSystem: true },
+        { name: 'active', label: 'Active', color: '#10B981' },
+      ],
+      transitions: [
+        { from: 'draft', to: ['active'] },
+        { from: 'active', to: [{ state: 'draft', requiredPermissions: ['tests.revert'] }] },
+      ],
+    });
+
+    it('marks the entry as source=code with a code:-prefixed id', () => {
+      service.registerInMemory(TEST_WORKFLOW);
+      const cached = service.getBySlug('test-status');
+      expect(cached).toBeDefined();
+      expect(cached!.source).toBe('code');
+      expect(cached!.id).toBe('code:test-status');
+      expect(isCodeDefinedWorkflowId(cached!.id)).toBe(true);
+    });
+
+    it('builds states with deterministic code:-prefixed ids', () => {
+      service.registerInMemory(TEST_WORKFLOW);
+      const cached = service.getBySlug('test-status')!;
+      expect(cached.states.map((s) => s.id)).toEqual([
+        'code:test-status:state:draft',
+        'code:test-status:state:active',
+      ]);
+      expect(cached.states[0].isSystem).toBe(true);
+    });
+
+    it('expands transition targets and preserves transition metadata', () => {
+      service.registerInMemory(TEST_WORKFLOW);
+      const cached = service.getBySlug('test-status')!;
+      expect(cached.transitions).toHaveLength(2);
+      expect(cached.transitions[0].fromStateName).toBe('draft');
+      expect(cached.transitions[0].toStateName).toBe('active');
+      expect(cached.transitions[1].requiredPermissions).toEqual(['tests.revert']);
+    });
+
+    it('is idempotent — re-registering the same slug replaces the entry', () => {
+      service.registerInMemory(TEST_WORKFLOW);
+      service.registerInMemory(TEST_WORKFLOW);
+      expect(service.getAll()).toHaveLength(1);
+    });
+
+    it('survives loadAll() — admin entries are cleared but code entries persist', async () => {
+      service.registerInMemory(TEST_WORKFLOW);
+      mockLoadAll(mockDb, [], [], []);
+      await service.loadAll();
+      expect(service.getBySlug('test-status')).toBeDefined();
+      expect(service.getBySlug('test-status')!.source).toBe('code');
+    });
+  });
+
+  describe('mutation guards reject code-defined ids', () => {
+    it('updateDefinition rejects code: ids', async () => {
+      await expect(
+        service.updateDefinition('code:test-status', { name: 'Edited' }),
+      ).rejects.toThrow(BadRequestException);
+    });
+
+    it('deleteDefinition rejects code: ids', async () => {
+      await expect(service.deleteDefinition('code:test-status')).rejects.toThrow(BadRequestException);
+    });
+
+    it('createState rejects when the parent definition is code-defined', async () => {
+      await expect(
+        service.createState('code:test-status', { name: 'paused', label: 'Paused' }),
+      ).rejects.toThrow(BadRequestException);
+    });
+
+    it('updateState/deleteState/createTransition/updateTransition/deleteTransition all reject code: ids', async () => {
+      await expect(service.updateState('code:test-status:state:draft', { label: 'X' })).rejects.toThrow(BadRequestException);
+      await expect(service.deleteState('code:test-status:state:draft')).rejects.toThrow(BadRequestException);
+      await expect(service.createTransition('code:test-status', { fromStateId: 'a', toStateId: 'b', name: 't' })).rejects.toThrow(BadRequestException);
+      await expect(service.updateTransition('code:test-status:transition:0', { name: 'X' })).rejects.toThrow(BadRequestException);
+      await expect(service.deleteTransition('code:test-status:transition:0')).rejects.toThrow(BadRequestException);
     });
   });
 });
