@@ -12,7 +12,8 @@ import {
   toast,
   type ActiveFilter,
 } from '@packages/ui';
-import { useEntityHooks } from '@packages/entity-engine-ui';
+import { useQuery } from '@tanstack/react-query';
+import { useEntityEngine, useEntityHooks } from '@packages/entity-engine-ui';
 import {
   type ComplianceFrequency,
   type LawGroupKey,
@@ -33,8 +34,8 @@ import { ScreenPreviewTopBar } from '../shared/ScreenPreviewTopBar';
 import {
   useComplianceRulesList,
   useComplianceRulesSummary,
-  useLawsLookup,
 } from '../../../../hooks/useComplianceRulesApi';
+import { lawsQueries } from '../../../../hooks/useLawsApi';
 import { useDebouncedValue } from '../../../../hooks/useDebouncedValue';
 import { mapComplianceRuleRecord } from './api/mapComplianceRuleRecord';
 
@@ -91,7 +92,8 @@ export function ComplianceRulesPage() {
     q: debouncedSearch || undefined,
   });
   const { data: summary } = useComplianceRulesSummary();
-  const { data: lawsPage } = useLawsLookup({ limit: DRAWER_LAW_LIMIT });
+  const { apiFn } = useEntityEngine();
+  const { data: lawsPage } = useQuery(lawsQueries(apiFn).list({ limit: DRAWER_LAW_LIMIT }));
 
   const rulesHooks = useEntityHooks('compliance-rules');
   const createRule = rulesHooks.useCreate({ onSuccess: () => setDrawerOpen(false) });

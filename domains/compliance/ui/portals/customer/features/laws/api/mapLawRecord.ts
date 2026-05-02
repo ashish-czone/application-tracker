@@ -23,7 +23,8 @@ export function mapLawRecord(record: LawApiRecord): LawNode {
 /**
  * Convert a server-built tree node into the UI's `LawNode` shape. Field
  * differences are presentation-only (`code`/`name` → `citation`/`title`);
- * children are mapped recursively. Used by `useLawsTree`-driven views.
+ * children are mapped recursively. Used by tree-driven views consuming
+ * `lawsQueries(apiFn).tree()`.
  */
 export function mapTreeApiNode(node: LawTreeApiNode): LawNode {
   return {
@@ -45,8 +46,8 @@ export function mapTreeApiNodes(nodes: LawTreeApiNode[]): LawNode[] {
  * Records whose parent is missing from the input are surfaced at the root so
  * nothing is lost.
  *
- * Kept for callers that still pass through `useLawsList` (a fading code
- * path); new screens should consume `useLawsTree` and `mapTreeApiNodes`.
+ * Kept for legacy flat-list callers; new screens should consume the
+ * server-built tree via `lawsQueries(apiFn).tree()` + `mapTreeApiNodes`.
  */
 export function buildLawTree(records: LawApiRecord[]): LawNode[] {
   const byId = new Map<string, LawNode>();
