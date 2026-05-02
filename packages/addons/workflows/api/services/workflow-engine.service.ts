@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException, UnprocessableEntityException, ForbiddenException } from '@nestjs/common';
+import { BadRequestException, Injectable, NotFoundException, UnprocessableEntityException, ForbiddenException } from '@nestjs/common';
 import { DatabaseService, desc, eq } from '@packages/database';
 import { RbacService } from '@packages/rbac';
 import { evaluateConditionsInMemory, type Condition } from '@packages/common';
@@ -124,9 +124,17 @@ export class WorkflowEngineService {
   }
 
   /**
-   * Validate a transition fully: legality, permissions, and declarative
-   * conditions evaluated against entity data. Throws on failure. Returns
-   * transition metadata on success.
+   * Validate a transition fully: legality, permissions, declarative
+   * conditions evaluated against entity data, and (when supplied)
+   * reason/comment requirements. Throws on failure. Returns transition
+   * metadata on success.
+   *
+   * Reason/comment validation is opt-in: if the caller doesn't pass
+   * `reason` / `comment`, the corresponding required-field checks are
+   * skipped. This keeps the historical contract for callers that don't
+   * surface the reason UX, while letting domain services that DO carry
+   * a reason payload (e.g. compliance-rules `deprecate`) get the full
+   * generic validation in one call instead of replicating it per entity.
    *
    * Does NOT run guards — those live in per-entity services and run before
    * the engine is called. Does NOT record history or emit events — the
@@ -140,6 +148,10 @@ export class WorkflowEngineService {
     fromState: string;
     toState: string;
     actorId: string | null;
+    /** Optional reason. Required when the matched transition has `reasonRequired: true`. Validated against `reasonOptions` when present. */
+    reason?: string;
+    /** Optional comment. Required when the matched transition has `commentRequired: true`. */
+    comment?: string;
     metadata?: Record<string, unknown>;
     entityData?: Record<string, unknown>;
   }): Promise<ValidatedTransition> {
@@ -183,6 +195,28 @@ export class WorkflowEngineService {
             `Conditions not met for transition from '${params.fromState}' to '${params.toState}'`,
           );
         }
+      }
+    }
+
+    // Reason/comment validation. Mirrors the messages historically used
+    // by `EntityService.validateTransition` so consumers migrating off
+    // the engine get identical error responses.
+    if (matchedTransition) {
+      if (matchedTransition.reasonRequired && !params.reason) {
+        throw new BadRequestException('A reason is required for this transition');
+      }
+      if (matchedTransition.commentRequired && !params.comment) {
+        throw new BadRequestException('A comment is required for this transition');
+      }
+      if (
+        params.reason &&
+        matchedTransition.reasonOptions &&
+        matchedTransition.reasonOptions.length > 0 &&
+        !matchedTransition.reasonOptions.includes(params.reason)
+      ) {
+        throw new BadRequestException(
+          `Invalid reason. Must be one of: ${matchedTransition.reasonOptions.join(', ')}`,
+        );
       }
     }
 
