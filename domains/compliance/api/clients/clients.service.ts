@@ -11,6 +11,7 @@ import {
 import { clients } from './clients.schema';
 import { clientContacts } from '../client-contacts/client-contacts.schema';
 import { CLIENTS_CREATED, CLIENT_CONTACTS_CREATED } from '../events/types';
+import { CLIENTS_WORKFLOW } from './clients.workflow';
 import { ClientDormancyService } from './clients.dormancy.service';
 import { ClientContactsService } from '../client-contacts/client-contacts.service';
 import {
@@ -190,33 +191,61 @@ export class ClientsService {
     return this.rollup.getHandlerOptions(scopePredicate);
   }
 
-  findOne(id: string, accessCtx?: DataAccessContext) {
-    return this.entityService.findOneOrFail(id, accessCtx);
+  async findOne(id: string, accessCtx?: DataAccessContext) {
+    const row = await this.entityService.findOneOrFail(id, accessCtx);
+    return this.withStatusAlias(row);
   }
 
-  create(input: Record<string, unknown>, actorId: string) {
-    return this.entityService.create(input, actorId);
+  /**
+   * Creates a client and pre-fills `complianceStatus` with the workflow's
+   * initialState. State is system-managed: the DTO strips any caller-supplied
+   * value, so the only path that lands a client in a non-initial state is
+   * `POST /:id/transition`. See `.claude/rules/workflow-entity-creates.md`.
+   */
+  async create(input: Record<string, unknown>, actorId: string) {
+    const row = await this.entityService.create(
+      { ...input, complianceStatus: CLIENTS_WORKFLOW.initialState },
+      actorId,
+    );
+    return this.withStatusAlias(row);
   }
 
-  update(
+  async update(
     id: string,
     input: Record<string, unknown>,
     actorId: string,
     accessCtx?: DataAccessContext,
   ) {
-    return this.entityService.update(id, input, actorId, accessCtx);
+    const row = await this.entityService.update(id, input, actorId, accessCtx);
+    return this.withStatusAlias(row);
   }
 
   softDelete(id: string, actorId: string, accessCtx?: DataAccessContext) {
     return this.entityService.softDelete(id, actorId, accessCtx);
   }
 
-  clone(id: string, actorId: string) {
-    return this.entityService.clone(id, actorId);
+  async clone(id: string, actorId: string) {
+    const row = await this.entityService.clone(id, actorId);
+    return this.withStatusAlias(row);
   }
 
-  restore(id: string) {
-    return this.entityService.restore(id);
+  async restore(id: string) {
+    const row = await this.entityService.restore(id);
+    return this.withStatusAlias(row);
+  }
+
+  /**
+   * Adds the public `status` alias to a row whose storage column is named
+   * `complianceStatus`. The alias is a one-way response shim — input DTOs
+   * do not accept `status` (workflow fields are system-managed; see the
+   * rule). Generic CRUD reads + the transition response both flow through
+   * here so consumers see a stable `status` field. Tolerates falsy rows
+   * (e.g. service mocks returning undefined) by returning them unchanged.
+   */
+  private withStatusAlias<T>(row: T): T {
+    if (!row || typeof row !== 'object') return row;
+    const r = row as Record<string, unknown>;
+    return { ...r, status: r.complianceStatus } as T;
   }
 
   getListLayout() {
@@ -296,7 +325,7 @@ export class ClientsService {
       this.dormancy.emitCascadeEvent(ctx, cancelledFilingIds);
     }
 
-    const fresh = await this.entityService.findOneOrFail(id);
+    const fresh = this.withStatusAlias(await this.entityService.findOneOrFail(id));
     return warnings.length > 0 ? { ...fresh, warnings } : fresh;
   }
 
@@ -362,7 +391,11 @@ export class ClientsService {
         postalCode: input.client.postalCode ?? null,
         addressCountryId: input.client.addressCountryId ?? null,
         complianceAccountManagerId: input.client.complianceAccountManagerId ?? null,
-        complianceStatus: input.client.complianceStatus ?? 'onboarding',
+        // Workflow state is system-managed — the DTO strips any caller-supplied
+        // `complianceStatus` at the API boundary. Internal callers (CLI seeds)
+        // may pre-set a non-initial state; otherwise we default to the
+        // workflow's initialState. See `.claude/rules/workflow-entity-creates.md`.
+        complianceStatus: input.client.complianceStatus ?? CLIENTS_WORKFLOW.initialState,
         complianceOnboardedAt: input.client.complianceOnboardedAt ?? null,
         complianceNotes: input.client.complianceNotes ?? null,
         // Marker that flags this row as a compliance client. Queries that

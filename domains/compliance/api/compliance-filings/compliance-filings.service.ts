@@ -5,6 +5,7 @@ import type { DataAccessContext } from '@packages/rbac';
 import { complianceFilings } from './compliance-filings.schema';
 import { LawsService } from '../laws';
 import { buildFilingExternalKey } from './compliance-filings.config';
+import { COMPLIANCE_FILINGS_WORKFLOW } from './compliance-filings.workflow';
 import type { CreateComplianceFilingDto, UpdateComplianceFilingDto } from './compliance-filings.dto';
 
 /**
@@ -100,13 +101,19 @@ export class ComplianceFilingsService {
 
   /**
    * Derive the externalKey idempotency column from (ruleId, clientId,
-   * periodStart) when not explicitly provided, and stamp completedAt
-   * based on initial status. These used to live in the `beforeCreate`
-   * config hook; moving here keeps all create-time logic in one place.
+   * periodStart) when not explicitly provided, stamp `status` with the
+   * workflow initialState (state is system-managed; the DTO drops any
+   * caller-supplied value), and stamp `completedAt` based on the resulting
+   * status. These used to live in the `beforeCreate` config hook; moving
+   * here keeps all create-time logic in one place.
    */
   create(input: CreateComplianceFilingDto, actorId: string) {
     const withExternalKey = this.ensureExternalKey(input as Record<string, unknown>);
-    const finalPayload = applyCompletedAt(withExternalKey);
+    const withInitialState = {
+      ...withExternalKey,
+      status: COMPLIANCE_FILINGS_WORKFLOW.initialState,
+    };
+    const finalPayload = applyCompletedAt(withInitialState);
     return this.entityService.create(finalPayload, actorId);
   }
 

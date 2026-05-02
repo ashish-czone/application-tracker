@@ -143,9 +143,15 @@ describe('ClientsService', () => {
       expect(entityService.findOneOrFail).toHaveBeenCalledWith('cid-1', { userId: 'u1' });
     });
 
-    it('create delegates to entityService.create with the actor id', () => {
+    it('create pre-fills complianceStatus with the workflow initialState and delegates to entityService.create', () => {
       service.create({ name: 'Acme' }, 'user-1');
-      expect(entityService.create).toHaveBeenCalledWith({ name: 'Acme' }, 'user-1');
+      // Workflow state is system-managed: the service unconditionally stamps
+      // `complianceStatus = CLIENTS_WORKFLOW.initialState` ('onboarding')
+      // before delegating. See `.claude/rules/workflow-entity-creates.md`.
+      expect(entityService.create).toHaveBeenCalledWith(
+        { name: 'Acme', complianceStatus: 'onboarding' },
+        'user-1',
+      );
     });
 
     it('update delegates to entityService.update', () => {

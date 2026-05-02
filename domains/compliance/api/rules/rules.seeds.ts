@@ -1,5 +1,5 @@
 import type { INestApplicationContext } from '@nestjs/common';
-import { DatabaseService, inArray } from '@packages/database';
+import { DatabaseService, eq, inArray } from '@packages/database';
 import { complianceLaws } from '../laws/laws.schema';
 import { complianceRules } from './rules.schema';
 import { ComplianceRulesService } from './rules.service';
@@ -132,13 +132,12 @@ export const seedDemoRules = async (ctx: INestApplicationContext): Promise<void>
     const lawId = lawIdByCode.get(rule.lawCode);
     if (!lawId) continue;
 
-    await ruleService.create(
+    const created = await ruleService.create(
       {
         code: rule.code,
         name: rule.name,
         lawId,
         frequency: rule.frequency,
-        status: 'active',
         dueDayOfMonth: rule.dueDayOfMonth,
         dueMonthOffset: rule.dueMonthOffset,
         gracePeriodDays: rule.gracePeriodDays,
@@ -146,5 +145,15 @@ export const seedDemoRules = async (ctx: INestApplicationContext): Promise<void>
       },
       'system',
     );
+
+    // Workflow state is system-managed (.claude/rules/workflow-entity-creates.md):
+    // creates always start at RULES_WORKFLOW.initialState ('draft'); state
+    // changes go through `/transition`. Seeds are the documented bypass —
+    // demo data needs realistic non-initial state without going through
+    // permission gates and history rows for synthetic activity.
+    await database.db
+      .update(complianceRules)
+      .set({ status: 'active' })
+      .where(eq(complianceRules.id, (created as { id: string }).id));
   }
 };

@@ -15,6 +15,7 @@ import { complianceFilings } from '../compliance-filings/compliance-filings.sche
 import { complianceClientRegistrations } from '../client-registrations/client-registrations.schema';
 import { LawHandlersService } from '../law-handlers';
 import { ComplianceFilingsCancellationService } from '../compliance-filings';
+import { RULES_WORKFLOW } from './rules.workflow';
 import type {
   CreateComplianceRuleDto,
   RulesListQuery,
@@ -362,7 +363,12 @@ export class ComplianceRulesService {
     if (!hasHandler) {
       throw new NoDefaultHandlerError(input.lawId as string);
     }
-    return this.entityService.create(input, actorId);
+    // Workflow state is system-managed: pre-fill `status` with the workflow's
+    // initialState. The DTO drops any caller-supplied value.
+    return this.entityService.create(
+      { ...input, status: RULES_WORKFLOW.initialState },
+      actorId,
+    );
   }
 
   async update(

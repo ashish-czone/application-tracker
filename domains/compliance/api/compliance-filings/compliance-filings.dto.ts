@@ -14,6 +14,13 @@ const completedAtSchema = z.preprocess(
   z.coerce.date().nullable().optional(),
 );
 
+/**
+ * `status` is intentionally omitted: workflow state is system-managed.
+ * Creates always start at `COMPLIANCE_FILINGS_WORKFLOW.initialState`
+ * (set by `ComplianceFilingsService.create`); state changes go only
+ * through `POST /compliance-filings/:id/transition`. See
+ * `.claude/rules/workflow-entity-creates.md`.
+ */
 export const CreateComplianceFilingSchema = createInsertSchema(complianceFilings, {
   title: (s) => s.min(1),
   completedAt: completedAtSchema,
@@ -24,6 +31,7 @@ export const CreateComplianceFilingSchema = createInsertSchema(complianceFilings
   deletedAt: true,
   deletedBy: true,
   createdBy: true,
+  status: true,
 });
 
 export const UpdateComplianceFilingSchema = CreateComplianceFilingSchema.partial();

@@ -13,6 +13,11 @@ export const ClientRowSchema = createSelectSchema(clients);
  * compliance UI / API has historically supported. The narrow projection
  * below mirrors the old `compliance.clients` shape mapped onto the new
  * field names per the C-2 mapping table.
+ *
+ * `complianceStatus` is intentionally NOT picked. Workflow state is
+ * system-managed: creates always start at `CLIENTS_WORKFLOW.initialState`
+ * (set by `ClientsService.create`); state changes go only through
+ * `POST /clients/:id/transition`. See `.claude/rules/workflow-entity-creates.md`.
  */
 export const CreateClientSchema = createInsertSchema(clients).pick({
   name: true,
@@ -29,7 +34,6 @@ export const CreateClientSchema = createInsertSchema(clients).pick({
   postalCode: true,
   addressCountryId: true,
   complianceAccountManagerId: true,
-  complianceStatus: true,
   complianceOnboardedAt: true,
   complianceNotes: true,
 });
@@ -70,7 +74,8 @@ const ClientPayloadSchema = z.object({
   postalCode: z.string().max(32).optional(),
   addressCountryId: z.string().uuid().optional(),
   complianceAccountManagerId: z.string().uuid().optional(),
-  complianceStatus: z.string().optional(),
+  // complianceStatus intentionally absent — workflow state is system-managed
+  // (always starts at `CLIENTS_WORKFLOW.initialState`).
   complianceOnboardedAt: z.string().datetime({ offset: true }).optional(),
   complianceNotes: z.string().optional(),
 });

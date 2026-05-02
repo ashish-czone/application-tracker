@@ -10,15 +10,23 @@ import { complianceRules } from './rules.schema';
 
 export const ComplianceRuleRowSchema = createSelectSchema(complianceRules);
 
+/**
+ * `status` is intentionally omitted: workflow state is system-managed.
+ * Creates always start at `RULES_WORKFLOW.initialState` (set by
+ * `ComplianceRulesService.create`); state changes go only through
+ * `POST /compliance-rules/:id/transition`. See
+ * `.claude/rules/workflow-entity-creates.md`.
+ */
 export const CreateComplianceRuleSchema = createInsertSchema(complianceRules).omit({
   id: true,
   createdAt: true,
   updatedAt: true,
+  status: true,
 });
 
 /**
- * PATCH body shape. `status` transitions go through the workflow engine, not
- * PATCH — the service strips it defensively, but clients shouldn't send it.
+ * PATCH body shape. `status` is omitted (creates and updates never carry it);
+ * transitions go through the workflow engine via `/transition`.
  */
 export const UpdateComplianceRuleSchema = CreateComplianceRuleSchema.partial();
 
