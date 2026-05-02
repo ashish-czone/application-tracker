@@ -20,6 +20,7 @@
     "@packages/auth-core": "workspace:*",
     "@packages/automation-contracts": "workspace:*",
     "@packages/common": "workspace:*",
+    "@packages/crud-base": "workspace:*",
     "@packages/database": "workspace:*",
     "@packages/directory": "workspace:*",
     "@packages/domains": "workspace:*",

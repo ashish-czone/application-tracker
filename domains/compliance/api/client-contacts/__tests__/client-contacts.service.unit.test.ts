@@ -25,27 +25,34 @@ interface TxMock {
 }
 
 /**
- * After the BaseCrudService migration, the constructor signature is
- * (database, events, appLogger) — entityService is no longer injected.
- * The appLogger mock just needs `.forContext()` to return a logger-shaped
- * object (the base service binds it once at construction).
+ * After the camp-B move to composition over inheritance, the constructor
+ * signature is `(crud, database, events)`. setPrimary / hasPrimaryContact
+ * use `database` + `events` directly (the partial-unique-index-aware
+ * transaction has to live below the BaseCrudService line) so the `crud`
+ * mock here is a stub — those tests don't exercise it.
  */
-function makeLoggerMock() {
-  const logger = { log: vi.fn(), warn: vi.fn(), error: vi.fn(), debug: vi.fn() };
-  return { forContext: vi.fn().mockReturnValue(logger) };
+function makeCrudMock() {
+  return {
+    list: vi.fn(),
+    findOne: vi.fn(),
+    findOneOrFail: vi.fn(),
+    create: vi.fn(),
+    update: vi.fn(),
+    softDelete: vi.fn(),
+  };
 }
 
 describe('ClientContactsService', () => {
   let db: { db: { transaction: ReturnType<typeof vi.fn> } };
   let events: { emitDynamic: ReturnType<typeof vi.fn> };
-  let appLogger: ReturnType<typeof makeLoggerMock>;
+  let crud: ReturnType<typeof makeCrudMock>;
   let service: ClientContactsService;
 
   beforeEach(() => {
     db = { db: { transaction: vi.fn() } };
     events = { emitDynamic: vi.fn() };
-    appLogger = makeLoggerMock();
-    service = new ClientContactsService(db as never, events as never, appLogger as never);
+    crud = makeCrudMock();
+    service = new ClientContactsService(crud as never, db as never, events as never);
   });
 
   describe('setPrimary', () => {
@@ -147,13 +154,11 @@ describe('ClientContactsService', () => {
 
   describe('hasPrimaryContact', () => {
     it('returns true when a primary contact exists', async () => {
-      const limitChain = { then: vi.fn() };
       const whereChain = { limit: vi.fn().mockResolvedValue([{ id: 'ct-1' }]) };
       const fromChain = { where: vi.fn().mockReturnValue(whereChain) };
       const selectChain = { from: vi.fn().mockReturnValue(fromChain) };
       const dbMock = { select: vi.fn().mockReturnValue(selectChain) };
-      const s = new ClientContactsService({ db: dbMock } as never, events as never, appLogger as never);
-      void limitChain;
+      const s = new ClientContactsService(makeCrudMock() as never, { db: dbMock } as never, events as never);
 
       await expect(s.hasPrimaryContact('cid-1')).resolves.toBe(true);
     });
@@ -163,7 +168,7 @@ describe('ClientContactsService', () => {
       const fromChain = { where: vi.fn().mockReturnValue(whereChain) };
       const selectChain = { from: vi.fn().mockReturnValue(fromChain) };
       const dbMock = { select: vi.fn().mockReturnValue(selectChain) };
-      const s = new ClientContactsService({ db: dbMock } as never, events as never, appLogger as never);
+      const s = new ClientContactsService(makeCrudMock() as never, { db: dbMock } as never, events as never);
 
       await expect(s.hasPrimaryContact('cid-1')).resolves.toBe(false);
     });
