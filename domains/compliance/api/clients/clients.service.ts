@@ -1,8 +1,9 @@
 import { Inject, Injectable, BadRequestException, UnprocessableEntityException } from '@nestjs/common';
-import { DatabaseService, eq } from '@packages/database';
+import { DatabaseService, eq, withScope } from '@packages/database';
 import { DomainEventEmitter } from '@packages/events';
-import { EntityService, type BaseListQuery } from '@packages/entity-engine';
+import { type BaseListQuery, type TransitionContext } from '@packages/entity-engine';
 import { BaseCrudService } from '@packages/crud-base';
+import { WorkflowEngineService, WorkflowRegistryService } from '@packages/workflows';
 import { CLIENTS_CRUD_TOKEN } from './clients.crud-token';
 import type { DataAccessContext } from '@packages/rbac';
 import {
@@ -143,9 +144,10 @@ export interface CreateWithContactsResult {
 export class ClientsService {
   constructor(
     @Inject(CLIENTS_CRUD_TOKEN) private readonly crud: BaseCrudService<typeof clients>,
-    @Inject('ENTITY_SERVICE_clients') private readonly entityService: EntityService,
     private readonly database: DatabaseService,
     private readonly events: DomainEventEmitter,
+    private readonly workflowEngine: WorkflowEngineService,
+    private readonly workflowRegistry: WorkflowRegistryService,
     private readonly dormancy: ClientDormancyService,
     private readonly contacts: ClientContactsService,
     private readonly rollup: ClientsRollupService,
@@ -170,7 +172,10 @@ export class ClientsService {
    * if the engine pipeline could express the rollup.
    */
   async list(query: ClientsListQuery, accessCtx?: DataAccessContext) {
-    const scopePredicate = accessCtx ? await this.entityService.getScopePredicate(accessCtx) : undefined;
+    // Clients has no `dataAccess` config — actor scope is a no-op for this
+    // entity. The `accessCtx` parameter is preserved on the public API for
+    // controller-level consistency but does not gate any rows.
+    const scopePredicate = undefined;
     return this.rollup.list(query, scopePredicate);
   }
 
@@ -180,7 +185,10 @@ export class ClientsService {
    * as the list view so subtotals match.
    */
   async getSummary(accessCtx?: DataAccessContext): Promise<ClientsSummary> {
-    const scopePredicate = accessCtx ? await this.entityService.getScopePredicate(accessCtx) : undefined;
+    // Clients has no `dataAccess` config — actor scope is a no-op for this
+    // entity. The `accessCtx` parameter is preserved on the public API for
+    // controller-level consistency but does not gate any rows.
+    const scopePredicate = undefined;
     return this.rollup.getSummary(scopePredicate);
   }
 
@@ -190,7 +198,10 @@ export class ClientsService {
    * picking a handler doesn't surface clients outside the actor's scope.
    */
   async getHandlerOptions(accessCtx?: DataAccessContext): Promise<HandlerOption[]> {
-    const scopePredicate = accessCtx ? await this.entityService.getScopePredicate(accessCtx) : undefined;
+    // Clients has no `dataAccess` config — actor scope is a no-op for this
+    // entity. The `accessCtx` parameter is preserved on the public API for
+    // controller-level consistency but does not gate any rows.
+    const scopePredicate = undefined;
     return this.rollup.getHandlerOptions(scopePredicate);
   }
 
@@ -242,16 +253,6 @@ export class ClientsService {
     return this.crud.softDelete(id, actorId, accessCtx);
   }
 
-  async clone(id: string, actorId: string) {
-    const row = await this.entityService.clone(id, actorId);
-    return this.withStatusAlias(row);
-  }
-
-  async restore(id: string) {
-    const row = await this.entityService.restore(id);
-    return this.withStatusAlias(row);
-  }
-
   /**
    * Adds the public `status` alias to a row whose storage column is named
    * `complianceStatus`. The alias is a one-way response shim — input DTOs
@@ -291,40 +292,104 @@ export class ClientsService {
   ): Promise<Record<string, unknown>> {
     const internalFieldKey = resolveFieldKey(fieldKey);
 
-    // Per-entity guards run before the engine. Other field flips skip the
-    // guard step entirely — only `status` has gating logic on this entity.
+    // Load the entity up front so we have `fromState` for validation +
+    // `entity.name` for the dormancy cascade audit trail. (Pre-lift the
+    // engine loaded it internally; now we own that read.)
+    const entity = await this.crud.findOneOrFail(id, accessCtx) as Record<string, unknown>;
+    const fromState = entity[internalFieldKey] as string | null;
+    if (!fromState) {
+      throw new BadRequestException(`Entity has no current state for field '${fieldKey}'`);
+    }
+
+    // Per-entity guards (require-primary-contact, warn-dormant-cascade)
+    // run before the engine. Other fields skip — only `status` has gating
+    // logic on this entity.
     let warnings: string[] = [];
     if (fieldKey === STATUS_FIELD_ALIAS) {
-      const entity = await this.crud.findOneOrFail(id, accessCtx) as Record<string, unknown>;
-      const fromState = entity[internalFieldKey] as string | null;
-      if (!fromState) {
-        throw new BadRequestException(`Entity has no current state for field '${fieldKey}'`);
-      }
       warnings = await runTransitionGuards(CLIENT_GUARDS, entity as ClientRow, {
         fromState, toState, actor: actorId, deps: this.guardDeps(),
       });
     }
 
-    const ctx = await this.entityService.validateTransition(
-      id, internalFieldKey, toState, actorId, options, accessCtx,
-    );
+    const workflow = this.workflowRegistry.getByEntityField('clients', internalFieldKey);
+    if (!workflow) {
+      throw new BadRequestException(
+        `No workflow registered for clients field '${internalFieldKey}'`,
+      );
+    }
+
+    const validated = await this.workflowEngine.validateAndThrow({
+      workflowSlug: workflow.slug,
+      entityType: 'clients',
+      entityId: id,
+      fromState,
+      toState,
+      actorId,
+      reason: options?.reason,
+      comment: options?.comment,
+      entityData: entity,
+    });
+
+    // Reconstruct the engine's `TransitionContext` shape for the dormancy
+    // cascade hooks (they read entityId / entity.name / actorId / reason /
+    // comment to build the cancellation history rows + cascade event).
+    // Keeping the shape stable means dormancy doesn't have to change.
+    const ctx: TransitionContext = {
+      entityType: 'clients',
+      entityId: id,
+      fieldKey: internalFieldKey,
+      fieldName: validated.fieldName,
+      fromState,
+      toState,
+      transitionId: validated.transitionId,
+      transitionName: validated.transitionName,
+      workflowDefinitionId: validated.workflowDefinitionId,
+      workflowSlug: workflow.slug,
+      actorId,
+      reason: options?.reason,
+      comment: options?.comment,
+      entity,
+    };
 
     const isDormantisation =
-      ctx.fieldKey === STATUS_COLUMN_KEY &&
-      ctx.fromState === 'active' &&
-      ctx.toState === 'dormant';
+      internalFieldKey === STATUS_COLUMN_KEY &&
+      fromState === 'active' &&
+      toState === 'dormant';
 
     let cancelledFilingIds: string[] = [];
 
     await this.database.db.transaction(async (tx) => {
-      await this.entityService.applyTransition(ctx, tx);
+      // Phase 2: column update + workflow_transition_history row + cascade
+      // all commit together. A failure rolls the whole transition back.
+      await tx
+        .update(clients)
+        .set({ [internalFieldKey]: toState })
+        .where(withScope(clients, eq(clients.id, id)));
+
+      await this.workflowEngine.recordHistory(
+        {
+          workflowDefinitionId: validated.workflowDefinitionId,
+          entityType: 'clients',
+          entityId: id,
+          fieldName: validated.fieldName,
+          fromState,
+          toState,
+          transitionId: validated.transitionId,
+          actorId,
+          reason: options?.reason,
+          comment: options?.comment,
+        },
+        tx,
+      );
+
       if (isDormantisation) {
         const result = await this.dormancy.cancelInFlightFilings(ctx, tx);
         cancelledFilingIds = result.cancelledFilingIds;
       }
     });
 
-    this.entityService.emitTransitionEvent(ctx);
+    this.emitTransitionEvent(ctx);
+
     if (isDormantisation) {
       // The in-tx cascade only catches filings that existed when its SELECT
       // ran. An event-driven generator (J3/J4/J5) on a different connection
@@ -332,7 +397,7 @@ export class ClientsService {
       // clients.complianceStatus sees the pre-commit 'active' value, so its
       // own isClientActive guard passes. Sweep those stragglers now that
       // the dormantisation is committed and the new status is visible.
-      const lateResult = await this.dormancy.sweepLateFilings(ctx.entityId);
+      const lateResult = await this.dormancy.sweepLateFilings(id);
       if (lateResult.cancelledFilingIds.length > 0) {
         cancelledFilingIds = [...cancelledFilingIds, ...lateResult.cancelledFilingIds];
       }
@@ -341,6 +406,30 @@ export class ClientsService {
 
     const fresh = this.withStatusAlias(await this.crud.findOneOrFail(id));
     return warnings.length > 0 ? { ...fresh, warnings } : fresh;
+  }
+
+  /**
+   * Emit `clients.<Field>Changed` after a workflow transition commits.
+   * Mirrors the event shape `EntityService.emitTransitionEvent` produced
+   * pre-lift so any listener subscribed to those events keeps receiving
+   * the same payload.
+   */
+  private emitTransitionEvent(ctx: TransitionContext): void {
+    const pascalField = ctx.fieldKey.charAt(0).toUpperCase() + ctx.fieldKey.slice(1);
+    this.events.emitDynamic(`clients.${pascalField}Changed`, {
+      entityType: 'clients',
+      entityId: ctx.entityId,
+      actorId: ctx.actorId,
+      payload: {
+        fieldKey: ctx.fieldKey,
+        fromState: ctx.fromState,
+        toState: ctx.toState,
+        transitionId: ctx.transitionId,
+        transitionName: ctx.transitionName,
+        reason: ctx.reason,
+        comment: ctx.comment,
+      },
+    });
   }
 
   /**

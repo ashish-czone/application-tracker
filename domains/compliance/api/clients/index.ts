@@ -6,8 +6,6 @@
  * else is internal and free to be reorganised without breaking callers.
  *
  * Internals NOT exported (intentionally):
- * - `CLIENTS_CONFIG`             — entity-engine workflow definition,
- *                                   wired only by clients.module
  * - `ClientsRollupService`       — internal aggregation for the dashboard
  *                                   list endpoint, not part of the public
  *                                   API; consumers use ClientsService.list

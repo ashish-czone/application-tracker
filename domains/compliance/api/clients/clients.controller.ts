@@ -138,19 +138,6 @@ export class ClientsController {
     return this.clientsService.previewTransition(id, fieldKey, to, user.userId, accessCtx);
   }
 
-  @Post(':id/clone')
-  @RequirePermission('clients.create')
-  @HttpCode(HttpStatus.CREATED)
-  clone(@Param('id', ParseUUIDPipe) id: string, @CurrentUser() user: JwtPayload) {
-    return this.clientsService.clone(id, user.userId);
-  }
-
-  @Post(':id/restore')
-  @RequirePermission('clients.update')
-  restore(@Param('id', ParseUUIDPipe) id: string) {
-    return this.clientsService.restore(id);
-  }
-
   // ---- Composite create + cross-entity endpoints ---------------------------
 
   @Post('with-contacts')

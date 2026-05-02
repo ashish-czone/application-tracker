@@ -25,10 +25,9 @@ function makeTx(clientRow: unknown, contactRows: unknown[]): TxMock {
 }
 
 describe('ClientsService', () => {
-  // After the BaseCrudService migration, list/findOneOrFail/create/update/
-  // softDelete delegate to `crud`. clone/restore/transition primitives +
-  // `getScopePredicate` stay on `entityService`. Both are mocked here so
-  // assertions can verify which dependency each call site uses.
+  // After the workflow-lift, the service no longer injects EntityService.
+  // CRUD goes through `crud` (BaseCrudService). Workflow ops go through
+  // `workflowEngine` + `workflowRegistry` from @packages/workflows.
   let crud: {
     list: ReturnType<typeof vi.fn>;
     findOneOrFail: ReturnType<typeof vi.fn>;
@@ -37,21 +36,12 @@ describe('ClientsService', () => {
     update: ReturnType<typeof vi.fn>;
     softDelete: ReturnType<typeof vi.fn>;
   };
-  let entityService: {
-    list: ReturnType<typeof vi.fn>;
-    findOneOrFail: ReturnType<typeof vi.fn>;
-    create: ReturnType<typeof vi.fn>;
-    update: ReturnType<typeof vi.fn>;
-    softDelete: ReturnType<typeof vi.fn>;
-    clone: ReturnType<typeof vi.fn>;
-    restore: ReturnType<typeof vi.fn>;
-    getListLayout: ReturnType<typeof vi.fn>;
-    validateTransition: ReturnType<typeof vi.fn>;
-    applyTransition: ReturnType<typeof vi.fn>;
-    emitTransitionEvent: ReturnType<typeof vi.fn>;
-    getScopePredicate: ReturnType<typeof vi.fn>;
+  let workflowEngine: {
+    validateAndThrow: ReturnType<typeof vi.fn>;
+    recordHistory: ReturnType<typeof vi.fn>;
   };
-  let db: { db: { transaction: ReturnType<typeof vi.fn> } };
+  let workflowRegistry: { getByEntityField: ReturnType<typeof vi.fn> };
+  let db: { db: { transaction: ReturnType<typeof vi.fn>; update: ReturnType<typeof vi.fn> } };
   let events: { emitDynamic: ReturnType<typeof vi.fn> };
   let dormancy: {
     cancelInFlightFilings: ReturnType<typeof vi.fn>;
@@ -67,30 +57,40 @@ describe('ClientsService', () => {
   };
   let service: ClientsService;
 
+  const baseClient = { id: 'cid-1', name: 'Acme', complianceStatus: 'active' };
+  const validatedTransition = {
+    transitionId: 'trans-1',
+    transitionName: 'Dormantise',
+    workflowDefinitionId: 'def-clients',
+    workflowName: 'Compliance Client Status',
+    fieldName: 'complianceStatus',
+  };
+  const workflowDef = { slug: 'compliance-client-status' } as never;
+
   beforeEach(() => {
     crud = {
       list: vi.fn(),
-      findOneOrFail: vi.fn().mockResolvedValue({ id: 'cid-1', status: 'dormant' }),
+      findOneOrFail: vi.fn().mockResolvedValue(baseClient),
       findOne: vi.fn(),
       create: vi.fn(),
       update: vi.fn(),
       softDelete: vi.fn(),
     };
-    entityService = {
-      list: vi.fn(),
-      findOneOrFail: vi.fn().mockResolvedValue({ id: 'cid-1', status: 'dormant' }),
-      create: vi.fn(),
-      update: vi.fn(),
-      softDelete: vi.fn(),
-      clone: vi.fn(),
-      restore: vi.fn(),
-      getListLayout: vi.fn(),
-      validateTransition: vi.fn(),
-      applyTransition: vi.fn().mockResolvedValue(undefined),
-      emitTransitionEvent: vi.fn(),
-      getScopePredicate: vi.fn().mockResolvedValue(undefined),
+    workflowEngine = {
+      validateAndThrow: vi.fn().mockResolvedValue(validatedTransition),
+      recordHistory: vi.fn().mockResolvedValue({ historyId: 'h1', recordedAt: '2026-04-30T00:00:00Z' }),
     };
-    db = { db: { transaction: vi.fn() } };
+    workflowRegistry = {
+      getByEntityField: vi.fn().mockReturnValue(workflowDef),
+    };
+    db = {
+      db: {
+        transaction: vi.fn(),
+        update: vi.fn().mockReturnValue({
+          set: vi.fn().mockReturnValue({ where: vi.fn().mockResolvedValue(undefined) }),
+        }),
+      },
+    };
     events = { emitDynamic: vi.fn() };
     dormancy = {
       cancelInFlightFilings: vi.fn().mockResolvedValue({ cancelledFilingIds: [] }),
@@ -112,9 +112,10 @@ describe('ClientsService', () => {
     };
     service = new ClientsService(
       crud as never,
-      entityService as never,
       db as never,
       events as never,
+      workflowEngine as never,
+      workflowRegistry as never,
       dormancy as never,
       contacts as never,
       rollup as never,
@@ -129,34 +130,25 @@ describe('ClientsService', () => {
   const secondaryContact: ContactInput = { fullName: 'Bob', complianceIsPrimary: false };
 
   describe('CRUD delegates', () => {
-    it('list delegates to ClientsRollupService.list with the translated params and no scope when no accessCtx', async () => {
+    // Clients has no `dataAccess` config so list/summary/handlerOptions
+    // call rollup with `undefined` scope. Pre-lift these used to round-trip
+    // through `entityService.getScopePredicate(ctx)` which always returned
+    // undefined — same result, fewer hops.
+    it('list delegates to ClientsRollupService.list with undefined scope', async () => {
       await service.list({ page: 1, limit: 25 } as never);
       expect(rollup.list).toHaveBeenCalledWith({ page: 1, limit: 25 }, undefined);
     });
 
-    it('list passes the actor scope predicate from EntityService through to the rollup', async () => {
-      const scopePredicate = { __tag: 'scope-sql' };
-      entityService.getScopePredicate.mockResolvedValueOnce(scopePredicate);
-      const ctx = { userId: 'u1', scopes: [{ type: 'unit' }] } as never;
-      await service.list({ page: 1, limit: 25 } as never, ctx);
-      expect(entityService.getScopePredicate).toHaveBeenCalledWith(ctx);
-      expect(rollup.list).toHaveBeenCalledWith({ page: 1, limit: 25 }, scopePredicate);
-    });
-
-    it('getSummary delegates to ClientsRollupService.getSummary with the scope predicate', async () => {
-      const scopePredicate = { __tag: 'sum-sql' };
-      entityService.getScopePredicate.mockResolvedValueOnce(scopePredicate);
+    it('getSummary delegates to ClientsRollupService.getSummary with undefined scope', async () => {
       const ctx = { userId: 'u1', scopes: [{ type: 'any' }] } as never;
       await service.getSummary(ctx);
-      expect(rollup.getSummary).toHaveBeenCalledWith(scopePredicate);
+      expect(rollup.getSummary).toHaveBeenCalledWith(undefined);
     });
 
-    it('getHandlerOptions delegates to ClientsRollupService.getHandlerOptions with the scope predicate', async () => {
-      const scopePredicate = { __tag: 'handler-sql' };
-      entityService.getScopePredicate.mockResolvedValueOnce(scopePredicate);
+    it('getHandlerOptions delegates to ClientsRollupService.getHandlerOptions with undefined scope', async () => {
       const ctx = { userId: 'u1', scopes: [{ type: 'any' }] } as never;
       await service.getHandlerOptions(ctx);
-      expect(rollup.getHandlerOptions).toHaveBeenCalledWith(scopePredicate);
+      expect(rollup.getHandlerOptions).toHaveBeenCalledWith(undefined);
     });
 
     it('findOne delegates to crud.findOneOrFail', () => {
@@ -185,91 +177,94 @@ describe('ClientsService', () => {
       service.softDelete('cid-1', 'user-1');
       expect(crud.softDelete).toHaveBeenCalledWith('cid-1', 'user-1', undefined);
     });
-
-    it('clone delegates to entityService.clone', () => {
-      service.clone('cid-1', 'user-1');
-      expect(entityService.clone).toHaveBeenCalledWith('cid-1', 'user-1');
-    });
-
-    it('restore delegates to entityService.restore', () => {
-      service.restore('cid-1');
-      expect(entityService.restore).toHaveBeenCalledWith('cid-1');
-    });
   });
 
   describe('transition', () => {
-    // After the C-2 fold, the service translates the controller-side
-    // `fieldKey: 'status'` to the column key `complianceStatus` before
-    // calling the entity engine. The TransitionContext returned by the
-    // engine therefore carries `complianceStatus` — that's what dormantisation
-    // detection compares against.
-    const baseCtx = {
-      entityType: 'clients',
-      entityId: 'cid-1',
-      fieldKey: 'complianceStatus',
-      fieldName: 'complianceStatus',
-      fromState: 'onboarding',
-      toState: 'active',
-      transitionId: 't-1',
-      transitionName: 'activate',
-      workflowDefinitionId: 'wf-1',
-      workflowSlug: 'client-status',
-      actorId: 'user-1',
-      entity: { id: 'cid-1', name: 'Acme' },
-    };
+    // After the workflow-lift, the service no longer goes through
+    // EntityService. It loads the entity itself, calls
+    // `workflowEngine.validateAndThrow`, then writes the column update +
+    // `recordHistory` row inside a single tx (with the dormancy cascade
+    // composed in for active → dormant on status). Dormancy hooks still
+    // receive a TransitionContext-shaped object — built inline from the
+    // engine's ValidatedTransition return.
+    function makeTx() {
+      return {
+        update: vi.fn().mockReturnValue({
+          set: vi.fn().mockReturnValue({ where: vi.fn().mockResolvedValue(undefined) }),
+        }),
+      };
+    }
 
-    it('runs validate → tx(apply) → emit for a non-dormantisation transition', async () => {
-      crud.findOneOrFail.mockResolvedValue({ id: 'cid-1', complianceStatus: 'onboarding' });
-      entityService.validateTransition.mockResolvedValue(baseCtx);
-      db.db.transaction.mockImplementation(async (cb: (tx: unknown) => unknown) => cb({}));
+    it('runs load → validate → tx(update + recordHistory) → emit for a non-dormantisation transition', async () => {
+      crud.findOneOrFail.mockResolvedValue({ id: 'cid-1', name: 'Acme', complianceStatus: 'onboarding' });
+      const tx = makeTx();
+      db.db.transaction.mockImplementation(async (cb: (tx: unknown) => unknown) => cb(tx));
 
       await service.transition('cid-1', 'status', 'active', 'user-1');
 
       // Engine call uses the translated column key, not the caller-facing alias.
-      expect(entityService.validateTransition).toHaveBeenCalledWith('cid-1', 'complianceStatus', 'active', 'user-1', undefined, undefined);
-      expect(entityService.applyTransition).toHaveBeenCalledWith(baseCtx, {});
+      expect(workflowEngine.validateAndThrow).toHaveBeenCalledWith(
+        expect.objectContaining({
+          workflowSlug: 'compliance-client-status',
+          entityType: 'clients',
+          entityId: 'cid-1',
+          fromState: 'onboarding',
+          toState: 'active',
+          actorId: 'user-1',
+        }),
+      );
+      expect(workflowEngine.recordHistory).toHaveBeenCalledWith(
+        expect.objectContaining({
+          entityType: 'clients',
+          entityId: 'cid-1',
+          fromState: 'onboarding',
+          toState: 'active',
+        }),
+        tx,
+      );
       expect(dormancy.cancelInFlightFilings).not.toHaveBeenCalled();
-      expect(entityService.emitTransitionEvent).toHaveBeenCalledWith(baseCtx);
+      expect(events.emitDynamic).toHaveBeenCalledWith(
+        'clients.ComplianceStatusChanged',
+        expect.objectContaining({
+          entityType: 'clients',
+          entityId: 'cid-1',
+          actorId: 'user-1',
+          payload: expect.objectContaining({ fromState: 'onboarding', toState: 'active' }),
+        }),
+      );
       expect(dormancy.emitCascadeEvent).not.toHaveBeenCalled();
     });
 
     it('runs dormancy cascade inside the same tx when active → dormant on status', async () => {
-      const dormantCtx = { ...baseCtx, fromState: 'active', toState: 'dormant' };
-      crud.findOneOrFail.mockResolvedValue({ id: 'cid-1', complianceStatus: 'active' });
-      entityService.validateTransition.mockResolvedValue(dormantCtx);
+      crud.findOneOrFail.mockResolvedValue({ id: 'cid-1', name: 'Acme', complianceStatus: 'active' });
       dormancy.cancelInFlightFilings.mockResolvedValue({ cancelledFilingIds: ['f1', 'f2'] });
-      let applyCalled = false;
-      let cascadeCalled = false;
-      db.db.transaction.mockImplementation(async (cb: (tx: unknown) => unknown) => {
-        const tx = {};
-        entityService.applyTransition.mockImplementationOnce(() => {
-          applyCalled = true;
-          expect(cascadeCalled).toBe(false);
-          return Promise.resolve();
-        });
-        dormancy.cancelInFlightFilings.mockImplementationOnce(() => {
-          cascadeCalled = true;
-          expect(applyCalled).toBe(true);
-          return Promise.resolve({ cancelledFilingIds: ['f1', 'f2'] });
-        });
-        return cb(tx);
-      });
+      const tx = makeTx();
+      db.db.transaction.mockImplementation(async (cb: (tx: unknown) => unknown) => cb(tx));
 
       await service.transition('cid-1', 'status', 'dormant', 'user-1', { reason: 'Ceased' });
 
-      expect(applyCalled).toBe(true);
-      expect(cascadeCalled).toBe(true);
+      expect(dormancy.cancelInFlightFilings).toHaveBeenCalledWith(
+        expect.objectContaining({
+          entityId: 'cid-1',
+          fromState: 'active',
+          toState: 'dormant',
+          reason: 'Ceased',
+        }),
+        tx,
+      );
       expect(dormancy.sweepLateFilings).toHaveBeenCalledWith('cid-1');
-      expect(dormancy.emitCascadeEvent).toHaveBeenCalledWith(dormantCtx, ['f1', 'f2']);
+      expect(dormancy.emitCascadeEvent).toHaveBeenCalledWith(
+        expect.objectContaining({ fromState: 'active', toState: 'dormant' }),
+        ['f1', 'f2'],
+      );
     });
 
     it('post-commit late-filing sweep folds straggler IDs into the cascade event', async () => {
-      const dormantCtx = { ...baseCtx, fromState: 'active', toState: 'dormant' };
-      crud.findOneOrFail.mockResolvedValue({ id: 'cid-1', complianceStatus: 'active' });
-      entityService.validateTransition.mockResolvedValue(dormantCtx);
+      crud.findOneOrFail.mockResolvedValue({ id: 'cid-1', name: 'Acme', complianceStatus: 'active' });
       dormancy.cancelInFlightFilings.mockResolvedValue({ cancelledFilingIds: ['f1'] });
       dormancy.sweepLateFilings.mockResolvedValue({ cancelledFilingIds: ['f-late-1', 'f-late-2'] });
-      db.db.transaction.mockImplementation(async (cb: (tx: unknown) => unknown) => cb({}));
+      const tx = makeTx();
+      db.db.transaction.mockImplementation(async (cb: (tx: unknown) => unknown) => cb(tx));
 
       await service.transition('cid-1', 'status', 'dormant', 'user-1');
 
@@ -282,16 +277,15 @@ describe('ClientsService', () => {
 
       // Late stragglers concatenated onto the cascade event payload.
       expect(dormancy.emitCascadeEvent).toHaveBeenCalledWith(
-        dormantCtx,
+        expect.objectContaining({ fromState: 'active', toState: 'dormant' }),
         ['f1', 'f-late-1', 'f-late-2'],
       );
     });
 
     it('does not run cascade on dormant → active', async () => {
-      const reactivate = { ...baseCtx, fromState: 'dormant', toState: 'active' };
-      crud.findOneOrFail.mockResolvedValue({ id: 'cid-1', complianceStatus: 'dormant' });
-      entityService.validateTransition.mockResolvedValue(reactivate);
-      db.db.transaction.mockImplementation(async (cb: (tx: unknown) => unknown) => cb({}));
+      crud.findOneOrFail.mockResolvedValue({ id: 'cid-1', name: 'Acme', complianceStatus: 'dormant' });
+      const tx = makeTx();
+      db.db.transaction.mockImplementation(async (cb: (tx: unknown) => unknown) => cb(tx));
 
       await service.transition('cid-1', 'status', 'active', 'user-1');
 
@@ -300,9 +294,9 @@ describe('ClientsService', () => {
     });
 
     it('does not run cascade on a non-status field flipping to dormant', async () => {
-      const other = { ...baseCtx, fieldKey: 'other', fieldName: 'other', fromState: 'active', toState: 'dormant' };
-      entityService.validateTransition.mockResolvedValue(other);
-      db.db.transaction.mockImplementation(async (cb: (tx: unknown) => unknown) => cb({}));
+      crud.findOneOrFail.mockResolvedValue({ id: 'cid-1', name: 'Acme', other: 'active' });
+      const tx = makeTx();
+      db.db.transaction.mockImplementation(async (cb: (tx: unknown) => unknown) => cb(tx));
 
       await service.transition('cid-1', 'other', 'dormant', 'user-1');
 

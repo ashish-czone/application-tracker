@@ -1,9 +1,11 @@
-import { Module } from '@nestjs/common';
-import { EntityEngineModule } from '@packages/entity-engine';
+import { Module, type OnModuleInit } from '@nestjs/common';
+import {
+  LookupResolverService,
+  registerEntityLookup,
+} from '@packages/entity-engine';
 import { WorkflowsModule } from '@packages/workflows';
 import { RbacIntegrationModule } from '@packages/rbac';
 import { createCrudProvider } from '@packages/crud-base';
-import { CLIENTS_CONFIG } from './clients.config';
 import { CLIENTS_WORKFLOW } from './clients.workflow';
 import { CLIENTS_PERMISSION_MANIFESTS } from './clients.permissions';
 import { ClientsController } from './clients.controller';
@@ -15,9 +17,16 @@ import { ClientRegistrationsModule } from '../client-registrations';
 import { CLIENTS_CRUD_TOKEN } from './clients.crud-token';
 import { clients } from './clients.schema';
 
+/**
+ * Clients module — fully de-engined. Workflow orchestration goes through
+ * `WorkflowEngineService` directly from `ClientsService.transition`; the
+ * dormancy cascade composes inside the same tx as the column update +
+ * `recordHistory` write. Lookup registration (so other entities can
+ * resolve `clientId` references) is via `registerEntityLookup` in
+ * `onModuleInit` — no `defineEntity` config.
+ */
 @Module({
   imports: [
-    EntityEngineModule.forEntity(CLIENTS_CONFIG),
     WorkflowsModule.forFeature(CLIENTS_WORKFLOW),
     RbacIntegrationModule.forFeature({ manifests: CLIENTS_PERMISSION_MANIFESTS }),
     ClientContactsModule,
@@ -39,4 +48,15 @@ import { clients } from './clients.schema';
   ],
   exports: [ClientsService, ClientDormancyService],
 })
-export class ClientsModule {}
+export class ClientsModule implements OnModuleInit {
+  constructor(private readonly lookupResolver: LookupResolverService) {}
+
+  onModuleInit(): void {
+    registerEntityLookup(this.lookupResolver, {
+      entityType: 'clients',
+      table: clients,
+      labelField: 'name',
+      searchFields: ['name', 'legalName'],
+    });
+  }
+}
