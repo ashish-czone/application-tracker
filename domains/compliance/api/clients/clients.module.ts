@@ -15,6 +15,7 @@ import { ClientsRollupService } from './clients.rollup.service';
 import { ClientContactsModule } from '../client-contacts/client-contacts.module';
 import { ClientRegistrationsModule } from '../client-registrations';
 import { CLIENTS_CRUD_TOKEN } from './clients.crud-token';
+import { CLIENTS_ANCHORS } from './clients.scope';
 import { clients } from './clients.schema';
 
 /**
@@ -41,6 +42,7 @@ import { clients } from './clients.schema';
         updated: 'clients.Updated',
         deleted: 'clients.Deleted',
       },
+      scope: { anchors: CLIENTS_ANCHORS },
     }),
     ClientsService,
     ClientDormancyService,

@@ -9,6 +9,7 @@ import { CLIENT_CONTACTS_PERMISSION_MANIFESTS } from './client-contacts.permissi
 import { ClientContactsController } from './client-contacts.controller';
 import { ClientContactsService } from './client-contacts.service';
 import { CLIENT_CONTACTS_CRUD_TOKEN } from './client-contacts.crud-token';
+import { CLIENT_CONTACTS_ANCHORS } from './client-contacts.scope';
 import { clientContacts } from './client-contacts.schema';
 
 @Module({
@@ -24,6 +25,7 @@ import { clientContacts } from './client-contacts.schema';
         updated: 'client-contacts.Updated',
         deleted: 'client-contacts.Deleted',
       },
+      scope: { anchors: CLIENT_CONTACTS_ANCHORS },
     }),
     ClientContactsService,
   ],

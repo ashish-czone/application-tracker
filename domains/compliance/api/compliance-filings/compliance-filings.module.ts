@@ -9,6 +9,10 @@ import { createCrudProvider } from '@packages/crud-base';
 import { COMPLIANCE_FILINGS_WORKFLOW } from './compliance-filings.workflow';
 import { COMPLIANCE_FILINGS_PERMISSION_MANIFESTS } from './compliance-filings.permissions';
 import { COMPLIANCE_FILINGS_CRUD_TOKEN } from './compliance-filings.crud-token';
+import {
+  COMPLIANCE_FILINGS_ANCHORS,
+  COMPLIANCE_FILINGS_INLINE_SCOPES,
+} from './compliance-filings.scope';
 import { complianceFilings } from './compliance-filings.schema';
 import { ComplianceFilingsController } from './compliance-filings.controller';
 import { ComplianceFilingsReportsController } from './compliance-filings.reports.controller';
@@ -57,6 +61,10 @@ import { LawsModule } from '../laws';
         created: 'compliance-filings.Created',
         updated: 'compliance-filings.Updated',
         deleted: 'compliance-filings.Deleted',
+      },
+      scope: {
+        anchors: COMPLIANCE_FILINGS_ANCHORS,
+        inlineResolvers: COMPLIANCE_FILINGS_INLINE_SCOPES,
       },
     }),
     ComplianceFilingsService,

@@ -2,7 +2,12 @@ import { Injectable, NotFoundException, type Provider } from '@nestjs/common';
 import { DatabaseService, eq, withScope } from '@packages/database';
 import { DomainEventEmitter } from '@packages/events';
 import { AppLoggerService, type ContextLogger } from '@packages/logger';
-import type { DataAccessContext } from '@packages/rbac';
+import {
+  DataAccessScopeService,
+  type BuildScopePredicateOptions,
+  type DataAccessContext,
+} from '@packages/rbac';
+import type { SQL } from 'drizzle-orm';
 import type { PgTable, PgColumn } from 'drizzle-orm/pg-core';
 
 /**
@@ -38,6 +43,23 @@ export interface BaseCrudOptions {
   defaultLimit?: number;
   /** Max page size for `list` — clamps higher values silently (default: 100). */
   maxLimit?: number;
+  /**
+   * Optional row-level RBAC scope shape. When provided AND a method is
+   * called with an `accessCtx`, the base ANDs a scope predicate (built via
+   * `DataAccessScopeService.buildPredicate`) into the WHERE of every
+   * scope-aware path (`list`, `findOne`, `update`, `softDelete`).
+   *
+   * The predicate covers the **default CRUD permissions** for the entity —
+   * `<slug>.read` (gates `list` / `findOne` / pre-read of `update` /
+   * `softDelete`) and `<slug>.update` (gates the actual UPDATE/DELETE
+   * statement). Non-default permissions (transitions, custom actions,
+   * report aggregations) are out of scope for the base — the consuming
+   * service hand-rolls `buildPredicate` for those, same as today.
+   *
+   * Omit `scope` for entities whose only declared scope is `'all'` /
+   * `'any'` (`organizations`, `laws`) — passing it would just no-op.
+   */
+  scope?: BuildScopePredicateOptions;
 }
 
 /**
@@ -54,6 +76,12 @@ export interface BaseCrudOptions {
  * Composes:
  *   - `withScope(table, …)` for tenant + soft-delete scoping (no-op on tables
  *     without those columns)
+ *   - **Actor-scope predicates** when `options.scope` is configured AND the
+ *     caller passes `accessCtx`. The predicate ANDs into the same `withScope`
+ *     call so soft-delete + tenant + actor-scope all flow through one WHERE.
+ *     Built via `DataAccessScopeService.buildPredicate(ctx, options.scope)`;
+ *     `'any'` scope returns `undefined` (free path, no predicate added);
+ *     empty scope array returns `1=0` (deny — caller sees zero rows / 404).
  *   - Optional event emission on create/update/softDelete (configured via
  *     `options.events`)
  *   - Logger context bound to `options.slug`
@@ -65,37 +93,32 @@ export interface BaseCrudOptions {
  *     read methods
  *   - **Permission checks** — controllers handle via `@RequirePermission`
  *   - **Validation** — controllers handle via `Schema.parse(body)`
- *   - **Actor-scope predicates** — every method accepts
- *     `accessCtx?: DataAccessContext` in its signature, but the base does
- *     NOT yet wire the context to a scope predicate. Consumers with row-
- *     level RBAC needs call `DataAccessScopeService.buildPredicate(ctx)`
- *     themselves and apply it inline.
+ *   - **Non-default-permission scope predicates** — for transitions, custom
+ *     actions, or report aggregations gated by a non-CRUD permission slug,
+ *     consumers call `DataAccessScopeService.buildPredicate(ctx, …)`
+ *     themselves with the right anchors and apply it inline.
  *
  * @example
  *   // module: provide one BaseCrudService instance per entity behind a token
  *   providers: [
- *     createCrudProvider('CRUD_organizations', organizations, {
- *       slug: 'organizations',
- *       events: { created: 'organizations.Created', ... },
+ *     createCrudProvider('CRUD_clients', clients, {
+ *       slug: 'clients',
+ *       events: { created: 'clients.Created', ... },
+ *       scope: { anchors: CLIENTS_ANCHORS, inlineResolvers: CLIENTS_INLINE_SCOPES },
  *     }),
- *     OrganizationsService,
+ *     ClientsService,
  *   ]
  *
- *   // service: inject and delegate per method
+ *   // service: inject and delegate per method; pass accessCtx through
  *   @Injectable()
- *   export class OrganizationsService {
+ *   export class ClientsService {
  *     constructor(
- *       @Inject('CRUD_organizations')
- *       private readonly crud: BaseCrudService<typeof organizations>,
+ *       @Inject('CRUD_clients')
+ *       private readonly crud: BaseCrudService<typeof clients>,
  *     ) {}
  *
  *     async list(query, ctx?) { return this.crud.list(query, ctx); }
- *     async findOneOrFail(id, ctx?) { return this.crud.findOneOrFail(id, ctx); }
- *     async create(input, actorId) {
- *       // singleton invariant — explicit, lives here, not in the base
- *       if (await this.exists()) throw new BadRequestException('singleton');
- *       return this.crud.create(input, actorId);
- *     }
+ *     async findOne(id, ctx?) { return this.crud.findOneOrFail(id, ctx); }
  *   }
  */
 @Injectable()
@@ -109,6 +132,7 @@ export class BaseCrudService<TTable extends TableWithId = TableWithId> {
     private readonly options: BaseCrudOptions,
     private readonly database: DatabaseService,
     private readonly events: DomainEventEmitter,
+    private readonly dataAccessScope: DataAccessScopeService,
     appLogger: AppLoggerService,
   ) {
     this.logger = appLogger.forContext(`BaseCrudService:${options.slug}`);
@@ -117,16 +141,31 @@ export class BaseCrudService<TTable extends TableWithId = TableWithId> {
   }
 
   /**
-   * List rows with pagination. Applies tenant + soft-delete scope via
-   * `withScope`. Does NOT apply actor-scope (apply manually in the
-   * consumer's own `list` method when needed). Search/sort/structured
-   * filters are not implemented in the base — consumers compose their own
-   * `list` and call this only for the trivial pagination case.
+   * Resolve the actor-scope predicate for the current call. Returns
+   * `undefined` when scope can't or shouldn't apply:
+   *  - no `accessCtx` (caller is privileged or doesn't care)
+   *  - no `options.scope` registered (entity has only `'all'` scope)
+   *  - the resolved scope contains `'any'` — `buildPredicate` returns
+   *    `undefined` itself, which we pass through.
+   * Returns `1=0` for the deny case (empty / unknown scopes); flows through
+   * `withScope` and short-circuits the WHERE to no matches.
+   */
+  private async resolveScopePredicate(
+    accessCtx?: DataAccessContext,
+  ): Promise<SQL | undefined> {
+    if (!accessCtx || !this.options.scope) return undefined;
+    return this.dataAccessScope.buildPredicate(accessCtx, this.options.scope);
+  }
+
+  /**
+   * List rows with pagination. Applies tenant + soft-delete + actor-scope
+   * (when configured) via `withScope`. Search/sort/structured filters are
+   * not implemented in the base — consumers compose their own `list` and
+   * call this only for the trivial pagination case.
    */
   async list(
     query: BaseListQuery = {},
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    _accessCtx?: DataAccessContext,
+    accessCtx?: DataAccessContext,
   ): Promise<{ data: TTable['$inferSelect'][]; meta: { page: number; limit: number; total: number } }> {
     type Row = TTable['$inferSelect'];
     const limitRaw = query.limit ?? this.defaultLimit;
@@ -134,10 +173,12 @@ export class BaseCrudService<TTable extends TableWithId = TableWithId> {
     const page = Math.max(1, query.page ?? 1);
     const offset = (page - 1) * limit;
 
+    const scopePredicate = await this.resolveScopePredicate(accessCtx);
+
     const rows = (await this.database.db
       .select()
       .from(this.table as PgTable)
-      .where(withScope(this.table))
+      .where(withScope(this.table, scopePredicate))
       .limit(limit)
       .offset(offset)) as Row[];
 
@@ -150,14 +191,14 @@ export class BaseCrudService<TTable extends TableWithId = TableWithId> {
   /** Returns the row by id, or null if not found / out of scope. */
   async findOne(
     id: string,
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    _accessCtx?: DataAccessContext,
+    accessCtx?: DataAccessContext,
   ): Promise<TTable['$inferSelect'] | null> {
     type Row = TTable['$inferSelect'];
+    const scopePredicate = await this.resolveScopePredicate(accessCtx);
     const rows = (await this.database.db
       .select()
       .from(this.table as PgTable)
-      .where(withScope(this.table, eq(this.table.id, id)))
+      .where(withScope(this.table, scopePredicate, eq(this.table.id, id)))
       .limit(1)) as Row[];
     return rows[0] ?? null;
   }
@@ -174,6 +215,12 @@ export class BaseCrudService<TTable extends TableWithId = TableWithId> {
   /**
    * Insert a new row. Emits `options.events.created` (if configured)
    * after the insert commits.
+   *
+   * `create` is intentionally NOT scope-gated: the row doesn't exist yet,
+   * so its anchor columns aren't set, so a scope predicate has nothing to
+   * match against. Permission to create is the controller's
+   * `<slug>.create` check, not a row predicate. Consumers that need a
+   * pre-create invariant (singletons, FK-existence, etc.) wrap the call.
    */
   async create(input: TTable['$inferInsert'], actorId: string): Promise<TTable['$inferSelect']> {
     type Row = TTable['$inferSelect'];
@@ -197,8 +244,10 @@ export class BaseCrudService<TTable extends TableWithId = TableWithId> {
 
   /**
    * Update a row by id. Reads before-state for the event payload, then
-   * applies the patch within scope. Emits `options.events.updated` (if
-   * configured) carrying { before, after }.
+   * applies the patch within scope. The scope predicate is included in
+   * BOTH the pre-read AND the UPDATE statement's WHERE — closing the race
+   * where a row's scope state could change between the two. Emits
+   * `options.events.updated` (if configured) carrying { before, after }.
    */
   async update(
     id: string,
@@ -208,11 +257,12 @@ export class BaseCrudService<TTable extends TableWithId = TableWithId> {
   ): Promise<TTable['$inferSelect']> {
     type Row = TTable['$inferSelect'];
     const before = await this.findOneOrFail(id, accessCtx);
+    const scopePredicate = await this.resolveScopePredicate(accessCtx);
 
     const [updated] = (await this.database.db
       .update(this.table as PgTable)
       .set(patch as never)
-      .where(withScope(this.table, eq(this.table.id, id)))
+      .where(withScope(this.table, scopePredicate, eq(this.table.id, id)))
       .returning()) as [Row];
 
     if (!updated) {
@@ -236,16 +286,19 @@ export class BaseCrudService<TTable extends TableWithId = TableWithId> {
   /**
    * Soft-delete a row by id. Sets `deletedAt`/`deletedBy` (the table
    * MUST have these columns — `withScope` will silently filter the row
-   * back out if they're missing). Emits `options.events.deleted` (if
-   * configured).
+   * back out if they're missing). The scope predicate is included in the
+   * UPDATE statement's WHERE (mirroring `update`) so an out-of-scope
+   * caller cannot tombstone a row even by guessing the id. Emits
+   * `options.events.deleted` (if configured).
    */
   async softDelete(id: string, actorId: string, accessCtx?: DataAccessContext): Promise<void> {
     const before = await this.findOneOrFail(id, accessCtx);
+    const scopePredicate = await this.resolveScopePredicate(accessCtx);
 
     await this.database.db
       .update(this.table as PgTable)
       .set({ deletedAt: new Date(), deletedBy: actorId } as never)
-      .where(withScope(this.table, eq(this.table.id, id)));
+      .where(withScope(this.table, scopePredicate, eq(this.table.id, id)));
 
     if (this.options.events?.deleted) {
       this.events.emitDynamic(this.options.events.deleted, {
@@ -277,8 +330,9 @@ export function createCrudProvider<T extends TableWithId>(
     useFactory: (
       database: DatabaseService,
       events: DomainEventEmitter,
+      dataAccessScope: DataAccessScopeService,
       appLogger: AppLoggerService,
-    ) => new BaseCrudService(table, options, database, events, appLogger),
-    inject: [DatabaseService, DomainEventEmitter, AppLoggerService],
+    ) => new BaseCrudService(table, options, database, events, dataAccessScope, appLogger),
+    inject: [DatabaseService, DomainEventEmitter, DataAccessScopeService, AppLoggerService],
   };
 }
