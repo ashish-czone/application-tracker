@@ -1,13 +1,14 @@
 import { useMemo } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { toast } from '@packages/ui';
-import { useEntityEngine, useEntityHooks } from '@packages/entity-engine-ui';
+import { useEntityEngine } from '@packages/entity-engine-ui';
 import { useOrgUnits } from '@packages/org-units-ui';
 import type { OrgUnit } from '@packages/org-units-ui';
 import type { FilingRow } from '../portals/customer/features/filings/types';
 import type { Handler, Filing } from '../types';
 import { lawsQueries } from './useLawsApi';
 import { rulesQueries } from './useComplianceRulesApi';
+import { clientsQueries } from './useClientsApi';
 
 interface PaginatedResponse<T> {
   data: T[];
@@ -117,7 +118,6 @@ export interface ComplianceFilingsResult {
 
 export function useComplianceFilingRows(): ComplianceFilingsResult {
   const { apiFn } = useEntityEngine();
-  const clientsHooks = useEntityHooks('clients');
 
   const filingsQuery = useQuery<PaginatedResponse<ComplianceFilingRow>>({
     queryKey: ['compliance-filings', { limit: 1000 }],
@@ -126,7 +126,7 @@ export function useComplianceFilingRows(): ComplianceFilingsResult {
   });
   const rulesQuery = useQuery(rulesQueries(apiFn).list({ limit: 1000 }));
   const lawsQuery = useQuery(lawsQueries(apiFn).list({ limit: 1000 }));
-  const clientsQuery = clientsHooks.useList({ limit: 1000 });
+  const clientsQuery = useQuery(clientsQueries(apiFn).list({ limit: 1000 }));
   const orgUnitsQuery = useOrgUnits();
 
   const loading =

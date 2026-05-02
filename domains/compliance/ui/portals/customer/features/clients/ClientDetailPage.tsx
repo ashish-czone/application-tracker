@@ -3,6 +3,8 @@ import { Link, useParams } from 'react-router';
 import { ChevronRight, ChevronLeft } from 'lucide-react';
 import { DataTable, Pagination, CoarseTabs } from '@packages/ui';
 import { AuditTimeline } from '@packages/audit-ui';
+import { useQuery } from '@tanstack/react-query';
+import { useEntityEngine } from '@packages/entity-engine-ui';
 import type { ClientFilingStatus, ClientLaw } from './types';
 import { ScreenPreviewTopBar } from '../shared/ScreenPreviewTopBar';
 import { InactiveStateBanner } from '../../../../components';
@@ -11,7 +13,7 @@ import { ClientDetailOverview } from './components/ClientDetailOverview';
 import { CLIENT_DETAIL_FILING_COLUMNS } from './components/clientDetailFilingColumns';
 import { makeClientDetailLawColumns } from './components/clientDetailLawColumns';
 import { RegistrationDeactivationDialog } from './components/RegistrationDeactivationDialog';
-import { useClientDetail } from '../../../../hooks/useClientsApi';
+import { clientsQueries } from '../../../../hooks/useClientsApi';
 import {
   useClientContacts,
   useClientFilings,
@@ -26,7 +28,10 @@ const FILINGS_PAGE_LIMIT = 10;
 
 export function ClientDetailPage() {
   const { clientId } = useParams<{ clientId: string }>();
-  const { data: record, isLoading: recordLoading, isError } = useClientDetail(clientId);
+  const { apiFn } = useEntityEngine();
+  const { data: record, isLoading: recordLoading, isError } = useQuery(
+    clientsQueries(apiFn).detail(clientId),
+  );
   const { summary, loading: summaryLoading } = useClientFilingsSummary(clientId);
   const { registrations, loading: registrationsLoading } = useClientRegistrations(clientId);
   const { contacts, loading: contactsLoading } = useClientContacts(clientId);

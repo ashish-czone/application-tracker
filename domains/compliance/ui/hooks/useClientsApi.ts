@@ -1,6 +1,6 @@
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { queryOptions, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { toast } from '@packages/ui';
-import { useEntityEngine, useEntityHooks } from '@packages/entity-engine-ui';
+import { useEntityEngine } from '@packages/entity-engine-ui';
 
 interface PaginatedResponse<T> {
   data: T[];
@@ -153,19 +153,59 @@ export interface DeactivateRegistrationResult {
   manuallyCancelledFilingIds: string[];
 }
 
-export function useClientsList(params: ClientsListParams = {}) {
-  const hooks = useEntityHooks('clients');
-  return hooks.useList(params as Record<string, unknown>) as ReturnType<typeof hooks.useList> & {
-    data?: PaginatedResponse<ClientRecord>;
+type ApiFn = {
+  get: <T>(path: string) => Promise<T>;
+  post: <T>(path: string, body?: unknown) => Promise<T>;
+  put: <T>(path: string, body?: unknown) => Promise<T>;
+  patch: <T>(path: string, body?: unknown) => Promise<T>;
+  delete: <T>(path: string) => Promise<T>;
+};
+
+const BASE = '/clients';
+
+export const clientsQueryKey = ['clients'] as const;
+
+/**
+ * `queryOptions` factory for clients reads. Pages call
+ * `useQuery(clientsQueries(apiFn).list(params))` directly rather than going
+ * through the entity-engine FE registry. queryKey + URL stay colocated so
+ * cross-page lists can't drift to incompatible cache keys.
+ */
+export function clientsQueries(apiFn: ApiFn) {
+  return {
+    list: (params: ClientsListParams = {}) =>
+      queryOptions({
+        queryKey: [...clientsQueryKey, 'list', params] as const,
+        queryFn: () =>
+          apiFn.get<PaginatedResponse<ClientRecord>>(
+            `${BASE}${buildQuery(params as Record<string, unknown>)}`,
+          ),
+      }),
+    detail: (id: string | null | undefined) =>
+      queryOptions({
+        queryKey: [...clientsQueryKey, 'detail', id] as const,
+        queryFn: () => apiFn.get<ClientRecord>(`${BASE}/${id}`),
+        enabled: !!id,
+      }),
   };
+}
+
+function buildQuery(params: Record<string, unknown>): string {
+  const sp = new URLSearchParams();
+  for (const [k, v] of Object.entries(params)) {
+    if (v != null && v !== '' && v !== false) sp.set(k, String(v));
+  }
+  if (sp.get('page') === '1') sp.delete('page');
+  const qs = sp.toString();
+  return qs ? `?${qs}` : '';
 }
 
 /** Page-level KPI summary for the clients list view. */
 export function useClientsSummary() {
   const { apiFn } = useEntityEngine();
   return useQuery({
-    queryKey: ['clients', 'summary'],
-    queryFn: () => apiFn.get<ClientsSummary>('/clients/summary'),
+    queryKey: [...clientsQueryKey, 'summary'],
+    queryFn: () => apiFn.get<ClientsSummary>(`${BASE}/summary`),
   });
 }
 
@@ -173,17 +213,10 @@ export function useClientsSummary() {
 export function useClientHandlerOptions() {
   const { apiFn } = useEntityEngine();
   return useQuery({
-    queryKey: ['clients', 'handler-options'],
-    queryFn: () => apiFn.get<HandlerOption[]>('/clients/handler-options'),
+    queryKey: [...clientsQueryKey, 'handler-options'],
+    queryFn: () => apiFn.get<HandlerOption[]>(`${BASE}/handler-options`),
     staleTime: 60_000,
   });
-}
-
-export function useClientDetail(id: string | null | undefined) {
-  const hooks = useEntityHooks('clients');
-  return hooks.useDetail(id) as ReturnType<typeof hooks.useDetail> & {
-    data?: ClientRecord;
-  };
 }
 
 export function useCreateClientWithContacts(options?: {
@@ -194,9 +227,9 @@ export function useCreateClientWithContacts(options?: {
 
   return useMutation({
     mutationFn: (payload: CreateClientWithContactsPayload) =>
-      apiFn.post<CreateClientWithContactsResult>('/clients/with-contacts', payload),
+      apiFn.post<CreateClientWithContactsResult>(`${BASE}/with-contacts`, payload),
     onSuccess: (result) => {
-      queryClient.invalidateQueries({ queryKey: ['clients'] });
+      queryClient.invalidateQueries({ queryKey: clientsQueryKey });
       toast.success('Client created');
       options?.onSuccess?.(result);
     },
@@ -237,7 +270,7 @@ export function useCreateClientRegistrations(options?: {
 
   return useMutation({
     mutationFn: ({ clientId, lawCodes }: CreateClientRegistrationsPayload) =>
-      apiFn.post<ClientRegistrationRecord[]>(`/clients/${clientId}/registrations`, { lawCodes }),
+      apiFn.post<ClientRegistrationRecord[]>(`${BASE}/${clientId}/registrations`, { lawCodes }),
     onSuccess: (result) => {
       queryClient.invalidateQueries({ queryKey: ['client-registrations'] });
       options?.onSuccess?.(result);
@@ -270,7 +303,7 @@ export function useRegistrationDeactivationPreview(
     queryKey: ['registration-deactivation-preview', params?.clientId, params?.lawId, params?.date],
     queryFn: () =>
       apiFn.get<RegistrationDeactivationPreview>(
-        `/clients/${params!.clientId}/registrations/${params!.lawId}/deactivation-preview?date=${encodeURIComponent(params!.date)}`,
+        `${BASE}/${params!.clientId}/registrations/${params!.lawId}/deactivation-preview?date=${encodeURIComponent(params!.date)}`,
       ),
     enabled: !!params,
     staleTime: 0,
@@ -287,7 +320,7 @@ export function useDeactivateRegistration(options?: {
   return useMutation({
     mutationFn: ({ clientId, lawId, ...body }: DeactivateRegistrationPayload) =>
       apiFn.post<DeactivateRegistrationResult>(
-        `/clients/${clientId}/registrations/${lawId}/deactivate`,
+        `${BASE}/${clientId}/registrations/${lawId}/deactivate`,
         body,
       ),
     onSuccess: (result) => {
@@ -315,7 +348,7 @@ export function useSetPrimaryContact(options?: { onSuccess?: () => void }) {
 
   return useMutation({
     mutationFn: ({ clientId, contactId }: { clientId: string; contactId: string }) =>
-      apiFn.put<void>(`/clients/${clientId}/contacts/${contactId}/primary`),
+      apiFn.put<void>(`${BASE}/${clientId}/contacts/${contactId}/primary`),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['client-contacts'] });
       toast.success('Primary contact updated');
