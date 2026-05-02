@@ -28,12 +28,6 @@ import {
 export class ClientRegistrationsController {
   constructor(private readonly clientRegistrations: ClientRegistrationsService) {}
 
-  @Get('layout/list')
-  @RequirePermission('client-registrations.read')
-  getListLayout() {
-    return this.clientRegistrations.getListLayout();
-  }
-
   @Get()
   @RequirePermission('client-registrations.read')
   list(@Query() query: Record<string, unknown>, @AccessContext() accessCtx?: DataAccessContext) {

@@ -1,9 +1,11 @@
 import { Inject, Injectable } from '@nestjs/common';
 import { DatabaseService, and, eq, isNull, sql } from '@packages/database';
 import { EntityService, type BaseListQuery } from '@packages/entity-engine';
+import { BaseCrudService } from '@packages/crud-base';
 import type { DataAccessContext } from '@packages/rbac';
 import { LawsService } from '../laws';
 import { complianceLawHandlers } from './law-handlers.schema';
+import { LAW_HANDLERS_CRUD_TOKEN } from './law-handlers.crud-token';
 import type { CreateLawHandlerDto, UpdateLawHandlerDto } from './law-handlers.dto';
 
 export interface LawHandler {
@@ -33,12 +35,14 @@ export interface CreateLawHandlerInput {
 @Injectable()
 export class LawHandlersService {
   constructor(
+    @Inject(LAW_HANDLERS_CRUD_TOKEN)
+    private readonly crud: BaseCrudService<typeof complianceLawHandlers>,
     @Inject('ENTITY_SERVICE_law-handlers') private readonly entityService: EntityService,
     private readonly database: DatabaseService,
     private readonly lawsService: LawsService,
   ) {}
 
-  // ---- CRUD delegates (vendors template) -----------------------------------
+  // ---- CRUD delegates -------------------------------------------------------
 
   /**
    * List handlers with `lawCode` + `lawName` embedded per row. Service
@@ -46,9 +50,9 @@ export class LawHandlersService {
    * ComplianceFilingsService.list, never a JOIN.
    */
   async list(query: BaseListQuery, accessCtx?: DataAccessContext) {
-    const result = await this.entityService.list(query, accessCtx);
+    const result = await this.crud.list(query, accessCtx);
     const lawIds = new Set<string>();
-    for (const row of result.data) {
+    for (const row of result.data as Record<string, unknown>[]) {
       const id = row.lawId;
       if (typeof id === 'string' && id.length > 0) lawIds.add(id);
     }
@@ -59,7 +63,7 @@ export class LawHandlersService {
 
     return {
       ...result,
-      data: result.data.map((row) => {
+      data: (result.data as Record<string, unknown>[]).map((row) => {
         const lawId = typeof row.lawId === 'string' ? row.lawId : null;
         const law = lawId ? byId.get(lawId) : undefined;
         if (!law) return row;
@@ -74,19 +78,19 @@ export class LawHandlersService {
   }
 
   findOne(id: string, accessCtx?: DataAccessContext) {
-    return this.entityService.findOneOrFail(id, accessCtx);
+    return this.crud.findOneOrFail(id, accessCtx);
   }
 
   create(input: CreateLawHandlerDto, actorId: string) {
-    return this.entityService.create(input, actorId);
+    return this.crud.create(input as never, actorId);
   }
 
   update(id: string, input: UpdateLawHandlerDto, actorId: string, accessCtx?: DataAccessContext) {
-    return this.entityService.update(id, input, actorId, accessCtx);
+    return this.crud.update(id, input as never, actorId, accessCtx);
   }
 
   softDelete(id: string, actorId: string, accessCtx?: DataAccessContext) {
-    return this.entityService.softDelete(id, actorId, accessCtx);
+    return this.crud.softDelete(id, actorId, accessCtx);
   }
 
   clone(id: string, actorId: string) {
@@ -95,10 +99,6 @@ export class LawHandlersService {
 
   restore(id: string) {
     return this.entityService.restore(id);
-  }
-
-  getListLayout() {
-    return this.entityService.getListLayout();
   }
 
   // ---- Programmatic / specialized ------------------------------------------

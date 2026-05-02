@@ -35,12 +35,6 @@ export class LawHandlersController {
     private readonly rules: ComplianceRulesService,
   ) {}
 
-  @Get('layout/list')
-  @RequirePermission('law-handlers.read')
-  getListLayout() {
-    return this.lawHandlers.getListLayout();
-  }
-
   @Get()
   @RequirePermission('law-handlers.read')
   list(@Query() query: Record<string, unknown>, @AccessContext() accessCtx?: DataAccessContext) {
