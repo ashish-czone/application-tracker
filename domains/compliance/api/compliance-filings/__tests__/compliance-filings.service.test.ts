@@ -2,6 +2,17 @@ import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { ComplianceFilingsService } from '../compliance-filings.service';
 
 describe('ComplianceFilingsService', () => {
+  // After the BaseCrudService migration, list/findOneOrFail/create/update/
+  // softDelete delegate to `crud`. getSummary's filter-based list calls and
+  // getScopePredicate stay on `entityService` (the engine's filter shape
+  // doesn't have a base equivalent yet).
+  let crud: {
+    list: ReturnType<typeof vi.fn>;
+    findOneOrFail: ReturnType<typeof vi.fn>;
+    create: ReturnType<typeof vi.fn>;
+    update: ReturnType<typeof vi.fn>;
+    softDelete: ReturnType<typeof vi.fn>;
+  };
   let entityService: {
     create: ReturnType<typeof vi.fn>;
     update: ReturnType<typeof vi.fn>;
@@ -13,6 +24,13 @@ describe('ComplianceFilingsService', () => {
   let service: ComplianceFilingsService;
 
   beforeEach(() => {
+    crud = {
+      list: vi.fn(),
+      findOneOrFail: vi.fn(),
+      create: vi.fn().mockResolvedValue({ id: 'filing-1' }),
+      update: vi.fn().mockResolvedValue({ id: 'filing-1' }),
+      softDelete: vi.fn(),
+    };
     entityService = {
       create: vi.fn().mockResolvedValue({ id: 'filing-1' }),
       update: vi.fn().mockResolvedValue({ id: 'filing-1' }),
@@ -25,7 +43,12 @@ describe('ComplianceFilingsService', () => {
     database = {
       db: { execute: vi.fn().mockResolvedValue({ rows: [{ count: 0 }] }) },
     };
-    service = new ComplianceFilingsService(entityService as never, lawsService as never, database as never);
+    service = new ComplianceFilingsService(
+      crud as never,
+      entityService as never,
+      lawsService as never,
+      database as never,
+    );
   });
 
   describe('create — externalKey derivation', () => {
@@ -39,7 +62,7 @@ describe('ComplianceFilingsService', () => {
         } as never,
         'actor',
       );
-      const payload = entityService.create.mock.calls[0][0] as Record<string, unknown>;
+      const payload = crud.create.mock.calls[0][0] as Record<string, unknown>;
       expect(payload.externalKey).toBe('r1:c1:2026-04-01');
     });
 
@@ -54,13 +77,13 @@ describe('ComplianceFilingsService', () => {
         } as never,
         'actor',
       );
-      const payload = entityService.create.mock.calls[0][0] as Record<string, unknown>;
+      const payload = crud.create.mock.calls[0][0] as Record<string, unknown>;
       expect(payload.externalKey).toBe('pre-set-key');
     });
 
     it('does not set externalKey when the tuple is incomplete', async () => {
       await service.create({ title: 'Filing', ruleId: 'r1' } as never, 'actor');
-      const payload = entityService.create.mock.calls[0][0] as Record<string, unknown>;
+      const payload = crud.create.mock.calls[0][0] as Record<string, unknown>;
       expect(payload.externalKey).toBeUndefined();
     });
   });
@@ -72,14 +95,14 @@ describe('ComplianceFilingsService', () => {
       // overrides with COMPLIANCE_FILINGS_WORKFLOW.initialState ('pending').
       // See `.claude/rules/workflow-entity-creates.md`.
       await service.create({ title: 'Filing', status: 'completed' } as never, 'actor');
-      const payload = entityService.create.mock.calls[0][0] as Record<string, unknown>;
+      const payload = crud.create.mock.calls[0][0] as Record<string, unknown>;
       expect(payload.status).toBe('pending');
       expect(payload.completedAt).toBeNull();
     });
 
     it('stamps status=pending and completedAt=null when no status supplied', async () => {
       await service.create({ title: 'Filing' } as never, 'actor');
-      const payload = entityService.create.mock.calls[0][0] as Record<string, unknown>;
+      const payload = crud.create.mock.calls[0][0] as Record<string, unknown>;
       expect(payload.status).toBe('pending');
       expect(payload.completedAt).toBeNull();
     });
@@ -88,26 +111,26 @@ describe('ComplianceFilingsService', () => {
   describe('update — completedAt stamping', () => {
     it('stamps completedAt when transitioning to completed', async () => {
       await service.update('id', { status: 'completed' } as never, 'actor');
-      const payload = entityService.update.mock.calls[0][1] as Record<string, unknown>;
+      const payload = crud.update.mock.calls[0][1] as Record<string, unknown>;
       expect(payload.completedAt).toBeInstanceOf(Date);
     });
 
     it('clears completedAt when transitioning away from completed', async () => {
       await service.update('id', { status: 'in_progress' } as never, 'actor');
-      const payload = entityService.update.mock.calls[0][1] as Record<string, unknown>;
+      const payload = crud.update.mock.calls[0][1] as Record<string, unknown>;
       expect(payload.completedAt).toBeNull();
     });
 
     it('does not touch completedAt when status is not in the payload', async () => {
       await service.update('id', { title: 'new title' } as never, 'actor');
-      const payload = entityService.update.mock.calls[0][1] as Record<string, unknown>;
+      const payload = crud.update.mock.calls[0][1] as Record<string, unknown>;
       expect('completedAt' in payload).toBe(false);
     });
   });
 
   describe('list — law display injection', () => {
     it('injects lawCode, lawName, lawJurisdiction onto each row from a single batched LawsService call', async () => {
-      entityService.list.mockResolvedValue({
+      crud.list.mockResolvedValue({
         data: [
           { id: 'f1', lawId: 'law-a', clientId: 'c1' },
           { id: 'f2', lawId: 'law-b', clientId: 'c2' },
@@ -134,7 +157,7 @@ describe('ComplianceFilingsService', () => {
     });
 
     it('returns rows unchanged when no rows have a lawId', async () => {
-      entityService.list.mockResolvedValue({
+      crud.list.mockResolvedValue({
         data: [{ id: 'f1', clientId: 'c1' }],
         meta: { total: 1, page: 1, limit: 20, totalPages: 1 },
       });
@@ -146,7 +169,7 @@ describe('ComplianceFilingsService', () => {
     });
 
     it('leaves a row untouched when its lawId is missing from the law batch', async () => {
-      entityService.list.mockResolvedValue({
+      crud.list.mockResolvedValue({
         data: [
           { id: 'f1', lawId: 'law-a' },
           { id: 'f2', lawId: 'law-deleted' },
@@ -165,9 +188,9 @@ describe('ComplianceFilingsService', () => {
       ]);
     });
 
-    it('preserves meta from the underlying entity-engine list call', async () => {
+    it('preserves meta from the underlying base CRUD list call', async () => {
       const meta = { total: 47, page: 2, limit: 20, totalPages: 3 };
-      entityService.list.mockResolvedValue({ data: [], meta });
+      crud.list.mockResolvedValue({ data: [], meta });
 
       const result = await service.list({ page: 2, limit: 20 });
 

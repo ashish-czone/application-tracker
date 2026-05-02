@@ -2,9 +2,12 @@ import { Module } from '@nestjs/common';
 import { EntityEngineModule } from '@packages/entity-engine';
 import { WorkflowsModule } from '@packages/workflows';
 import { RbacIntegrationModule } from '@packages/rbac';
+import { createCrudProvider } from '@packages/crud-base';
 import { COMPLIANCE_FILINGS_CONFIG } from './compliance-filings.config';
 import { COMPLIANCE_FILINGS_WORKFLOW } from './compliance-filings.workflow';
 import { COMPLIANCE_FILINGS_PERMISSION_MANIFESTS } from './compliance-filings.permissions';
+import { COMPLIANCE_FILINGS_CRUD_TOKEN } from './compliance-filings.crud-token';
+import { complianceFilings } from './compliance-filings.schema';
 import { ComplianceFilingsController } from './compliance-filings.controller';
 import { ComplianceFilingsReportsController } from './compliance-filings.reports.controller';
 import { ComplianceFilingsService } from './compliance-filings.service';
@@ -49,6 +52,14 @@ const filingsEntityEngineModule = EntityEngineModule.forEntity(COMPLIANCE_FILING
   ],
   controllers: [ComplianceFilingsController, ComplianceFilingsReportsController],
   providers: [
+    createCrudProvider(COMPLIANCE_FILINGS_CRUD_TOKEN, complianceFilings, {
+      slug: 'compliance-filings',
+      events: {
+        created: 'compliance-filings.Created',
+        updated: 'compliance-filings.Updated',
+        deleted: 'compliance-filings.Deleted',
+      },
+    }),
     ComplianceFilingsService,
     ComplianceFilingsReportsService,
     ComplianceFilingsLookupService,
