@@ -2124,6 +2124,9 @@ importers:
       '@packages/entity-engine-ui':
         specifier: workspace:*
         version: link:../../../packages/addons/entity-engine/ui
+      '@packages/entity-views-ui':
+        specifier: workspace:*
+        version: link:../../../packages/addons/entity-views-ui
       '@packages/notification-channels-ui':
         specifier: workspace:*
         version: link:../../../packages/platform/notification-channels/ui
@@ -3387,6 +3390,9 @@ importers:
 
   packages/addons/entity-views-ui:
     dependencies:
+      '@packages/eav-attributes-ui':
+        specifier: workspace:*
+        version: link:../../platform/eav-attributes-ui
       '@packages/ui':
         specifier: workspace:*
         version: link:../../core/ui
@@ -3405,6 +3411,9 @@ importers:
       react-router:
         specifier: ^7.0.0
         version: 7.13.1(react-dom@19.2.4(react@19.2.4))(react@19.2.4)
+      zod:
+        specifier: ^3.25.0
+        version: 3.25.76
     devDependencies:
       '@testing-library/react':
         specifier: ^16.0.0

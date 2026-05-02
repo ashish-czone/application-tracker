@@ -15,6 +15,7 @@
     "@packages/domains": "workspace:*",
     "@packages/eav-attributes-ui": "workspace:*",
     "@packages/entity-engine-ui": "workspace:*",
+    "@packages/entity-views-ui": "workspace:*",
     "@packages/notification-channels-ui": "workspace:*",
     "@packages/org-units-ui": "workspace:*",
     "@packages/platform-ui": "workspace:*",

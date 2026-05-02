@@ -19,7 +19,19 @@ export type {
 export { defineDetailLayout } from './define-detail-layout';
 export type { DetailLayoutDefinition, DetailLayoutSection } from './define-detail-layout';
 
+export { defineFormLayout, flattenFormFields } from './define-form-layout';
+export type {
+  FormLayoutDefinition,
+  FormSectionDefinition,
+  FormFieldDefinition,
+} from './define-form-layout';
+
+export { buildFormSchema, adaptFormFieldDefinition } from './helpers/build-form-schema';
+
 // Components
+export { EntityFormFields } from './EntityFormFields';
+export type { FormFieldOverride, LookupSearchFn } from './EntityFormFields';
+
 export { EntityListView } from './EntityListView';
 export type { UseListHook, UseListQuery, UseListResult } from './EntityListView';
 
