@@ -149,10 +149,14 @@ test.describe('Flow: filing assignment + continuity (US-7.x / US-12.x)', () => {
     await updateFiling(carolToComplete.id, { assigneeId: carol.id });
     await updateFiling(daveFiling.id, { assigneeId: dave.id });
 
-    // Drive the second Carol filing to a terminal state.
+    // Drive the second Carol filing to a terminal state. The reviewer-
+    // signoff transition (`review → completed`) requires a comment per
+    // COMPLIANCE_FILINGS_WORKFLOW.
     await transitionFiling(carolToComplete.id, 'in_progress');
     await transitionFiling(carolToComplete.id, 'review');
-    await transitionFiling(carolToComplete.id, 'completed');
+    await transitionFiling(carolToComplete.id, 'completed', {
+      comment: 'E2E flow: completing fixture filing for assignment test',
+    });
 
     // Sanity: pre-deactivation state matches what we set up.
     const beforeRow = (await apiClient.get<{ data: FilingRow[] }>(

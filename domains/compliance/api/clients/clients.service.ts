@@ -1,5 +1,5 @@
 import { Inject, Injectable, BadRequestException, UnprocessableEntityException } from '@nestjs/common';
-import { DatabaseService } from '@packages/database';
+import { DatabaseService, eq } from '@packages/database';
 import { DomainEventEmitter } from '@packages/events';
 import { EntityService, type BaseListQuery } from '@packages/entity-engine';
 import type { DataAccessContext } from '@packages/rbac';
@@ -201,12 +201,27 @@ export class ClientsService {
    * initialState. State is system-managed: the DTO strips any caller-supplied
    * value, so the only path that lands a client in a non-initial state is
    * `POST /:id/transition`. See `.claude/rules/workflow-entity-creates.md`.
+   *
+   * After the engine inserts the row, stamp `complianceBecameClientAt` via
+   * a follow-up UPDATE — this column is not in the entity config's `fields`
+   * (the engine rejects unknown fields), but the rollup queries filter on
+   * `complianceBecameClientAt IS NOT NULL` to distinguish compliance clients
+   * from rows owned by directory or other domains in the shared identity
+   * table. The composite `createWithContacts` stamps the same marker inline.
    */
   async create(input: Record<string, unknown>, actorId: string) {
     const row = await this.entityService.create(
       { ...input, complianceStatus: CLIENTS_WORKFLOW.initialState },
       actorId,
     );
+    if (row && !row.complianceBecameClientAt && typeof row.id === 'string') {
+      const becameAt = new Date();
+      await this.database.db
+        .update(clients)
+        .set({ complianceBecameClientAt: becameAt })
+        .where(eq(clients.id, row.id));
+      row.complianceBecameClientAt = becameAt;
+    }
     return this.withStatusAlias(row);
   }
 

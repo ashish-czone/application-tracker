@@ -91,7 +91,12 @@ test.describe('Flow: client workflow transitions', () => {
       reason: 'temporary pause',
       comment: 'E2E flow: round-trip to active',
     });
-    await transitionClient(client.id, 'active');
+    // Reactivation is symmetric with dormantisation — both require
+    // reason + comment per CLIENTS_WORKFLOW.
+    await transitionClient(client.id, 'active', {
+      reason: 'pause ended',
+      comment: 'E2E flow: round-trip back to active',
+    });
 
     const after = await apiClient.get<Client>(`/clients/${client.id}`);
     expect(after.status).toBe('active');
