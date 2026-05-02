@@ -13,7 +13,7 @@ import {
   type ActiveFilter,
 } from '@packages/ui';
 import { useQuery } from '@tanstack/react-query';
-import { useEntityEngine, useEntityHooks } from '@packages/entity-engine-ui';
+import { useEntityEngine } from '@packages/entity-engine-ui';
 import {
   type ComplianceFrequency,
   type LawGroupKey,
@@ -32,8 +32,9 @@ import {
 } from './components/NewComplianceRuleDrawer';
 import { ScreenPreviewTopBar } from '../shared/ScreenPreviewTopBar';
 import {
-  useComplianceRulesList,
+  rulesQueries,
   useComplianceRulesSummary,
+  useCreateComplianceRule,
 } from '../../../../hooks/useComplianceRulesApi';
 import { lawsQueries } from '../../../../hooks/useLawsApi';
 import { useDebouncedValue } from '../../../../hooks/useDebouncedValue';
@@ -78,25 +79,26 @@ export function ComplianceRulesPage() {
     setPage(1);
   }, [statusTab, lawFilter, jurisdictionFilter, frequencyFilter, debouncedSearch]);
 
+  const { apiFn } = useEntityEngine();
   const {
     data: rulesPage,
     isLoading,
     isError,
-  } = useComplianceRulesList({
-    page,
-    limit: PAGE_LIMIT,
-    status: statusTab === 'all' ? undefined : statusTab,
-    lawGroup: lawFilter.length > 0 ? lawFilter.join(',') : undefined,
-    jurisdiction: jurisdictionFilter.length > 0 ? jurisdictionFilter.join(',') : undefined,
-    frequency: frequencyFilter.length > 0 ? frequencyFilter.join(',') : undefined,
-    q: debouncedSearch || undefined,
-  });
+  } = useQuery(
+    rulesQueries(apiFn).list({
+      page,
+      limit: PAGE_LIMIT,
+      status: statusTab === 'all' ? undefined : statusTab,
+      lawGroup: lawFilter.length > 0 ? lawFilter.join(',') : undefined,
+      jurisdiction: jurisdictionFilter.length > 0 ? jurisdictionFilter.join(',') : undefined,
+      frequency: frequencyFilter.length > 0 ? frequencyFilter.join(',') : undefined,
+      q: debouncedSearch || undefined,
+    }),
+  );
   const { data: summary } = useComplianceRulesSummary();
-  const { apiFn } = useEntityEngine();
   const { data: lawsPage } = useQuery(lawsQueries(apiFn).list({ limit: DRAWER_LAW_LIMIT }));
 
-  const rulesHooks = useEntityHooks('compliance-rules');
-  const createRule = rulesHooks.useCreate({ onSuccess: () => setDrawerOpen(false) });
+  const createRule = useCreateComplianceRule({ onSuccess: () => setDrawerOpen(false) });
 
   const rows = useMemo<ComplianceRule[]>(
     () => rulesPage?.data?.map((r) => mapComplianceRuleRecord(r)) ?? [],

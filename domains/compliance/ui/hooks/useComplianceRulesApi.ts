@@ -1,6 +1,6 @@
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { queryOptions, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { toast } from '@packages/ui';
-import { useEntityEngine, useEntityHooks } from '@packages/entity-engine-ui';
+import { useEntityEngine } from '@packages/entity-engine-ui';
 
 interface PaginatedResponse<T> {
   data: T[];
@@ -48,13 +48,50 @@ export interface ComplianceRulesListParams {
   q?: string;
 }
 
-type ComplianceRulesListResult = Omit<ReturnType<ReturnType<typeof useEntityHooks>['useList']>, 'data'> & {
-  data?: PaginatedResponse<ComplianceRuleRecord>;
+type ApiFn = {
+  get: <T>(path: string) => Promise<T>;
+  post: <T>(path: string, body?: unknown) => Promise<T>;
+  patch: <T>(path: string, body?: unknown) => Promise<T>;
+  delete: <T>(path: string) => Promise<T>;
 };
 
-export function useComplianceRulesList(params: ComplianceRulesListParams = {}): ComplianceRulesListResult {
-  const hooks = useEntityHooks('compliance-rules');
-  return hooks.useList(params as Record<string, unknown>) as unknown as ComplianceRulesListResult;
+const BASE = '/compliance-rules';
+
+export const rulesQueryKey = ['compliance-rules'] as const;
+
+/**
+ * `queryOptions` factory for compliance-rules reads. Pages call
+ * `useQuery(rulesQueries(apiFn).list(params))` directly rather than going
+ * through the entity-engine FE registry. queryKey + URL stay colocated so
+ * cross-page lists can't drift to incompatible cache keys.
+ */
+export function rulesQueries(apiFn: ApiFn) {
+  return {
+    list: (params: ComplianceRulesListParams = {}) =>
+      queryOptions({
+        queryKey: [...rulesQueryKey, 'list', params] as const,
+        queryFn: () =>
+          apiFn.get<PaginatedResponse<ComplianceRuleRecord>>(
+            `${BASE}${buildQuery(params as Record<string, unknown>)}`,
+          ),
+      }),
+    detail: (id: string | null | undefined) =>
+      queryOptions({
+        queryKey: [...rulesQueryKey, 'detail', id] as const,
+        queryFn: () => apiFn.get<ComplianceRuleRecord>(`${BASE}/${id}`),
+        enabled: !!id,
+      }),
+  };
+}
+
+function buildQuery(params: Record<string, unknown>): string {
+  const sp = new URLSearchParams();
+  for (const [k, v] of Object.entries(params)) {
+    if (v != null && v !== '' && v !== false) sp.set(k, String(v));
+  }
+  if (sp.get('page') === '1') sp.delete('page');
+  const qs = sp.toString();
+  return qs ? `?${qs}` : '';
 }
 
 /**
@@ -65,8 +102,8 @@ export function useComplianceRulesList(params: ComplianceRulesListParams = {}): 
 export function useComplianceRulesSummary() {
   const { apiFn } = useEntityEngine();
   return useQuery({
-    queryKey: ['compliance-rules', 'summary'],
-    queryFn: () => apiFn.get<RulesSummary>('/compliance-rules/summary'),
+    queryKey: [...rulesQueryKey, 'summary'],
+    queryFn: () => apiFn.get<RulesSummary>(`${BASE}/summary`),
   });
 }
 
@@ -96,11 +133,9 @@ export interface DeprecateRuleResult {
 export function useRuleDeprecationPreview(ruleId: string | null) {
   const { apiFn } = useEntityEngine();
   return useQuery({
-    queryKey: ['rule-deprecation-preview', ruleId],
+    queryKey: [...rulesQueryKey, 'deprecation-preview', ruleId],
     queryFn: () =>
-      apiFn.get<RuleDeprecationPreview>(
-        `/compliance-rules/${ruleId}/deprecation-preview`,
-      ),
+      apiFn.get<RuleDeprecationPreview>(`${BASE}/${ruleId}/deprecation-preview`),
     enabled: !!ruleId,
     staleTime: 0,
   });
@@ -114,14 +149,11 @@ export function useDeprecateRule(options?: {
 
   return useMutation({
     mutationFn: ({ ruleId, ...body }: DeprecateRulePayload) =>
-      apiFn.post<DeprecateRuleResult>(
-        `/compliance-rules/${ruleId}/deprecate`,
-        body,
-      ),
+      apiFn.post<DeprecateRuleResult>(`${BASE}/${ruleId}/deprecate`, body),
     onSuccess: (result) => {
       // Rules list tabs depend on status counts; filings may have been
       // cancelled; audit timeline should show the new transition.
-      queryClient.invalidateQueries({ queryKey: ['compliance-rules'] });
+      queryClient.invalidateQueries({ queryKey: rulesQueryKey });
       queryClient.invalidateQueries({ queryKey: ['compliance-filings'] });
       queryClient.invalidateQueries({ queryKey: ['audit'] });
       toast.success('Rule deprecated');
@@ -150,11 +182,9 @@ export interface RuleEditConstraints {
 export function useRuleEditConstraints(ruleId: string | null | undefined) {
   const { apiFn } = useEntityEngine();
   return useQuery({
-    queryKey: ['rule-edit-constraints', ruleId],
+    queryKey: [...rulesQueryKey, 'edit-constraints', ruleId],
     queryFn: () =>
-      apiFn.get<RuleEditConstraints>(
-        `/compliance-rules/${ruleId}/edit-constraints`,
-      ),
+      apiFn.get<RuleEditConstraints>(`${BASE}/${ruleId}/edit-constraints`),
     enabled: !!ruleId,
     staleTime: 0,
   });
@@ -179,10 +209,9 @@ export function useUpdateComplianceRule(options?: {
 
   return useMutation({
     mutationFn: ({ ruleId, data }: UpdateComplianceRulePayload) =>
-      apiFn.patch<ComplianceRuleRecord>(`/compliance-rules/${ruleId}`, data),
+      apiFn.patch<ComplianceRuleRecord>(`${BASE}/${ruleId}`, data),
     onSuccess: (result) => {
-      queryClient.invalidateQueries({ queryKey: ['compliance-rules'] });
-      queryClient.invalidateQueries({ queryKey: ['rule-edit-constraints', result.id] });
+      queryClient.invalidateQueries({ queryKey: rulesQueryKey });
       queryClient.invalidateQueries({ queryKey: ['audit'] });
       toast.success('Rule updated');
       options?.onSuccess?.(result);
@@ -190,6 +219,34 @@ export function useUpdateComplianceRule(options?: {
     onError: (error: unknown) => {
       const body = (error as { body?: { message?: string; code?: string } })?.body;
       toast.error(body?.message ?? 'Failed to update rule');
+    },
+  });
+}
+
+/**
+ * Create a new compliance rule. Invalidates the rules root query key on
+ * success so list/summary views refetch. Mirrors the prior
+ * `useEntityHooks('compliance-rules').useCreate` behaviour without going
+ * through the registry.
+ */
+export function useCreateComplianceRule(options?: {
+  onSuccess?: (rule: ComplianceRuleRecord) => void;
+}) {
+  const { apiFn } = useEntityEngine();
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (data: Record<string, unknown>) =>
+      apiFn.post<ComplianceRuleRecord>(BASE, data),
+    onSuccess: (rule) => {
+      qc.invalidateQueries({ queryKey: rulesQueryKey });
+      toast.success('Compliance Rule created');
+      options?.onSuccess?.(rule);
+    },
+    onError: (error: unknown) => {
+      const message =
+        (error as { body?: { message?: string } })?.body?.message ??
+        'Failed to create compliance rule';
+      toast.error(message);
     },
   });
 }
