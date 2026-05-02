@@ -3,48 +3,38 @@ import { BadRequestException } from '@nestjs/common';
 import { OrganizationsService } from '../organizations.service';
 
 /**
- * Builds an OrganizationsService with a fake DatabaseService whose chain
- * responds based on which top-level method was called first:
- *   - `db.select(...)` (singleton-check path) → resolves to `[{ count: <rowCount> }]`
- *   - `db.insert(...)` (BaseCrudService.create path) → resolves to `[{ id: 'o1', ... }]`
+ * Builds an OrganizationsService with:
+ *   - a fake DatabaseService whose `db.select(...).from(...)` thenable
+ *     resolves to `[{ count: <rowCount> }]` (the singleton-check path)
+ *   - a fake `BaseCrudService` whose `create` returns the scripted row
  *
- * The thenable proxy short-circuits the chain so any sequence of `.from()`,
- * `.values()`, `.returning()`, etc. resolves to the scripted result on
- * `await`.
+ * After the camp-B sprint switched to composition over inheritance, the
+ * singleton check lives on `OrganizationsService.create` (which queries
+ * the database directly) and the actual insert is delegated to the
+ * injected `crud` instance. The test mocks both halves separately.
  */
 function makeService(opts: { rowCount: number; inserted?: { id: string; name?: string } }) {
   const inserted = opts.inserted ?? { id: 'o1', name: 'Acme' };
-  let pendingOp: 'select' | 'insert' | 'update' | 'unknown' = 'unknown';
 
   const proxy: Record<string, unknown> = {};
-  const chainMethods = ['from', 'where', 'limit', 'offset', 'values', 'returning', 'set'];
+  const chainMethods = ['from', 'where', 'limit', 'offset'];
   for (const m of chainMethods) {
     proxy[m] = vi.fn().mockReturnValue(proxy);
   }
-  proxy.select = vi.fn(() => {
-    pendingOp = 'select';
-    return proxy;
-  });
-  proxy.insert = vi.fn(() => {
-    pendingOp = 'insert';
-    return proxy;
-  });
-  proxy.update = vi.fn(() => {
-    pendingOp = 'update';
-    return proxy;
-  });
-  proxy.then = (resolve: (v: unknown) => unknown) => {
-    if (pendingOp === 'select') return resolve([{ count: opts.rowCount }]);
-    if (pendingOp === 'insert') return resolve([inserted]);
-    return resolve([]);
-  };
+  proxy.select = vi.fn(() => proxy);
+  proxy.then = (resolve: (v: unknown) => unknown) => resolve([{ count: opts.rowCount }]);
 
   const database = { db: proxy } as never;
-  const events = { emitDynamic: vi.fn() } as never;
-  const logger = { log: vi.fn(), warn: vi.fn(), error: vi.fn() };
-  const appLogger = { forContext: vi.fn().mockReturnValue(logger) } as never;
+  const crud = {
+    list: vi.fn(),
+    findOne: vi.fn(),
+    findOneOrFail: vi.fn(),
+    create: vi.fn().mockResolvedValue(inserted),
+    update: vi.fn(),
+    softDelete: vi.fn(),
+  } as never;
 
-  return new OrganizationsService(database, events, appLogger);
+  return new OrganizationsService(crud, database);
 }
 
 describe('OrganizationsService', () => {

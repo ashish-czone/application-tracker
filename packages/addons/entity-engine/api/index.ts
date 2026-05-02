@@ -10,12 +10,6 @@ export { seedEntityFields, seedWorkflows } from './seed-entity-fields';
 export { defineEntity } from './define-entity';
 export type { ModelDefinition, ModelField } from './define-entity';
 
-// Generic CRUD class factory for hand-written services that don't go
-// through defineEntity. Provides typed list/findOne/create/update/softDelete
-// using the table's $inferSelect/$inferInsert types.
-export { BaseCrudService } from './base-crud-service';
-export type { BaseCrudOptions } from './base-crud-service';
-
 // --- Types originally from entity-engine ---
 
 export type {

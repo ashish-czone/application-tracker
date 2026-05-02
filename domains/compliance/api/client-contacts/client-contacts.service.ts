@@ -1,18 +1,19 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { Inject, Injectable, NotFoundException } from '@nestjs/common';
 import { DatabaseService, eq, withScope } from '@packages/database';
 import { DomainEventEmitter } from '@packages/events';
-import { AppLoggerService } from '@packages/logger';
-import { BaseCrudService } from '@packages/entity-engine';
+import { BaseCrudService } from '@packages/crud-base';
+import type { DataAccessContext } from '@packages/rbac';
 import { clientContacts } from './client-contacts.schema';
 import { CLIENT_CONTACTS_UPDATED } from '../events/types';
-import type { CreateClientContactDto } from './client-contacts.dto';
+import { CLIENT_CONTACTS_CRUD_TOKEN } from './client-contacts.crud-token';
+import type { CreateClientContactDto, UpdateClientContactDto } from './client-contacts.dto';
 
 type ContactRow = typeof clientContacts.$inferSelect;
 
 /**
- * Client contacts service. Inherits standard CRUD from `BaseCrudService`
- * (sprint 6 of the camp-B migration); adds the two domain-specific
- * primary-contact operations.
+ * Client contacts service. Composes with `BaseCrudService` (no inheritance)
+ * for the standard CRUD flows; adds the two domain-specific primary-contact
+ * operations.
  *
  * Custom methods:
  *  - `hasPrimaryContact(clientId)` — read predicate consumed by the
@@ -26,26 +27,46 @@ type ContactRow = typeof clientContacts.$inferSelect;
  *    rows after commit.
  */
 @Injectable()
-export class ClientContactsService extends BaseCrudService(clientContacts, {
-  slug: 'client-contacts',
-  events: {
-    created: 'client-contacts.Created',
-    updated: 'client-contacts.Updated',
-    deleted: 'client-contacts.Deleted',
-  },
-}) {
-  constructor(database: DatabaseService, events: DomainEventEmitter, appLogger: AppLoggerService) {
-    super(database, events, appLogger);
+export class ClientContactsService {
+  constructor(
+    @Inject(CLIENT_CONTACTS_CRUD_TOKEN)
+    private readonly crud: BaseCrudService<typeof clientContacts>,
+    private readonly database: DatabaseService,
+    private readonly events: DomainEventEmitter,
+  ) {}
+
+  list(
+    query: Parameters<BaseCrudService<typeof clientContacts>['list']>[0] = {},
+    accessCtx?: DataAccessContext,
+  ) {
+    return this.crud.list(query, accessCtx);
+  }
+
+  findOneOrFail(id: string, accessCtx?: DataAccessContext) {
+    return this.crud.findOneOrFail(id, accessCtx);
   }
 
   /**
-   * Override `create` to inject `createdBy` from the actor — the directory
-   * `client_contacts` table requires it NOT NULL, but it never appears in
-   * the request body (the actor comes from the JWT). The narrow Zod input
-   * type stays clean for callers; the column merge happens here.
+   * Inject `createdBy` from the actor — the directory `client_contacts`
+   * table requires it NOT NULL, but it never appears in the request body
+   * (the actor comes from the JWT). The narrow Zod input type stays clean
+   * for callers; the column merge happens here.
    */
-  async create(input: CreateClientContactDto, actorId: string) {
-    return super.create({ ...input, createdBy: actorId }, actorId);
+  create(input: CreateClientContactDto, actorId: string) {
+    return this.crud.create({ ...input, createdBy: actorId } as never, actorId);
+  }
+
+  update(
+    id: string,
+    input: UpdateClientContactDto,
+    actorId: string,
+    accessCtx?: DataAccessContext,
+  ) {
+    return this.crud.update(id, input as never, actorId, accessCtx);
+  }
+
+  softDelete(id: string, actorId: string, accessCtx?: DataAccessContext) {
+    return this.crud.softDelete(id, actorId, accessCtx);
   }
 
   /**

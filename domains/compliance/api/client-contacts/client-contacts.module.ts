@@ -1,10 +1,13 @@
 import { Module } from '@nestjs/common';
 import { EntityEngineModule } from '@packages/entity-engine';
 import { RbacIntegrationModule } from '@packages/rbac';
+import { createCrudProvider } from '@packages/crud-base';
 import { CLIENT_CONTACTS_CONFIG } from './client-contacts.config';
 import { CLIENT_CONTACTS_PERMISSION_MANIFESTS } from './client-contacts.permissions';
 import { ClientContactsController } from './client-contacts.controller';
 import { ClientContactsService } from './client-contacts.service';
+import { CLIENT_CONTACTS_CRUD_TOKEN } from './client-contacts.crud-token';
+import { clientContacts } from './client-contacts.schema';
 
 @Module({
   imports: [
@@ -12,7 +15,17 @@ import { ClientContactsService } from './client-contacts.service';
     RbacIntegrationModule.forFeature({ manifests: CLIENT_CONTACTS_PERMISSION_MANIFESTS }),
   ],
   controllers: [ClientContactsController],
-  providers: [ClientContactsService],
+  providers: [
+    createCrudProvider(CLIENT_CONTACTS_CRUD_TOKEN, clientContacts, {
+      slug: 'client-contacts',
+      events: {
+        created: 'client-contacts.Created',
+        updated: 'client-contacts.Updated',
+        deleted: 'client-contacts.Deleted',
+      },
+    }),
+    ClientContactsService,
+  ],
   exports: [ClientContactsService],
 })
 export class ClientContactsModule {}
