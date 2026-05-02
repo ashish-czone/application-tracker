@@ -90,7 +90,7 @@ Drizzle column types don't differentiate "table that has `deletedAt`" from "tabl
 
 - **Code review** — any new raw query in PR diff is read with this rule in mind.
 - **Tests over a real DB** — integration tests that hit `db.execute` paths catch most introspection bugs because the predicate fires (or doesn't) against real rows.
-- **Future** — a custom ESLint rule that flags `db.select/update/delete` chains whose `where()` argument doesn't go through `withScope` is the long-term plan. Until it lands, this rule is the contract.
+- **Lint** — `pnpm lint:scoping` (run as part of `pnpm lint`) flags any service file that contains a raw `db.select/update/delete/execute` chain without importing `withScope` (or `BaseCrudService` / `buildPredicate` for the actor-scope leg covered by `.claude/rules/data-access-scope.md`). Grandfathered files predating the lint live in `tools/data-access-scope-allowlist.txt` and are tracked for opportunistic cleanup. The check is structural — it cannot tell whether `withScope` is correctly applied to the WHERE; that stays a code-review concern.
 
 ### Review checklist
 
