@@ -2,6 +2,7 @@ import { forwardRef, Module } from '@nestjs/common';
 import { EntityEngineModule } from '@packages/entity-engine';
 import { WorkflowsModule } from '@packages/workflows';
 import { RbacIntegrationModule } from '@packages/rbac';
+import { createCrudProvider } from '@packages/crud-base';
 import { LawHandlersModule } from '../law-handlers';
 import { ComplianceFilingsModule } from '../compliance-filings';
 import { RULES_ENTITY } from './rules.entity';
@@ -9,6 +10,8 @@ import { RULES_WORKFLOW } from './rules.workflow';
 import { RULES_PERMISSION_MANIFESTS } from './rules.permissions';
 import { ComplianceRulesController } from './rules.controller';
 import { ComplianceRulesService } from './rules.service';
+import { RULES_CRUD_TOKEN } from './rules.crud-token';
+import { complianceRules } from './rules.schema';
 
 @Module({
   imports: [
@@ -19,7 +22,17 @@ import { ComplianceRulesService } from './rules.service';
     ComplianceFilingsModule,
   ],
   controllers: [ComplianceRulesController],
-  providers: [ComplianceRulesService],
+  providers: [
+    createCrudProvider(RULES_CRUD_TOKEN, complianceRules, {
+      slug: 'compliance-rules',
+      events: {
+        created: 'compliance-rules.Created',
+        updated: 'compliance-rules.Updated',
+        deleted: 'compliance-rules.Deleted',
+      },
+    }),
+    ComplianceRulesService,
+  ],
   exports: [ComplianceRulesService],
 })
 export class ComplianceRulesModule {}

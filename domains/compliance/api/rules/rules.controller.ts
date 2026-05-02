@@ -30,12 +30,6 @@ import {
 export class ComplianceRulesController {
   constructor(private readonly rules: ComplianceRulesService) {}
 
-  @Get('layout/list')
-  @RequirePermission('compliance-rules.read')
-  getListLayout() {
-    return this.rules.getListLayout();
-  }
-
   @Get()
   @RequirePermission('compliance-rules.read')
   list(
