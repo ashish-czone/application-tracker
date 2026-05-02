@@ -2,6 +2,8 @@ import { Inject, Injectable, BadRequestException, UnprocessableEntityException }
 import { DatabaseService, eq } from '@packages/database';
 import { DomainEventEmitter } from '@packages/events';
 import { EntityService, type BaseListQuery } from '@packages/entity-engine';
+import { BaseCrudService } from '@packages/crud-base';
+import { CLIENTS_CRUD_TOKEN } from './clients.crud-token';
 import type { DataAccessContext } from '@packages/rbac';
 import {
   runTransitionGuards,
@@ -140,6 +142,7 @@ export interface CreateWithContactsResult {
 @Injectable()
 export class ClientsService {
   constructor(
+    @Inject(CLIENTS_CRUD_TOKEN) private readonly crud: BaseCrudService<typeof clients>,
     @Inject('ENTITY_SERVICE_clients') private readonly entityService: EntityService,
     private readonly database: DatabaseService,
     private readonly events: DomainEventEmitter,
@@ -192,7 +195,7 @@ export class ClientsService {
   }
 
   async findOne(id: string, accessCtx?: DataAccessContext) {
-    const row = await this.entityService.findOneOrFail(id, accessCtx);
+    const row = await this.crud.findOneOrFail(id, accessCtx);
     return this.withStatusAlias(row);
   }
 
@@ -210,10 +213,10 @@ export class ClientsService {
    * table. The composite `createWithContacts` stamps the same marker inline.
    */
   async create(input: Record<string, unknown>, actorId: string) {
-    const row = await this.entityService.create(
-      { ...input, complianceStatus: CLIENTS_WORKFLOW.initialState },
+    const row = await this.crud.create(
+      { ...input, complianceStatus: CLIENTS_WORKFLOW.initialState } as never,
       actorId,
-    );
+    ) as Record<string, unknown>;
     if (row && !row.complianceBecameClientAt && typeof row.id === 'string') {
       const becameAt = new Date();
       await this.database.db
@@ -231,12 +234,12 @@ export class ClientsService {
     actorId: string,
     accessCtx?: DataAccessContext,
   ) {
-    const row = await this.entityService.update(id, input, actorId, accessCtx);
+    const row = await this.crud.update(id, input as never, actorId, accessCtx);
     return this.withStatusAlias(row);
   }
 
   softDelete(id: string, actorId: string, accessCtx?: DataAccessContext) {
-    return this.entityService.softDelete(id, actorId, accessCtx);
+    return this.crud.softDelete(id, actorId, accessCtx);
   }
 
   async clone(id: string, actorId: string) {
@@ -261,10 +264,6 @@ export class ClientsService {
     if (!row || typeof row !== 'object') return row;
     const r = row as Record<string, unknown>;
     return { ...r, status: r.complianceStatus } as T;
-  }
-
-  getListLayout() {
-    return this.entityService.getListLayout();
   }
 
   // ---- Workflow transition with service-owned cascade tx -------------------
@@ -296,7 +295,7 @@ export class ClientsService {
     // guard step entirely — only `status` has gating logic on this entity.
     let warnings: string[] = [];
     if (fieldKey === STATUS_FIELD_ALIAS) {
-      const entity = await this.entityService.findOneOrFail(id, accessCtx);
+      const entity = await this.crud.findOneOrFail(id, accessCtx) as Record<string, unknown>;
       const fromState = entity[internalFieldKey] as string | null;
       if (!fromState) {
         throw new BadRequestException(`Entity has no current state for field '${fieldKey}'`);
@@ -340,7 +339,7 @@ export class ClientsService {
       this.dormancy.emitCascadeEvent(ctx, cancelledFilingIds);
     }
 
-    const fresh = this.withStatusAlias(await this.entityService.findOneOrFail(id));
+    const fresh = this.withStatusAlias(await this.crud.findOneOrFail(id));
     return warnings.length > 0 ? { ...fresh, warnings } : fresh;
   }
 
@@ -359,7 +358,7 @@ export class ClientsService {
   ): Promise<{ warnings: string[]; blockers: string[] }> {
     if (fieldKey !== STATUS_FIELD_ALIAS) return { warnings: [], blockers: [] };
     const internalFieldKey = resolveFieldKey(fieldKey);
-    const entity = await this.entityService.findOneOrFail(id, accessCtx);
+    const entity = await this.crud.findOneOrFail(id, accessCtx) as Record<string, unknown>;
     const fromState = entity[internalFieldKey] as string | null;
     if (!fromState) return { warnings: [], blockers: [] };
     return previewTransitionGuards(CLIENT_GUARDS, entity as ClientRow, {

@@ -42,12 +42,6 @@ export class ClientsController {
 
   // ---- Generic CRUD --------------------------------------------------------
 
-  @Get('layout/list')
-  @RequirePermission('clients.read')
-  getListLayout() {
-    return this.clientsService.getListLayout();
-  }
-
   @Get()
   @RequirePermission('clients.read')
   list(
