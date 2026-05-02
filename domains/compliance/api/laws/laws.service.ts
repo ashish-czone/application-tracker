@@ -1,9 +1,11 @@
 import { Inject, Injectable } from '@nestjs/common';
 import { eq, inArray, sql } from 'drizzle-orm';
 import { EntityService, type BaseListQuery } from '@packages/entity-engine';
+import { BaseCrudService } from '@packages/crud-base';
 import { DatabaseService, withScope } from '@packages/database';
 import type { DataAccessContext } from '@packages/rbac';
 import { complianceLaws } from './laws.schema';
+import { LAWS_CRUD_TOKEN } from './laws.crud-token';
 import type { CreateLawDto, UpdateLawDto } from './laws.dto';
 
 export interface LawDisplayFields {
@@ -33,16 +35,17 @@ export interface LawTreeResponse {
 @Injectable()
 export class LawsService {
   constructor(
+    @Inject(LAWS_CRUD_TOKEN) private readonly crud: BaseCrudService<typeof complianceLaws>,
     @Inject('ENTITY_SERVICE_laws') private readonly entityService: EntityService,
     private readonly database: DatabaseService,
   ) {}
 
   list(query: BaseListQuery, accessCtx?: DataAccessContext) {
-    return this.entityService.list(query, accessCtx);
+    return this.crud.list(query, accessCtx);
   }
 
   findOne(id: string, accessCtx?: DataAccessContext) {
-    return this.entityService.findOneOrFail(id, accessCtx);
+    return this.crud.findOneOrFail(id, accessCtx);
   }
 
   /**
@@ -130,15 +133,15 @@ export class LawsService {
   }
 
   create(input: CreateLawDto, actorId: string) {
-    return this.entityService.create(input, actorId);
+    return this.crud.create(input as never, actorId);
   }
 
   update(id: string, input: UpdateLawDto, actorId: string, accessCtx?: DataAccessContext) {
-    return this.entityService.update(id, input, actorId, accessCtx);
+    return this.crud.update(id, input as never, actorId, accessCtx);
   }
 
   softDelete(id: string, actorId: string, accessCtx?: DataAccessContext) {
-    return this.entityService.softDelete(id, actorId, accessCtx);
+    return this.crud.softDelete(id, actorId, accessCtx);
   }
 
   clone(id: string, actorId: string) {
@@ -147,10 +150,6 @@ export class LawsService {
 
   restore(id: string) {
     return this.entityService.restore(id);
-  }
-
-  getListLayout() {
-    return this.entityService.getListLayout();
   }
 }
 
