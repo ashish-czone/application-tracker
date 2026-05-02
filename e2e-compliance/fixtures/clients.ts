@@ -49,14 +49,40 @@ function deterministicTaxId(): string {
 export async function createClient(overrides: CreateClientOverrides = {}): Promise<CreatedClient> {
   const name = overrides.name ?? uniqueName('Client');
   const legalName = overrides.legalName ?? `${name} Pvt. Ltd.`;
-  return apiClient.post<CreatedClient>('/clients', {
+  // Workflow state is system-managed: every client starts at
+  // CLIENTS_WORKFLOW initialState ('onboarding'). Fixtures that need a
+  // non-initial state walk the workflow via /transition; the
+  // `onboarding → active` move requires a primary contact (guard), so
+  // when a non-onboarding state is requested we add one before
+  // transitioning. See `.claude/rules/workflow-entity-creates.md`.
+  const created = await apiClient.post<CreatedClient>('/clients', {
     name,
     legalName,
     taxId: overrides.taxId ?? deterministicTaxId(),
     email: overrides.email ?? null,
     phone: overrides.phone ?? null,
-    status: overrides.status ?? 'active',
   });
+
+  const targetStatus = overrides.status ?? 'active';
+  if (targetStatus === 'onboarding') return created;
+
+  // Add a primary contact for the require-primary-contact guard.
+  await apiClient.post('/client-contacts', {
+    complianceClientId: created.id,
+    fullName: `${name} Primary`,
+    primaryEmail: overrides.email ?? `primary+${created.id.slice(0, 8)}@e2e.local`,
+    complianceIsPrimary: true,
+  });
+  await transitionClient(created.id, 'active');
+
+  if (targetStatus === 'dormant') {
+    await transitionClient(created.id, 'dormant', {
+      reason: 'fixture',
+      comment: 'E2E fixture: requested dormant initial state',
+    });
+  }
+
+  return apiClient.get<CreatedClient>(`/clients/${created.id}`);
 }
 
 /** Workflow transition on a client. The platform's transition endpoint

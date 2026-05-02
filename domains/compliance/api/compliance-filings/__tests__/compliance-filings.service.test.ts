@@ -65,16 +65,22 @@ describe('ComplianceFilingsService', () => {
     });
   });
 
-  describe('create — completedAt stamping', () => {
-    it('stamps completedAt when created in completed state', async () => {
+  describe('create — workflow initial state', () => {
+    it('forces status to the workflow initialState regardless of input', async () => {
+      // Workflow state is system-managed: even if a caller bypasses the DTO
+      // and passes `status: 'completed'` directly to the service, the service
+      // overrides with COMPLIANCE_FILINGS_WORKFLOW.initialState ('pending').
+      // See `.claude/rules/workflow-entity-creates.md`.
       await service.create({ title: 'Filing', status: 'completed' } as never, 'actor');
       const payload = entityService.create.mock.calls[0][0] as Record<string, unknown>;
-      expect(payload.completedAt).toBeInstanceOf(Date);
+      expect(payload.status).toBe('pending');
+      expect(payload.completedAt).toBeNull();
     });
 
-    it('clears completedAt for non-completed status on create', async () => {
-      await service.create({ title: 'Filing', status: 'pending' } as never, 'actor');
+    it('stamps status=pending and completedAt=null when no status supplied', async () => {
+      await service.create({ title: 'Filing' } as never, 'actor');
       const payload = entityService.create.mock.calls[0][0] as Record<string, unknown>;
+      expect(payload.status).toBe('pending');
       expect(payload.completedAt).toBeNull();
     });
   });

@@ -1,0 +1,5 @@
+ALTER TABLE "entity_pipeline_assignments" DROP CONSTRAINT "entity_pipeline_assignments_workflow_definition_id_workflow_definitions_id_fk";
+--> statement-breakpoint
+ALTER TABLE "workflow_transition_history" DROP CONSTRAINT "workflow_transition_history_workflow_definition_id_workflow_definitions_id_fk";
+--> statement-breakpoint
+ALTER TABLE "workflow_transition_history" DROP CONSTRAINT "workflow_transition_history_transition_id_workflow_transitions_id_fk";

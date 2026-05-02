@@ -11,8 +11,6 @@ import { eq, gt, desc } from '@packages/database';
 import {
   EntityRegistryService,
   FieldDefinitionService,
-  WORKFLOW_EXTENSION,
-  seedWorkflows,
   type EntityConfig,
 } from '@packages/entity-engine';
 import { WorkflowRegistryService } from '@packages/workflows';
@@ -53,11 +51,6 @@ export class TestHooksService {
     // sees the new IDs.
     await this.reloadCaches();
     const seedsRun = await this.runResetSeeds();
-    // Workflow definitions for non-adminConfigurable entities are NOT covered
-    // by the system seed pipeline (EntityEngineSeedService skips them). Seed
-    // them directly here so transition endpoints have the rows they read at
-    // request time. Mirrors `seedAllWorkflows` in the integration-test setup.
-    await this.seedAllWorkflows();
     await this.reloadCaches();
     const durationMs = Date.now() - startedAt;
     this.logger.log(
@@ -82,14 +75,6 @@ export class TestHooksService {
       }
     }
     await workflowRegistry.loadAll();
-  }
-
-  private async seedAllWorkflows(): Promise<void> {
-    const registry = this.moduleRef.get(EntityRegistryService, { strict: false });
-    const workflowExt = this.moduleRef.get(WORKFLOW_EXTENSION, { strict: false });
-    for (const entry of registry.getAll() as EntityConfig[]) {
-      await seedWorkflows(entry, workflowExt);
-    }
   }
 
   /**

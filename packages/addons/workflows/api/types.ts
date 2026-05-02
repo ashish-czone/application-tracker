@@ -24,6 +24,13 @@ export interface CachedWorkflowDefinition {
   isDefault: boolean;
   states: CachedWorkflowState[];
   transitions: CachedWorkflowTransition[];
+  /**
+   * `'code'` — declared via `defineWorkflow()` and registered through
+   * `WorkflowsModule.forFeature(...)`. Lives only in memory; never persisted
+   * to `workflow_definitions`. Mutation endpoints reject these.
+   * `'admin'` — created via the workflows API and persisted in the DB.
+   */
+  source: 'code' | 'admin';
 }
 
 export interface CachedWorkflowState {

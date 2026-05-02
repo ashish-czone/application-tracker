@@ -25,7 +25,10 @@ export interface CreateRuleOptions {
 }
 
 export async function createComplianceRule(opts: CreateRuleOptions): Promise<ComplianceRule> {
-  return apiClient.post<ComplianceRule>('/compliance-rules', {
+  // Workflow state is system-managed: every rule starts at RULES_WORKFLOW
+  // initialState ('draft'). Tests that need a non-initial state walk the
+  // workflow via /transition. See `.claude/rules/workflow-entity-creates.md`.
+  const created = await apiClient.post<ComplianceRule>('/compliance-rules', {
     code: opts.code ?? `E2E-${randomSuffix(6).toUpperCase()}`,
     name: opts.name ?? uniqueName('Rule'),
     lawId: opts.lawId,
@@ -33,8 +36,11 @@ export async function createComplianceRule(opts: CreateRuleOptions): Promise<Com
     dueDayOfMonth: opts.dueDayOfMonth ?? 20,
     dueMonthOffset: opts.dueMonthOffset ?? 1,
     gracePeriodDays: opts.gracePeriodDays ?? 0,
-    status: opts.status ?? 'active',
   });
+
+  const targetStatus = opts.status ?? 'active';
+  if (targetStatus === 'draft') return created;
+  return transitionComplianceRule(created.id, targetStatus);
 }
 
 /** Workflow transition on a rule (draft → active → deprecated). Goes

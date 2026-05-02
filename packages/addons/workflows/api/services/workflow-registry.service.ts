@@ -1,10 +1,27 @@
-import { Injectable, NotFoundException, type OnModuleInit } from '@nestjs/common';
+import { BadRequestException, Injectable, NotFoundException, type OnModuleInit } from '@nestjs/common';
 import { DatabaseService, eq, and, isNull } from '@packages/database';
 import { withTenant, withTenantInsert } from '@packages/tenancy/helpers';
 import { workflowDefinitions } from '../schema/workflow-definitions';
 import { workflowStates } from '../schema/workflow-states';
 import { workflowTransitions } from '../schema/workflow-transitions';
+import type { WorkflowDefinition } from '../define-workflow';
 import type { CachedWorkflowDefinition, CachedWorkflowState, CachedWorkflowTransition } from '../types';
+
+/**
+ * Stable id prefix for code-defined workflow definitions, states, and
+ * transitions. The DB has no row with these ids — `workflow_transition_history`
+ * stores them as plain text after the FK to `workflow_definitions.id` was
+ * dropped. Any id starting with this prefix means the entry was registered via
+ * `defineWorkflow()` + `WorkflowsModule.forFeature(...)` and is read-only.
+ */
+const CODE_ID_PREFIX = 'code:';
+
+export const isCodeDefinedWorkflowId = (id: string) => id.startsWith(CODE_ID_PREFIX);
+
+const codeNotEditable = (kind: 'definition' | 'state' | 'transition') =>
+  new BadRequestException(
+    `Cannot mutate ${kind}: this workflow is code-defined (declared via defineWorkflow). Edit the source code, not via API.`,
+  );
 
 @Injectable()
 export class WorkflowRegistryService implements OnModuleInit {
@@ -47,7 +64,12 @@ export class WorkflowRegistryService implements OnModuleInit {
       transitionsByDef.set(transition.workflowDefinitionId, list);
     }
 
-    this.cache.clear();
+    // Drop only admin-persisted entries before reloading. Code-defined defs
+    // (registered once at boot via WorkflowsModule.forFeature) live only in
+    // memory — they survive truncates, reloads, and admin mutations.
+    for (const [slug, cached] of this.cache) {
+      if (cached.source === 'admin') this.cache.delete(slug);
+    }
 
     for (const def of definitions) {
       const defStates = statesByDef.get(def.id) ?? [];
@@ -95,10 +117,88 @@ export class WorkflowRegistryService implements OnModuleInit {
         isDefault: def.isDefault,
         states: cachedStates,
         transitions: cachedTransitions,
+        source: 'admin',
       };
 
       this.cache.set(def.slug, cached);
     }
+  }
+
+  /**
+   * Register a code-defined workflow into the in-memory cache. The definition
+   * is **not** persisted to `workflow_definitions`; it lives only in memory
+   * across the process lifetime. Called from `WorkflowFeatureRegistrations`
+   * on module init. Idempotent — re-calling with the same slug replaces the
+   * existing entry.
+   *
+   * Ids are deterministic and `code:`-prefixed so callers (history, mutation
+   * guards) can recognize code-defined entities by id alone.
+   */
+  registerInMemory(def: WorkflowDefinition): void {
+    this.cache.set(def.slug, this.buildCodeDefinedCache(def));
+  }
+
+  private buildCodeDefinedCache(def: WorkflowDefinition): CachedWorkflowDefinition {
+    const definitionId = `${CODE_ID_PREFIX}${def.slug}`;
+
+    const cachedStates: CachedWorkflowState[] = def.states.map((s, i) => ({
+      id: `${definitionId}:state:${s.name}`,
+      name: s.name,
+      label: s.label,
+      color: s.color ?? null,
+      sortOrder: i,
+      isSystem: s.isSystem ?? false,
+      metadata: null,
+    }));
+
+    const stateNames = new Set(def.states.map((s) => s.name));
+    const cachedTransitions: CachedWorkflowTransition[] = [];
+    let txIndex = 0;
+
+    for (const transition of def.transitions) {
+      if (!stateNames.has(transition.from)) continue;
+
+      for (let i = 0; i < transition.to.length; i++) {
+        const target = transition.to[i];
+        const isString = typeof target === 'string';
+        const targetName = isString ? target : target.state;
+        const targetDef = isString ? undefined : target;
+
+        if (!stateNames.has(targetName)) continue;
+
+        const targetState = def.states.find((s) => s.name === targetName);
+        const name = targetState?.label ?? targetName;
+
+        cachedTransitions.push({
+          id: `${definitionId}:transition:${txIndex++}`,
+          fromStateName: transition.from,
+          toStateName: targetName,
+          name,
+          requiredPermissions: targetDef?.requiredPermissions ?? [],
+          sortOrder: i,
+          reasonOptions: targetDef?.reasonOptions ?? null,
+          reasonRequired: targetDef?.reasonRequired ?? false,
+          commentRequired: targetDef?.commentRequired ?? false,
+          metadata: null,
+        });
+      }
+    }
+
+    return {
+      id: definitionId,
+      slug: def.slug,
+      name: def.name ?? def.slug,
+      entityType: def.entityType,
+      fieldName: def.fieldName,
+      initialState: def.initialState,
+      isActive: true,
+      discriminatorKey: null,
+      discriminatorValue: null,
+      isDefault: true,
+      states: cachedStates,
+      transitions: cachedTransitions,
+      source: 'code',
+    };
   }
 
   getAll(): CachedWorkflowDefinition[] {
@@ -188,6 +288,8 @@ export class WorkflowRegistryService implements OnModuleInit {
     discriminatorValue: string;
     isDefault: boolean;
   }>) {
+    if (isCodeDefinedWorkflowId(id)) throw codeNotEditable('definition');
+
     const [row] = await this.database.db
       .update(workflowDefinitions)
       .set(data)
@@ -200,6 +302,8 @@ export class WorkflowRegistryService implements OnModuleInit {
   }
 
   async deleteDefinition(id: string): Promise<void> {
+    if (isCodeDefinedWorkflowId(id)) throw codeNotEditable('definition');
+
     const [row] = await this.database.db
       .update(workflowDefinitions)
       .set({ deletedAt: new Date() })
@@ -218,6 +322,8 @@ export class WorkflowRegistryService implements OnModuleInit {
     isSystem?: boolean;
     metadata?: Record<string, unknown>;
   }) {
+    if (isCodeDefinedWorkflowId(definitionId)) throw codeNotEditable('state');
+
     const [row] = await this.database.db
       .insert(workflowStates)
       .values(withTenantInsert(workflowStates, { workflowDefinitionId: definitionId, ...data }))
@@ -233,6 +339,8 @@ export class WorkflowRegistryService implements OnModuleInit {
     sortOrder: number;
     metadata: Record<string, unknown> | null;
   }>) {
+    if (isCodeDefinedWorkflowId(id)) throw codeNotEditable('state');
+
     const [row] = await this.database.db
       .update(workflowStates)
       .set(data)
@@ -245,6 +353,8 @@ export class WorkflowRegistryService implements OnModuleInit {
   }
 
   async deleteState(id: string): Promise<void> {
+    if (isCodeDefinedWorkflowId(id)) throw codeNotEditable('state');
+
     const [row] = await this.database.db
       .delete(workflowStates)
       .where(withTenant(workflowStates, eq(workflowStates.id, id)))
@@ -265,6 +375,8 @@ export class WorkflowRegistryService implements OnModuleInit {
     commentRequired?: boolean;
     metadata?: Record<string, unknown>;
   }) {
+    if (isCodeDefinedWorkflowId(definitionId)) throw codeNotEditable('transition');
+
     const [row] = await this.database.db
       .insert(workflowTransitions)
       .values(withTenantInsert(workflowTransitions, { workflowDefinitionId: definitionId, ...data }))
@@ -282,6 +394,8 @@ export class WorkflowRegistryService implements OnModuleInit {
     commentRequired: boolean;
     metadata: Record<string, unknown> | null;
   }>) {
+    if (isCodeDefinedWorkflowId(id)) throw codeNotEditable('transition');
+
     const [row] = await this.database.db
       .update(workflowTransitions)
       .set(data)
@@ -294,6 +408,8 @@ export class WorkflowRegistryService implements OnModuleInit {
   }
 
   async deleteTransition(id: string): Promise<void> {
+    if (isCodeDefinedWorkflowId(id)) throw codeNotEditable('transition');
+
     const [row] = await this.database.db
       .delete(workflowTransitions)
       .where(withTenant(workflowTransitions, eq(workflowTransitions.id, id)))

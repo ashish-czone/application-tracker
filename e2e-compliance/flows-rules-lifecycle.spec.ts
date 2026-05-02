@@ -127,8 +127,12 @@ test.describe('Flow: rule lifecycle (US-3.x)', () => {
     const idsBefore = new Set(ourBefore.map((f) => f.id));
 
     // Deprecate. Forward-only by default — alsoCancelInFlight=false leaves
-    // existing non-terminal filings alone.
-    const deprecated = await deprecateComplianceRule(rule.id, { alsoCancelInFlight: false });
+    // existing non-terminal filings alone. The deprecate transition requires
+    // a comment per RULES_WORKFLOW so the audit row stands on its own.
+    const deprecated = await deprecateComplianceRule(rule.id, {
+      alsoCancelInFlight: false,
+      comment: 'E2E flow: forward-only deprecation; existing filings preserved',
+    });
     expect(deprecated.status).toBe('deprecated');
 
     // A subsequent sweep at a later asOf would normally extend the horizon
