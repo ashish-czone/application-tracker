@@ -24,12 +24,6 @@ import { CreateLawSchema, LawsListQuerySchema, UpdateLawSchema } from './laws.dt
 export class LawsController {
   constructor(private readonly laws: LawsService) {}
 
-  @Get('layout/list')
-  @RequirePermission('laws.read')
-  getListLayout() {
-    return this.laws.getListLayout();
-  }
-
   @Get()
   @RequirePermission('laws.read')
   list(@Query() query: Record<string, unknown>, @AccessContext() accessCtx?: DataAccessContext) {
