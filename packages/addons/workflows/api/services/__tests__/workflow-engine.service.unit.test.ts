@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
-import { NotFoundException, UnprocessableEntityException, ForbiddenException } from '@nestjs/common';
+import { BadRequestException, NotFoundException, UnprocessableEntityException, ForbiddenException } from '@nestjs/common';
 import { WorkflowEngineService } from '../workflow-engine.service';
 import { WorkflowRegistryService } from '../workflow-registry.service';
 import type { RbacService } from '@packages/rbac';
@@ -238,6 +238,106 @@ describe('WorkflowEngineService', () => {
           actorId: 'user-1',
         }),
       ).rejects.toThrow(NotFoundException);
+    });
+
+    describe('reason / comment validation', () => {
+      // Definition whose draft → rejected transition gates on reason +
+      // comment + a `reasonOptions` enum, mirroring the shape compliance
+      // workflows (`compliance-rules.deprecate`, `clients.dormantise`)
+      // declare in code.
+      const reasonGatedDefinition: CachedWorkflowDefinition = {
+        ...mockDefinition,
+        transitions: [
+          ...mockDefinition.transitions,
+          {
+            id: 'trans-4',
+            fromStateName: 'draft',
+            toStateName: 'rejected',
+            name: 'Reject',
+            requiredPermissions: [],
+            sortOrder: 2,
+            reasonOptions: ['Out of scope', 'Duplicate', 'Other'],
+            reasonRequired: true,
+            commentRequired: true,
+            metadata: null,
+          },
+        ],
+      };
+
+      beforeEach(() => {
+        registryMock.getBySlug.mockReturnValue(reasonGatedDefinition);
+      });
+
+      it('throws BadRequestException when reasonRequired and reason is missing', async () => {
+        await expect(
+          engine.validateAndThrow({
+            workflowSlug: 'task-status',
+            entityType: 'task',
+            entityId: 'entity-1',
+            fromState: 'draft',
+            toState: 'rejected',
+            actorId: 'user-1',
+            comment: 'Filing already cancelled',
+          }),
+        ).rejects.toThrow(BadRequestException);
+      });
+
+      it('throws BadRequestException when commentRequired and comment is missing', async () => {
+        await expect(
+          engine.validateAndThrow({
+            workflowSlug: 'task-status',
+            entityType: 'task',
+            entityId: 'entity-1',
+            fromState: 'draft',
+            toState: 'rejected',
+            actorId: 'user-1',
+            reason: 'Out of scope',
+          }),
+        ).rejects.toThrow(BadRequestException);
+      });
+
+      it('throws BadRequestException when reason is not in reasonOptions', async () => {
+        await expect(
+          engine.validateAndThrow({
+            workflowSlug: 'task-status',
+            entityType: 'task',
+            entityId: 'entity-1',
+            fromState: 'draft',
+            toState: 'rejected',
+            actorId: 'user-1',
+            reason: 'Made it up',
+            comment: 'Filing already cancelled',
+          }),
+        ).rejects.toThrow(BadRequestException);
+      });
+
+      it('passes when reason + comment are supplied and reason matches reasonOptions', async () => {
+        const result = await engine.validateAndThrow({
+          workflowSlug: 'task-status',
+          entityType: 'task',
+          entityId: 'entity-1',
+          fromState: 'draft',
+          toState: 'rejected',
+          actorId: 'user-1',
+          reason: 'Out of scope',
+          comment: 'Filing already cancelled',
+        });
+        expect(result.transitionId).toBe('trans-4');
+        expect(result.transitionName).toBe('Reject');
+      });
+
+      it('does not enforce reason/comment on transitions that do not require them', async () => {
+        // draft → submitted (trans-1) has reasonRequired/commentRequired = false
+        const result = await engine.validateAndThrow({
+          workflowSlug: 'task-status',
+          entityType: 'task',
+          entityId: 'entity-1',
+          fromState: 'draft',
+          toState: 'submitted',
+          actorId: 'user-1',
+        });
+        expect(result.transitionId).toBe('trans-1');
+      });
     });
   });
 
