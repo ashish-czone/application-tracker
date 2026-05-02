@@ -36,6 +36,14 @@ import { complianceRules } from './rules.schema';
   ],
   controllers: [ComplianceRulesController],
   providers: [
+    // No `scope:` block — `compliance_rules` carries no anchor columns
+    // (`createdBy` / `assigneeId` / `teamId` etc.). Wiring forward-compat
+    // scope here would have nothing to bind to. Every existing role grant
+    // uses `'any'` scope on `compliance-rules.read`, so the predicate path
+    // is moot today. If product later wants e.g. "rules I authored" reads,
+    // that requires (a) a schema migration adding `created_by`, (b) a
+    // `<entity>.scope.ts` declaring it as the `creator` anchor, (c)
+    // wiring `scope:` here.
     createCrudProvider(RULES_CRUD_TOKEN, complianceRules, {
       slug: 'compliance-rules',
       events: {

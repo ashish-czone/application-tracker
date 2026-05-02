@@ -23,6 +23,13 @@ import { complianceClientRegistrations } from './client-registrations.schema';
   ],
   controllers: [ClientRegistrationsController],
   providers: [
+    // No `scope:` block — `compliance_client_registrations` carries no
+    // anchor columns (`createdBy` / `assigneeId` / etc.). The row's
+    // visibility is naturally bound by its `clientId`, so any "scope by
+    // client" semantics live as an explicit predicate in the consuming
+    // service / report path, not as a row anchor on this table. If
+    // product later wants e.g. "registrations I created" reads, that
+    // requires adding `created_by` via migration first.
     createCrudProvider(CLIENT_REGISTRATIONS_CRUD_TOKEN, complianceClientRegistrations, {
       slug: 'client-registrations',
       events: {

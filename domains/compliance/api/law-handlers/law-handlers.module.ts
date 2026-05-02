@@ -7,6 +7,7 @@ import { LAW_HANDLERS_PERMISSION_MANIFESTS } from './law-handlers.permissions';
 import { LawHandlersController } from './law-handlers.controller';
 import { LawHandlersService } from './law-handlers.service';
 import { LAW_HANDLERS_CRUD_TOKEN } from './law-handlers.crud-token';
+import { LAW_HANDLERS_ANCHORS } from './law-handlers.scope';
 import { complianceLawHandlers } from './law-handlers.schema';
 
 /**
@@ -37,6 +38,7 @@ import { complianceLawHandlers } from './law-handlers.schema';
         updated: 'law-handlers.Updated',
         deleted: 'law-handlers.Deleted',
       },
+      scope: { anchors: LAW_HANDLERS_ANCHORS },
     }),
     LawHandlersService,
   ],
