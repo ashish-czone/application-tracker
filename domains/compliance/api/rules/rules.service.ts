@@ -1,7 +1,9 @@
 import { forwardRef, Inject, Injectable, BadRequestException, NotFoundException } from '@nestjs/common';
 import { DatabaseService, and, count, eq, inArray, isNull, ne, not, sql, withScope } from '@packages/database';
-import { EntityService, type BaseListQuery } from '@packages/entity-engine';
+import { type BaseListQuery } from '@packages/entity-engine';
 import { BaseCrudService } from '@packages/crud-base';
+import { WorkflowEngineService, WorkflowRegistryService } from '@packages/workflows';
+import { DomainEventEmitter } from '@packages/events';
 import type { DataAccessContext } from '@packages/rbac';
 import { AppLoggerService, type ContextLogger } from '@packages/logger';
 import { RULES_CRUD_TOKEN } from './rules.crud-token';
@@ -191,8 +193,10 @@ export class ComplianceRulesService {
 
   constructor(
     @Inject(RULES_CRUD_TOKEN) private readonly crud: BaseCrudService<typeof complianceRules>,
-    @Inject('ENTITY_SERVICE_compliance-rules') private readonly entityService: EntityService,
     private readonly database: DatabaseService,
+    private readonly workflowEngine: WorkflowEngineService,
+    private readonly workflowRegistry: WorkflowRegistryService,
+    private readonly events: DomainEventEmitter,
     @Inject(forwardRef(() => LawHandlersService))
     private readonly lawHandlers: LawHandlersService,
     private readonly filingsCancellation: ComplianceFilingsCancellationService,
@@ -231,7 +235,10 @@ export class ComplianceRulesService {
     // Scope predicate (if any) is applied at CTE level — it references the
     // `compliance_rules` table directly, so we pre-filter there before
     // aliasing as `r` for the outer JOIN/filters.
-    const scopePredicate = accessCtx ? await this.entityService.getScopePredicate(accessCtx) : undefined;
+    // Rules has no `dataAccess` config — actor scope is a no-op for this
+    // entity. The `accessCtx` parameter is preserved on the public API for
+    // controller-level consistency but does not gate any rows.
+    const scopePredicate = undefined;
     const cteScope = withScope(complianceRules, scopePredicate);
     const cteWhere = cteScope ? sql`WHERE ${cteScope}` : sql``;
     const scopedRules = sql`(SELECT * FROM ${complianceRules} ${cteWhere})`;
@@ -280,7 +287,10 @@ export class ComplianceRulesService {
    * each bucket is a FILTER (WHERE …) over the same scan.
    */
   async getSummary(accessCtx?: DataAccessContext): Promise<RulesSummary> {
-    const scopePredicate = accessCtx ? await this.entityService.getScopePredicate(accessCtx) : undefined;
+    // Rules has no `dataAccess` config — actor scope is a no-op for this
+    // entity. The `accessCtx` parameter is preserved on the public API for
+    // controller-level consistency but does not gate any rows.
+    const scopePredicate = undefined;
     const where = withScope(complianceRules, scopePredicate);
     const whereSql = where ? sql`WHERE ${where}` : sql``;
 
@@ -392,29 +402,118 @@ export class ComplianceRulesService {
   }
 
   /**
-   * Generic workflow transition. Delegates to the engine, which handles
-   * permission checks, guard evaluation, and history-row writes. Domain-
-   * specific cascades (e.g. rule deprecation cancelling in-flight filings)
-   * stay on dedicated endpoints; this one drives plain status moves like
-   * draft → active.
+   * Generic workflow transition. Loads the entity, validates the move
+   * against the workflow def via `WorkflowEngineService.validateAndThrow`
+   * (permissions, conditions, reason/comment requirements), then writes
+   * the column update + workflow_transition_history row in a single tx
+   * and emits `compliance-rules.<Field>Changed` after commit.
+   *
+   * Domain-specific cascades (e.g. rule deprecation cancelling in-flight
+   * filings) stay on dedicated endpoints (`deprecate`); this one drives
+   * plain status moves like draft → active.
    */
-  transition(
+  async transition(
     id: string,
     fieldKey: string,
     toState: string,
     actorId: string,
     options?: { reason?: string; comment?: string },
     accessCtx?: DataAccessContext,
-  ) {
-    return this.entityService.transition(id, fieldKey, toState, actorId, options, accessCtx);
+  ): Promise<Record<string, unknown>> {
+    const entity = await this.crud.findOneOrFail(id, accessCtx) as Record<string, unknown>;
+    const fromState = entity[fieldKey] as string | null;
+    if (!fromState) {
+      throw new BadRequestException(`Entity has no current state for field '${fieldKey}'`);
+    }
+
+    const workflow = this.workflowRegistry.getByEntityField('compliance-rules', fieldKey);
+    if (!workflow) {
+      throw new BadRequestException(
+        `No workflow registered for compliance-rules field '${fieldKey}'`,
+      );
+    }
+
+    const validated = await this.workflowEngine.validateAndThrow({
+      workflowSlug: workflow.slug,
+      entityType: 'compliance-rules',
+      entityId: id,
+      fromState,
+      toState,
+      actorId,
+      reason: options?.reason,
+      comment: options?.comment,
+      entityData: entity,
+    });
+
+    await this.database.db.transaction(async (tx) => {
+      await tx
+        .update(complianceRules)
+        .set({ [fieldKey]: toState })
+        .where(withScope(complianceRules, eq(complianceRules.id, id)));
+
+      await this.workflowEngine.recordHistory(
+        {
+          workflowDefinitionId: validated.workflowDefinitionId,
+          entityType: 'compliance-rules',
+          entityId: id,
+          fieldName: validated.fieldName,
+          fromState,
+          toState,
+          transitionId: validated.transitionId,
+          actorId,
+          reason: options?.reason,
+          comment: options?.comment,
+        },
+        tx,
+      );
+    });
+
+    this.emitTransitionEvent({
+      fieldKey,
+      entityId: id,
+      fromState,
+      toState,
+      transitionId: validated.transitionId,
+      transitionName: validated.transitionName,
+      actorId,
+      reason: options?.reason,
+      comment: options?.comment,
+    });
+
+    return this.crud.findOneOrFail(id);
   }
 
-  clone(id: string, actorId: string) {
-    return this.entityService.clone(id, actorId);
-  }
-
-  restore(id: string) {
-    return this.entityService.restore(id);
+  /**
+   * Emit `compliance-rules.<Field>Changed` after a workflow transition
+   * commits. Shared between `transition()` and `deprecate()` so both
+   * paths produce identical event payloads.
+   */
+  private emitTransitionEvent(params: {
+    fieldKey: string;
+    entityId: string;
+    fromState: string;
+    toState: string;
+    transitionId: string;
+    transitionName: string;
+    actorId: string | null;
+    reason?: string;
+    comment?: string;
+  }): void {
+    const pascalField = params.fieldKey.charAt(0).toUpperCase() + params.fieldKey.slice(1);
+    this.events.emitDynamic(`compliance-rules.${pascalField}Changed`, {
+      entityType: 'compliance-rules',
+      entityId: params.entityId,
+      actorId: params.actorId,
+      payload: {
+        fieldKey: params.fieldKey,
+        fromState: params.fromState,
+        toState: params.toState,
+        transitionId: params.transitionId,
+        transitionName: params.transitionName,
+        reason: params.reason,
+        comment: params.comment,
+      },
+    });
   }
 
   // ---- Domain queries & lifecycle ------------------------------------------
@@ -589,25 +688,52 @@ export class ComplianceRulesService {
       return { ruleId, status: 'deprecated', cancelledFilingIds: [] };
     }
 
-    // Engine `validateTransition` enforces `requiredPermissions:
-    // ['compliance-rules.deprecate']` declared on the workflow transition,
-    // resolves the transition row, and prepares the apply context. The
-    // `actorId` for permission resolution must be a user — `null` (system)
-    // bypasses the perm check inside the engine, matching how other
-    // cascade paths invoke the engine without a human actor.
-    const ctx = await this.entityService.validateTransition(
-      ruleId,
-      'status',
-      'deprecated',
-      params.actorId,
-      { reason: REASON_RULE_DEPRECATED, comment: params.comment },
-      accessCtx,
-    );
+    // Validate via the workflow engine — enforces `requiredPermissions:
+    // ['compliance-rules.deprecate']` declared on the active → deprecated
+    // (or draft → deprecated) transition, plus the reasonRequired +
+    // commentRequired gating that lives on those transition definitions.
+    const workflow = this.workflowRegistry.getByEntityField('compliance-rules', 'status');
+    if (!workflow) {
+      throw new BadRequestException(`No workflow registered for compliance-rules.status`);
+    }
+    const fromState = rule.status;
+    const validated = await this.workflowEngine.validateAndThrow({
+      workflowSlug: workflow.slug,
+      entityType: 'compliance-rules',
+      entityId: ruleId,
+      fromState,
+      toState: 'deprecated',
+      actorId: params.actorId,
+      reason: REASON_RULE_DEPRECATED,
+      comment: params.comment,
+      entityData: rule as unknown as Record<string, unknown>,
+    });
 
     const alsoCancelInFlight = params.alsoCancelInFlight ?? false;
 
     const cancelledIds = await this.database.db.transaction(async (tx) => {
-      await this.entityService.applyTransition(ctx, tx);
+      // Phase 2: write the column update + workflow_transition_history row
+      // on the same tx as the cascade so a failure rolls back atomically.
+      await tx
+        .update(complianceRules)
+        .set({ status: 'deprecated' })
+        .where(withScope(complianceRules, eq(complianceRules.id, ruleId)));
+
+      await this.workflowEngine.recordHistory(
+        {
+          workflowDefinitionId: validated.workflowDefinitionId,
+          entityType: 'compliance-rules',
+          entityId: ruleId,
+          fieldName: validated.fieldName,
+          fromState,
+          toState: 'deprecated',
+          transitionId: validated.transitionId,
+          actorId: params.actorId,
+          reason: REASON_RULE_DEPRECATED,
+          comment: params.comment,
+        },
+        tx,
+      );
 
       if (!alsoCancelInFlight) return [];
 
@@ -629,7 +755,17 @@ export class ComplianceRulesService {
       return inFlight.map((f: { id: string }) => f.id);
     });
 
-    this.entityService.emitTransitionEvent(ctx);
+    this.emitTransitionEvent({
+      fieldKey: 'status',
+      entityId: ruleId,
+      fromState,
+      toState: 'deprecated',
+      transitionId: validated.transitionId,
+      transitionName: validated.transitionName,
+      actorId: params.actorId,
+      reason: REASON_RULE_DEPRECATED,
+      comment: params.comment,
+    });
 
     this.logger.log('Rule deprecated', {
       ruleId,

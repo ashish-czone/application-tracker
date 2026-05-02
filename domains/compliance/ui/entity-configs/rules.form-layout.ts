@@ -1,17 +1,15 @@
 import { defineFormLayout } from '@packages/entity-views-ui';
 
 /**
- * Static form layout for compliance-rules edits. Replaces what
- * `useEntityLayout('compliance-rules')` used to fetch from
- * `GET /layouts/compliance-rules`. The workflow field (`status`) is
- * intentionally omitted — it's system-managed (transitions go through
- * `POST /:id/transition`, not the generic update endpoint).
+ * Static form layout for compliance-rules edits. Single source of truth
+ * for rules' form presentation; the api side (`rules.service.ts` +
+ * `rules.schema.ts`) carries the data shape, the workflow def,
+ * validation, and CRUD wiring but no form-layout metadata after
+ * `rules.entity.ts` was retired in the workflow-lift effort.
  *
- * Field metadata is duplicated relative to `RULES_ENTITY` in
- * `domains/compliance/api/rules/rules.entity.ts`; that's the temporary
- * cost of the migration. When `defineEntity` is fully retired the api
- * side stops carrying form-presentation metadata and the duplication
- * dissolves.
+ * The workflow field (`status`) is intentionally omitted — it's
+ * system-managed (transitions go through `POST /:id/transition`, not
+ * the generic update endpoint).
  */
 export const RULES_FORM_LAYOUT = defineFormLayout({
   entity: 'compliance-rules',
