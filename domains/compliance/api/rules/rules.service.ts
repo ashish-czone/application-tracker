@@ -1,8 +1,10 @@
 import { forwardRef, Inject, Injectable, BadRequestException, NotFoundException } from '@nestjs/common';
 import { DatabaseService, and, count, eq, inArray, isNull, ne, not, sql, withScope } from '@packages/database';
 import { EntityService, type BaseListQuery } from '@packages/entity-engine';
+import { BaseCrudService } from '@packages/crud-base';
 import type { DataAccessContext } from '@packages/rbac';
 import { AppLoggerService, type ContextLogger } from '@packages/logger';
+import { RULES_CRUD_TOKEN } from './rules.crud-token';
 import {
   FREQUENCIES,
   lawCodesForGroups,
@@ -188,6 +190,7 @@ export class ComplianceRulesService {
   private readonly logger: ContextLogger;
 
   constructor(
+    @Inject(RULES_CRUD_TOKEN) private readonly crud: BaseCrudService<typeof complianceRules>,
     @Inject('ENTITY_SERVICE_compliance-rules') private readonly entityService: EntityService,
     private readonly database: DatabaseService,
     @Inject(forwardRef(() => LawHandlersService))
@@ -352,7 +355,7 @@ export class ComplianceRulesService {
   }
 
   findOne(id: string, accessCtx?: DataAccessContext) {
-    return this.entityService.findOneOrFail(id, accessCtx);
+    return this.crud.findOneOrFail(id, accessCtx);
   }
 
   async create(input: CreateComplianceRuleDto, actorId: string) {
@@ -365,8 +368,8 @@ export class ComplianceRulesService {
     }
     // Workflow state is system-managed: pre-fill `status` with the workflow's
     // initialState. The DTO drops any caller-supplied value.
-    return this.entityService.create(
-      { ...input, status: RULES_WORKFLOW.initialState },
+    return this.crud.create(
+      { ...input, status: RULES_WORKFLOW.initialState } as never,
       actorId,
     );
   }
@@ -381,11 +384,11 @@ export class ComplianceRulesService {
       assertFrequency(input.frequency as string);
     }
     await this.assertUpdateAllowed(id, input as Record<string, unknown>);
-    return this.entityService.update(id, input, actorId, accessCtx);
+    return this.crud.update(id, input as never, actorId, accessCtx);
   }
 
   softDelete(id: string, actorId: string, accessCtx?: DataAccessContext) {
-    return this.entityService.softDelete(id, actorId, accessCtx);
+    return this.crud.softDelete(id, actorId, accessCtx);
   }
 
   /**
@@ -412,10 +415,6 @@ export class ComplianceRulesService {
 
   restore(id: string) {
     return this.entityService.restore(id);
-  }
-
-  getListLayout() {
-    return this.entityService.getListLayout();
   }
 
   // ---- Domain queries & lifecycle ------------------------------------------
@@ -474,7 +473,7 @@ export class ComplianceRulesService {
     // rule, surfaces NotFoundException (404) — same shape as a missing row,
     // which is the correct behaviour: the actor must not be able to detect
     // existence outside their scope.
-    await this.entityService.findOneOrFail(ruleId, accessCtx);
+    await this.crud.findOneOrFail(ruleId, accessCtx);
     const [row] = await this.database.db
       .select({ count: count() })
       .from(complianceFilings)
@@ -530,7 +529,7 @@ export class ComplianceRulesService {
     accessCtx?: DataAccessContext,
   ): Promise<DeprecationPreview> {
     // Existence + actor-scope check; same rationale as getEditConstraints.
-    await this.entityService.findOneOrFail(ruleId, accessCtx);
+    await this.crud.findOneOrFail(ruleId, accessCtx);
     const [row] = await this.database.db
       .select({ count: count() })
       .from(complianceFilings)
@@ -585,7 +584,7 @@ export class ComplianceRulesService {
     // Existence + actor-scope check via the engine. Throws NotFoundException
     // when the rule is invisible to the actor — keeps the destructive cascade
     // gated by the same scope as the read view.
-    const rule = (await this.entityService.findOneOrFail(ruleId, accessCtx)) as unknown as ComplianceRule;
+    const rule = (await this.crud.findOneOrFail(ruleId, accessCtx)) as unknown as ComplianceRule;
     if (rule.status === 'deprecated') {
       return { ruleId, status: 'deprecated', cancelledFilingIds: [] };
     }

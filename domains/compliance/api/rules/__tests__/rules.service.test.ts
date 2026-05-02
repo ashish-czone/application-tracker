@@ -57,6 +57,20 @@ function makeRule(overrides: Partial<ComplianceRule> = {}): ComplianceRule {
 }
 
 describe('ComplianceRulesService', () => {
+  // After the BaseCrudService migration, list/findOneOrFail/create/update/
+  // softDelete delegate to `crud` (BaseCrudService instance), while
+  // transition/clone/restore/validateTransition/applyTransition/
+  // emitTransitionEvent still delegate to `entityService` (the workflow-aware
+  // engine). Both are mocked here so each call site routes to the right
+  // dependency without leaking into the wrong mock.
+  let crud: {
+    list: ReturnType<typeof vi.fn>;
+    findOneOrFail: ReturnType<typeof vi.fn>;
+    findOne: ReturnType<typeof vi.fn>;
+    create: ReturnType<typeof vi.fn>;
+    update: ReturnType<typeof vi.fn>;
+    softDelete: ReturnType<typeof vi.fn>;
+  };
   let entityService: {
     list: ReturnType<typeof vi.fn>;
     findOneOrFail: ReturnType<typeof vi.fn>;
@@ -82,6 +96,14 @@ describe('ComplianceRulesService', () => {
   } as unknown as AppLoggerService;
 
   beforeEach(() => {
+    crud = {
+      list: vi.fn(),
+      findOneOrFail: vi.fn(),
+      findOne: vi.fn(),
+      create: vi.fn(),
+      update: vi.fn(),
+      softDelete: vi.fn(),
+    };
     entityService = {
       list: vi.fn(),
       findOneOrFail: vi.fn(),
@@ -106,6 +128,7 @@ describe('ComplianceRulesService', () => {
     lawHandlers = { hasDefaultHandler: vi.fn() };
     filingsCancellation = { cancelFilings: vi.fn().mockResolvedValue(undefined) };
     service = new ComplianceRulesService(
+      crud as never,
       entityService as never,
       db as never,
       lawHandlers as never,
@@ -127,7 +150,7 @@ describe('ComplianceRulesService', () => {
           'u1',
         ),
       ).rejects.toBeInstanceOf(NoDefaultHandlerError);
-      expect(entityService.create).not.toHaveBeenCalled();
+      expect(crud.create).not.toHaveBeenCalled();
     });
 
     it('throws InvalidFrequencyError when frequency is not in the FREQUENCIES enum', async () => {
@@ -144,20 +167,20 @@ describe('ComplianceRulesService', () => {
           'u1',
         ),
       ).rejects.toBeInstanceOf(InvalidFrequencyError);
-      expect(entityService.create).not.toHaveBeenCalled();
+      expect(crud.create).not.toHaveBeenCalled();
       expect(lawHandlers.hasDefaultHandler).not.toHaveBeenCalled();
     });
 
-    it('delegates to entityService.create when a default handler exists', async () => {
+    it('delegates to crud.create when a default handler exists', async () => {
       lawHandlers.hasDefaultHandler.mockResolvedValue(true);
-      entityService.create.mockResolvedValue({ id: 'r1', code: 'X', status: 'draft' });
+      crud.create.mockResolvedValue({ id: 'r1', code: 'X', status: 'draft' });
 
       const result = await service.create(
         { code: 'X', name: 'x', lawId: 'l1', frequency: 'monthly', dueDayOfMonth: 20, dueMonthOffset: 1 } as never,
         'u1',
       );
 
-      expect(entityService.create).toHaveBeenCalledWith(
+      expect(crud.create).toHaveBeenCalledWith(
         expect.objectContaining({ code: 'X', lawId: 'l1', frequency: 'monthly' }),
         'u1',
       );
@@ -535,7 +558,7 @@ describe('ComplianceRulesService', () => {
     };
 
     it('returns hasGeneratedFilings=true and the count when filings exist', async () => {
-      entityService.findOneOrFail.mockResolvedValueOnce(ruleRow);
+      crud.findOneOrFail.mockResolvedValueOnce(ruleRow);
       db.db.select.mockReturnValueOnce(mockSelectRows([{ count: 12 }]));
       expect(await service.getEditConstraints('r1')).toEqual({
         ruleId: 'r1',
@@ -545,7 +568,7 @@ describe('ComplianceRulesService', () => {
     });
 
     it('returns hasGeneratedFilings=false when count is zero', async () => {
-      entityService.findOneOrFail.mockResolvedValueOnce(ruleRow);
+      crud.findOneOrFail.mockResolvedValueOnce(ruleRow);
       db.db.select.mockReturnValueOnce(mockSelectRows([{ count: 0 }]));
       expect(await service.getEditConstraints('r1')).toEqual({
         ruleId: 'r1',
@@ -555,16 +578,16 @@ describe('ComplianceRulesService', () => {
     });
 
     it('throws when the rule is not visible to the actor', async () => {
-      entityService.findOneOrFail.mockRejectedValueOnce(new NotFoundException('not found'));
+      crud.findOneOrFail.mockRejectedValueOnce(new NotFoundException('not found'));
       await expect(service.getEditConstraints('missing')).rejects.toBeInstanceOf(NotFoundException);
     });
 
     it('forwards the access context to the engine for scope enforcement', async () => {
-      entityService.findOneOrFail.mockResolvedValueOnce(ruleRow);
+      crud.findOneOrFail.mockResolvedValueOnce(ruleRow);
       db.db.select.mockReturnValueOnce(mockSelectRows([{ count: 0 }]));
       const accessCtx = { userId: 'u1', scopes: [{ type: 'unit' }] } as never;
       await service.getEditConstraints('r1', accessCtx);
-      expect(entityService.findOneOrFail).toHaveBeenCalledWith('r1', accessCtx);
+      expect(crud.findOneOrFail).toHaveBeenCalledWith('r1', accessCtx);
     });
   });
 
@@ -683,7 +706,7 @@ describe('ComplianceRulesService', () => {
     };
 
     it('returns the non-terminal filing count for the rule', async () => {
-      entityService.findOneOrFail.mockResolvedValueOnce(ruleRow);
+      crud.findOneOrFail.mockResolvedValueOnce(ruleRow);
       db.db.select.mockReturnValueOnce(mockSelectRows([{ count: 7 }]));
 
       const result = await service.previewDeprecation('r1');
@@ -692,7 +715,7 @@ describe('ComplianceRulesService', () => {
     });
 
     it('returns zero when no in-flight filings exist', async () => {
-      entityService.findOneOrFail.mockResolvedValueOnce(ruleRow);
+      crud.findOneOrFail.mockResolvedValueOnce(ruleRow);
       db.db.select.mockReturnValueOnce(mockSelectRows([{ count: 0 }]));
 
       const result = await service.previewDeprecation('r1');
@@ -701,16 +724,16 @@ describe('ComplianceRulesService', () => {
     });
 
     it('throws when the rule is not visible to the actor', async () => {
-      entityService.findOneOrFail.mockRejectedValueOnce(new NotFoundException('not found'));
+      crud.findOneOrFail.mockRejectedValueOnce(new NotFoundException('not found'));
       await expect(service.previewDeprecation('missing')).rejects.toBeInstanceOf(NotFoundException);
     });
 
     it('forwards the access context to the engine', async () => {
-      entityService.findOneOrFail.mockResolvedValueOnce(ruleRow);
+      crud.findOneOrFail.mockResolvedValueOnce(ruleRow);
       db.db.select.mockReturnValueOnce(mockSelectRows([{ count: 0 }]));
       const accessCtx = { userId: 'u1', scopes: [{ type: 'unit' }] } as never;
       await service.previewDeprecation('r1', accessCtx);
-      expect(entityService.findOneOrFail).toHaveBeenCalledWith('r1', accessCtx);
+      expect(crud.findOneOrFail).toHaveBeenCalledWith('r1', accessCtx);
     });
   });
 
@@ -750,14 +773,14 @@ describe('ComplianceRulesService', () => {
     }
 
     it('throws when the rule is not visible to the actor', async () => {
-      entityService.findOneOrFail.mockRejectedValueOnce(new NotFoundException('not found'));
+      crud.findOneOrFail.mockRejectedValueOnce(new NotFoundException('not found'));
       await expect(service.deprecate('missing', { actorId: 'u1' })).rejects.toBeInstanceOf(NotFoundException);
       expect(entityService.validateTransition).not.toHaveBeenCalled();
       expect(db.db.transaction).not.toHaveBeenCalled();
     });
 
     it('is a no-op when rule is already deprecated', async () => {
-      entityService.findOneOrFail.mockResolvedValueOnce({ ...ruleRow, status: 'deprecated' });
+      crud.findOneOrFail.mockResolvedValueOnce({ ...ruleRow, status: 'deprecated' });
       const result = await service.deprecate('r1', { actorId: 'u1' });
       expect(result).toEqual({ ruleId: 'r1', status: 'deprecated', cancelledFilingIds: [] });
       expect(entityService.validateTransition).not.toHaveBeenCalled();
@@ -765,7 +788,7 @@ describe('ComplianceRulesService', () => {
     });
 
     it('routes the status flip through the engine so the perm gate fires; no cascade by default', async () => {
-      entityService.findOneOrFail.mockResolvedValueOnce(ruleRow);
+      crud.findOneOrFail.mockResolvedValueOnce(ruleRow);
       const ctx = makeTransitionCtx('active');
       entityService.validateTransition.mockResolvedValueOnce(ctx);
       const tx = mockTx();
@@ -790,7 +813,7 @@ describe('ComplianceRulesService', () => {
     });
 
     it('cascades cancellation when alsoCancelInFlight is true', async () => {
-      entityService.findOneOrFail.mockResolvedValueOnce(ruleRow);
+      crud.findOneOrFail.mockResolvedValueOnce(ruleRow);
       entityService.validateTransition.mockResolvedValueOnce(makeTransitionCtx('active'));
       const tx = mockTx({
         inFlight: [
@@ -818,7 +841,7 @@ describe('ComplianceRulesService', () => {
     });
 
     it('transitions a draft rule directly to deprecated', async () => {
-      entityService.findOneOrFail.mockResolvedValueOnce({ ...ruleRow, status: 'draft' });
+      crud.findOneOrFail.mockResolvedValueOnce({ ...ruleRow, status: 'draft' });
       entityService.validateTransition.mockResolvedValueOnce(makeTransitionCtx('draft'));
       const tx = mockTx();
       db.db.transaction.mockImplementation(async (fn: (t: typeof tx) => unknown) => fn(tx));
@@ -838,7 +861,7 @@ describe('ComplianceRulesService', () => {
     });
 
     it('forwards the access context to both findOneOrFail and validateTransition', async () => {
-      entityService.findOneOrFail.mockResolvedValueOnce(ruleRow);
+      crud.findOneOrFail.mockResolvedValueOnce(ruleRow);
       entityService.validateTransition.mockResolvedValueOnce(makeTransitionCtx('active'));
       const tx = mockTx();
       db.db.transaction.mockImplementation(async (fn: (t: typeof tx) => unknown) => fn(tx));
@@ -846,7 +869,7 @@ describe('ComplianceRulesService', () => {
 
       await service.deprecate('r1', { actorId: 'u1' }, accessCtx);
 
-      expect(entityService.findOneOrFail).toHaveBeenCalledWith('r1', accessCtx);
+      expect(crud.findOneOrFail).toHaveBeenCalledWith('r1', accessCtx);
       expect(entityService.validateTransition).toHaveBeenCalledWith(
         'r1', 'status', 'deprecated', 'u1', expect.any(Object), accessCtx,
       );
