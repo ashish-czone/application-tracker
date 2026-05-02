@@ -1,11 +1,13 @@
-import { forwardRef, Module } from '@nestjs/common';
-import { EntityEngineModule } from '@packages/entity-engine';
+import { forwardRef, Module, type OnModuleInit } from '@nestjs/common';
+import {
+  LookupResolverService,
+  registerEntityLookup,
+} from '@packages/entity-engine';
 import { WorkflowsModule } from '@packages/workflows';
 import { RbacIntegrationModule } from '@packages/rbac';
 import { createCrudProvider } from '@packages/crud-base';
 import { LawHandlersModule } from '../law-handlers';
 import { ComplianceFilingsModule } from '../compliance-filings';
-import { RULES_ENTITY } from './rules.entity';
 import { RULES_WORKFLOW } from './rules.workflow';
 import { RULES_PERMISSION_MANIFESTS } from './rules.permissions';
 import { ComplianceRulesController } from './rules.controller';
@@ -13,9 +15,20 @@ import { ComplianceRulesService } from './rules.service';
 import { RULES_CRUD_TOKEN } from './rules.crud-token';
 import { complianceRules } from './rules.schema';
 
+/**
+ * Rules module — fully de-engined. No more `EntityEngineModule.forEntity`:
+ * the auto-CRUD path was already off (every CRUD method delegates to
+ * `BaseCrudService` via `createCrudProvider`), and the workflow
+ * orchestration path now goes directly through `WorkflowEngineService` +
+ * `WorkflowRegistryService` from the consumer service.
+ *
+ * Lookup registration (so other entities can resolve `lawId` / `ruleId`
+ * lookups against rule rows) was the only remaining reason `forEntity`
+ * was load-bearing — we now register directly with `LookupResolverService`
+ * in `onModuleInit`, no `defineEntity` config needed.
+ */
 @Module({
   imports: [
-    EntityEngineModule.forEntity(RULES_ENTITY),
     WorkflowsModule.forFeature(RULES_WORKFLOW),
     RbacIntegrationModule.forFeature({ manifests: RULES_PERMISSION_MANIFESTS }),
     forwardRef(() => LawHandlersModule),
@@ -35,4 +48,15 @@ import { complianceRules } from './rules.schema';
   ],
   exports: [ComplianceRulesService],
 })
-export class ComplianceRulesModule {}
+export class ComplianceRulesModule implements OnModuleInit {
+  constructor(private readonly lookupResolver: LookupResolverService) {}
+
+  onModuleInit(): void {
+    registerEntityLookup(this.lookupResolver, {
+      entityType: 'compliance-rules',
+      table: complianceRules,
+      labelField: 'name',
+      searchFields: ['code', 'name'],
+    });
+  }
+}

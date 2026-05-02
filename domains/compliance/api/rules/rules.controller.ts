@@ -117,19 +117,6 @@ export class ComplianceRulesController {
     await this.rules.softDelete(id, user.userId, accessCtx);
   }
 
-  @Post(':id/clone')
-  @RequirePermission('compliance-rules.create')
-  @HttpCode(HttpStatus.CREATED)
-  clone(@Param('id', ParseUUIDPipe) id: string, @CurrentUser() user: JwtPayload) {
-    return this.rules.clone(id, user.userId);
-  }
-
-  @Post(':id/restore')
-  @RequirePermission('compliance-rules.update')
-  restore(@Param('id', ParseUUIDPipe) id: string) {
-    return this.rules.restore(id);
-  }
-
   @Post(':id/transition')
   @HttpCode(HttpStatus.CREATED)
   @RequirePermission('compliance-rules.update')
