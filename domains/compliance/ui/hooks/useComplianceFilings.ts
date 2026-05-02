@@ -7,6 +7,7 @@ import type { OrgUnit } from '@packages/org-units-ui';
 import type { FilingRow } from '../portals/customer/features/filings/types';
 import type { Handler, Filing } from '../types';
 import { lawsQueries } from './useLawsApi';
+import { rulesQueries } from './useComplianceRulesApi';
 
 interface PaginatedResponse<T> {
   data: T[];
@@ -116,7 +117,6 @@ export interface ComplianceFilingsResult {
 
 export function useComplianceFilingRows(): ComplianceFilingsResult {
   const { apiFn } = useEntityEngine();
-  const rulesHooks = useEntityHooks('compliance-rules');
   const clientsHooks = useEntityHooks('clients');
 
   const filingsQuery = useQuery<PaginatedResponse<ComplianceFilingRow>>({
@@ -124,7 +124,7 @@ export function useComplianceFilingRows(): ComplianceFilingsResult {
     queryFn: () =>
       apiFn.get<PaginatedResponse<ComplianceFilingRow>>('/compliance-filings?limit=1000'),
   });
-  const rulesQuery = rulesHooks.useList({ limit: 1000 });
+  const rulesQuery = useQuery(rulesQueries(apiFn).list({ limit: 1000 }));
   const lawsQuery = useQuery(lawsQueries(apiFn).list({ limit: 1000 }));
   const clientsQuery = clientsHooks.useList({ limit: 1000 });
   const orgUnitsQuery = useOrgUnits();
