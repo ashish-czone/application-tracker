@@ -1,4 +1,5 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
+import { PgDialect } from 'drizzle-orm/pg-core';
 import { ComplianceFilingsService } from '../compliance-filings.service';
 
 /**
@@ -19,6 +20,43 @@ function thenableChain<T>(value: T): unknown {
     },
   );
   return chain;
+}
+
+/**
+ * Variant of `thenableChain` that records the arguments passed to specific
+ * methods (e.g. `.where(...)`, `.orderBy(...)`) on the supplied `recorder`
+ * object so list-shape tests can assert structurally on the WHERE / ORDER BY
+ * Drizzle SQL objects. Other methods still chain through.
+ */
+function recordingChain<T>(value: T, recorder: Record<string, unknown[]>, methods: string[]): unknown {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const chain: any = new Proxy(
+    {},
+    {
+      get(_target, prop) {
+        if (prop === 'then') return (cb: (v: T) => unknown) => cb(value);
+        if (typeof prop === 'string' && methods.includes(prop)) {
+          return (...args: unknown[]) => {
+            recorder[prop] = args;
+            return chain;
+          };
+        }
+        return () => chain;
+      },
+    },
+  );
+  return chain;
+}
+
+/**
+ * Render a captured Drizzle SQL object (as passed to `.where(...)` or
+ * `.orderBy(...)`) into its compiled `{sql, params}` shape so tests can
+ * assert on substring matches without depending on Drizzle internals.
+ */
+const dialect = new PgDialect();
+function compileSql(sqlObj: unknown): { sql: string; params: unknown[] } {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  return dialect.sqlToQuery(sqlObj as any);
 }
 
 describe('ComplianceFilingsService', () => {
@@ -386,6 +424,195 @@ describe('ComplianceFilingsService', () => {
       await service.getSummary('2026-04-30');
 
       expect(dataAccessScope.buildPredicate).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('list — filters / sort / search', () => {
+    /**
+     * Stub the rows query with a recording chain (captures `.where()` and
+     * `.orderBy()` for assertions) and the count query with the plain
+     * thenable. Returns the recorder so the test can compile the SQL.
+     */
+    function stubSelectCapturing(rows: unknown[], total: number) {
+      const recorder: Record<string, unknown[]> = {};
+      database.db.select
+        .mockReturnValueOnce(recordingChain(rows, recorder, ['where', 'orderBy']))
+        .mockReturnValueOnce(thenableChain([{ total }]));
+      return recorder;
+    }
+
+    /**
+     * Variant that captures BOTH the rows-query WHERE and the count-query
+     * WHERE so the test can assert they are structurally identical (same
+     * scope + filter shape).
+     */
+    function stubSelectCapturingBoth(rows: unknown[], total: number) {
+      const rowsRec: Record<string, unknown[]> = {};
+      const countRec: Record<string, unknown[]> = {};
+      database.db.select
+        .mockReturnValueOnce(recordingChain(rows, rowsRec, ['where', 'orderBy']))
+        .mockReturnValueOnce(recordingChain([{ total }], countRec, ['where']));
+      return { rowsRec, countRec };
+    }
+
+    it('translates filters JSON eq predicates into a WHERE that pins the column', async () => {
+      const recorder = stubSelectCapturing([], 0);
+
+      await service.list({
+        filters: JSON.stringify([
+          { field: 'clientId', operator: 'eq', value: 'c1' },
+        ]),
+      });
+
+      const where = recorder.where?.[0];
+      expect(where).toBeDefined();
+      const compiled = compileSql(where);
+      // Column reference + parameter binding — Drizzle uses positional
+      // placeholders, so the substring + params assertion is structural.
+      expect(compiled.sql).toContain('"client_id"');
+      expect(compiled.params).toContain('c1');
+    });
+
+    it('translates filters JSON in operator into an inArray predicate', async () => {
+      const recorder = stubSelectCapturing([], 0);
+
+      await service.list({
+        filters: JSON.stringify([
+          { field: 'lawId', operator: 'in', value: ['l1', 'l2', 'l3'] },
+        ]),
+      });
+
+      const compiled = compileSql(recorder.where?.[0]);
+      expect(compiled.sql).toContain('"law_id"');
+      expect(compiled.sql).toMatch(/in\s*\(/i);
+      expect(compiled.params).toEqual(expect.arrayContaining(['l1', 'l2', 'l3']));
+    });
+
+    it('translates filters JSON lte / gte predicates against dueDate', async () => {
+      const recorder = stubSelectCapturing([], 0);
+
+      await service.list({
+        filters: JSON.stringify([
+          { field: 'dueDate', operator: 'lte', value: '2026-04-30' },
+          { field: 'dueDate', operator: 'gte', value: '2026-04-01' },
+        ]),
+      });
+
+      const compiled = compileSql(recorder.where?.[0]);
+      expect(compiled.sql).toContain('"due_date"');
+      expect(compiled.sql).toMatch(/<=|>=/);
+      expect(compiled.params).toEqual(expect.arrayContaining(['2026-04-30', '2026-04-01']));
+    });
+
+    it('ignores unknown filter fields (whitelist enforced) without 400-ing', async () => {
+      const recorder = stubSelectCapturing([], 0);
+
+      await service.list({
+        filters: JSON.stringify([
+          { field: 'notAColumn', operator: 'eq', value: 'whatever' },
+          { field: 'status', operator: 'eq', value: 'pending' },
+        ]),
+      });
+
+      const compiled = compileSql(recorder.where?.[0]);
+      expect(compiled.sql).not.toContain('notAColumn');
+      expect(compiled.sql).not.toContain('not_a_column');
+      expect(compiled.sql).toContain('"status"');
+      expect(compiled.params).toContain('pending');
+    });
+
+    it('honors bare passthrough id params (clientId / lawId / assigneeId / assigneeTeamId / ruleId)', async () => {
+      const recorder = stubSelectCapturing([], 0);
+
+      await service.list({
+        clientId: 'c-bare',
+        lawId: 'l-bare',
+        ruleId: 'r-bare',
+        assigneeId: 'u-bare',
+        assigneeTeamId: 't-bare',
+      });
+
+      const compiled = compileSql(recorder.where?.[0]);
+      expect(compiled.params).toEqual(
+        expect.arrayContaining(['c-bare', 'l-bare', 'r-bare', 'u-bare', 't-bare']),
+      );
+    });
+
+    it('renders ORDER BY against the sort whitelist with stable id tiebreaker', async () => {
+      const recorder = stubSelectCapturing([], 0);
+
+      await service.list({ sort: 'dueDate', order: 'desc' });
+
+      const orderBy = recorder.orderBy ?? [];
+      // Two arguments: primary sort + id tiebreaker.
+      expect(orderBy.length).toBe(2);
+      const primary = compileSql(orderBy[0]);
+      const tiebreaker = compileSql(orderBy[1]);
+      expect(primary.sql).toContain('"due_date"');
+      expect(primary.sql).toMatch(/desc/i);
+      expect(tiebreaker.sql).toContain('"id"');
+      expect(tiebreaker.sql).toMatch(/asc/i);
+    });
+
+    it('falls back to the default sort when sort key is not whitelisted', async () => {
+      const recorder = stubSelectCapturing([], 0);
+
+      await service.list({ sort: 'arbitraryColumn', order: 'desc' });
+
+      const primary = compileSql((recorder.orderBy ?? [])[0]);
+      // Default column is dueDate.
+      expect(primary.sql).toContain('"due_date"');
+    });
+
+    it('renders sort against a joined display column from the whitelist', async () => {
+      const recorder = stubSelectCapturing([], 0);
+
+      await service.list({ sort: 'clientName', order: 'asc' });
+
+      const primary = compileSql((recorder.orderBy ?? [])[0]);
+      // clientName resolves to clients.name
+      expect(primary.sql).toContain('"name"');
+      expect(primary.sql).toMatch(/asc/i);
+    });
+
+    it('OR-composes ILIKE predicates across title / description / externalKey / clients.name for search', async () => {
+      const recorder = stubSelectCapturing([], 0);
+
+      await service.list({ search: 'gst' });
+
+      const compiled = compileSql(recorder.where?.[0]);
+      expect(compiled.sql).toMatch(/ilike/i);
+      expect(compiled.sql).toContain('"title"');
+      expect(compiled.sql).toContain('"description"');
+      expect(compiled.sql).toContain('"external_key"');
+      expect(compiled.sql).toContain('"name"'); // clients.name
+      // Pattern is %gst% — should appear in params at least once.
+      expect(compiled.params).toContain('%gst%');
+    });
+
+    it('applies the same WHERE shape to the COUNT query as the rows query', async () => {
+      const { rowsRec, countRec } = stubSelectCapturingBoth([], 0);
+
+      await service.list({
+        filters: JSON.stringify([
+          { field: 'status', operator: 'eq', value: 'pending' },
+        ]),
+        search: 'gst',
+      });
+
+      const rowsWhere = compileSql(rowsRec.where?.[0]);
+      const countWhere = compileSql(countRec.where?.[0]);
+      expect(countWhere.sql).toBe(rowsWhere.sql);
+      expect(countWhere.params).toEqual(rowsWhere.params);
+    });
+
+    it('treats blank search as no predicate (no ILIKE rendered)', async () => {
+      const recorder = stubSelectCapturing([], 0);
+
+      await service.list({ search: '   ' });
+
+      const compiled = compileSql(recorder.where?.[0]);
+      expect(compiled.sql).not.toMatch(/ilike/i);
     });
   });
 });

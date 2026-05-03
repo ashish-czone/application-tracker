@@ -1,9 +1,30 @@
 import { BadRequestException, Inject, Injectable } from '@nestjs/common';
-import { count, DatabaseService, eq, sql, users, withScope } from '@packages/database';
-import { BaseCrudService, type BaseListQuery } from '@packages/crud-base';
+import {
+  asc,
+  count,
+  DatabaseService,
+  desc,
+  eq,
+  ilike,
+  or,
+  type SQL,
+  sql,
+  users,
+  withScope,
+  withScopeIncludingDeleted,
+} from '@packages/database';
+import { BaseCrudService } from '@packages/crud-base';
+// `BaseListQuery` from entity-engine has the wide `[key: string]: unknown`
+// passthrough that the controller's `buildBaseListQuery(...)` output relies on
+// (filters/sort/search/order plus bare clientId/lawId/etc.). The crud-base
+// version is `{page?, limit?}` only — too narrow for the custom list path
+// here. The two type names match by design; the engine's is the consumer-
+// facing shape.
+import type { BaseListQuery } from '@packages/entity-engine';
 import { WorkflowEngineService, WorkflowRegistryService } from '@packages/workflows';
 import { DomainEventEmitter } from '@packages/events';
 import { orgUnits } from '@packages/org-units';
+import { buildFilterCondition, parseFilterParam, type FilterExpression } from '@packages/query-builder';
 import { type DataAccessContext, DataAccessScopeService } from '@packages/rbac';
 import { complianceFilings } from './compliance-filings.schema';
 import { clients } from '../clients/clients.schema';
@@ -60,6 +81,56 @@ function addDays(calendarDate: string, days: number): string {
   return `${yy}-${mm}-${dd}`;
 }
 
+/**
+ * Whitelisted filterable columns on `compliance_filings`. Maps the JSON
+ * filter `field` name to a Drizzle column reference so a structured
+ * predicate like `{field:'clientId', operator:'in', value:['c1','c2']}`
+ * resolves to a real SQL condition. Unknown fields are ignored — frontend
+ * cannot push arbitrary column predicates through.
+ */
+const FILTERABLE_FILING_COLUMNS = {
+  id: complianceFilings.id,
+  status: complianceFilings.status,
+  priority: complianceFilings.priority,
+  clientId: complianceFilings.clientId,
+  lawId: complianceFilings.lawId,
+  ruleId: complianceFilings.ruleId,
+  assigneeId: complianceFilings.assigneeId,
+  assigneeTeamId: complianceFilings.assigneeTeamId,
+  dueDate: complianceFilings.dueDate,
+  periodStart: complianceFilings.periodStart,
+  periodEnd: complianceFilings.periodEnd,
+  completedAt: complianceFilings.completedAt,
+  externalKey: complianceFilings.externalKey,
+  createdAt: complianceFilings.createdAt,
+  updatedAt: complianceFilings.updatedAt,
+  createdBy: complianceFilings.createdBy,
+} as const;
+
+/**
+ * Whitelisted sort columns. Driver columns sort directly; joined display
+ * columns sort via the JOIN-resolved column reference (one round-trip,
+ * no extra query). Anything outside the whitelist falls back to the
+ * default (`dueDate ASC, id ASC` tiebreaker).
+ */
+const SORTABLE_FILING_COLUMNS: Record<string, ReturnType<typeof sql>> = {
+  dueDate: sql`${complianceFilings.dueDate}`,
+  periodStart: sql`${complianceFilings.periodStart}`,
+  periodEnd: sql`${complianceFilings.periodEnd}`,
+  completedAt: sql`${complianceFilings.completedAt}`,
+  status: sql`${complianceFilings.status}`,
+  priority: sql`${complianceFilings.priority}`,
+  createdAt: sql`${complianceFilings.createdAt}`,
+  updatedAt: sql`${complianceFilings.updatedAt}`,
+  title: sql`${complianceFilings.title}`,
+  clientName: sql`${clients.name}`,
+  assigneeFirstName: sql`${users.firstName}`,
+  assigneeLastName: sql`${users.lastName}`,
+  assigneeTeamName: sql`${orgUnits.name}`,
+};
+
+const DEFAULT_FILING_SORT_COLUMN = SORTABLE_FILING_COLUMNS.dueDate;
+
 @Injectable()
 export class ComplianceFilingsService {
   constructor(
@@ -95,6 +166,16 @@ export class ComplianceFilingsService {
    * built explicitly via `buildFilingsScopePredicate(...)` (same helper
    * used by `getSummary` and the report endpoints) so the filings.read
    * scope shape stays in one place.
+   *
+   * Honors the full `BaseListQuery` shape supplied by the controller's
+   * `buildBaseListQuery(...)` translator: structured `filters` JSON
+   * (clientId / lawId / ruleId / status / dueDate / etc., already merged
+   * with the bucket / dueBefore / dueAfter / notCompleted shorthand),
+   * `sort` + `order` against a sortable-column whitelist, multi-column
+   * `search`, plus belt-and-braces passthrough on `clientId` / `lawId` /
+   * `ruleId` / `assigneeId` / `assigneeTeamId` if any consumer ever sends
+   * those bare on the URL instead of via the filters JSON. COUNT applies
+   * the same WHERE so `meta.total` matches the rendered page.
    */
   async list(query: BaseListQuery, accessCtx?: DataAccessContext) {
     const limit = Math.max(1, Math.min(query.limit ?? 25, 100));
@@ -102,7 +183,24 @@ export class ComplianceFilingsService {
     const offset = (page - 1) * limit;
 
     const scopePredicate = await buildFilingsScopePredicate(this.dataAccessScope, accessCtx);
-    const driverWhere = withScope(complianceFilings, scopePredicate);
+
+    // Compose the structured-filter, search, and passthrough-id predicates
+    // ahead of the WHERE so both the data and count queries see the same
+    // shape. Per `.claude/rules/data-scoping.md` we honor `includeDeleted`
+    // by switching to `withScopeIncludingDeleted` — soft-delete is the only
+    // leg that flips; tenant + actor-scope still apply.
+    const filterPredicates = this.buildListFilterPredicates(query);
+    const searchPredicate = this.buildSearchPredicate(query.search);
+    if (searchPredicate) filterPredicates.push(searchPredicate);
+
+    // `includeDeleted=true` is the explicit caller opt-in (e.g. an admin
+    // "show deleted" toggle on the list page). Tenant + actor-scope still
+    // apply; only the soft-delete leg flips. See `.claude/rules/data-scoping.md`
+    // — the verbose primitive name is the audit-trail surface.
+    const scopeFn = query.includeDeleted ? withScopeIncludingDeleted : withScope;
+    const driverWhere = scopeFn(complianceFilings, scopePredicate, ...filterPredicates);
+
+    const orderClauses = this.buildOrderClauses(query.sort, query.order);
 
     const rows = await this.database.db
       .select({
@@ -117,6 +215,7 @@ export class ComplianceFilingsService {
       .leftJoin(users,    withScope(users,    eq(complianceFilings.assigneeId,      users.id)))
       .leftJoin(orgUnits, withScope(orgUnits, eq(complianceFilings.assigneeTeamId, orgUnits.id)))
       .where(driverWhere)
+      .orderBy(...orderClauses)
       .limit(limit)
       .offset(offset);
 
@@ -158,6 +257,95 @@ export class ComplianceFilingsService {
         totalPages: Math.max(1, Math.ceil(total / limit)),
       },
     };
+  }
+
+  /**
+   * Translate the `BaseListQuery` filter inputs into Drizzle predicates
+   * over the `complianceFilings` table. Reads two sources:
+   *  - `query.filters` (JSON string): structured `[{field, operator, value}]`
+   *    array, parsed via `parseFilterParam`. The controller's
+   *    `buildBaseListQuery` already merges shorthand (bucket / dueBefore /
+   *    dueAfter / notCompleted / status) into this JSON, so this method
+   *    sees one canonical filter shape regardless of how the URL was
+   *    written.
+   *  - bare passthrough id params (`clientId` / `lawId` / `ruleId` /
+   *    `assigneeId` / `assigneeTeamId`) — defensive support so a caller
+   *    that bypasses the helper still gets server-side filtering rather
+   *    than a silently-unfiltered list.
+   *
+   * Unknown filter fields are ignored, not 400'd: the same shape may be
+   * routed through downstream services (EAV resolvers in other modules)
+   * that want to handle unresolved fields themselves. For this service,
+   * only the columns in `FILTERABLE_FILING_COLUMNS` are honored.
+   */
+  private buildListFilterPredicates(query: BaseListQuery): SQL[] {
+    const predicates: SQL[] = [];
+
+    const expressions = typeof query.filters === 'string' ? parseFilterParam(query.filters) : [];
+    for (const expr of expressions) {
+      const column = (FILTERABLE_FILING_COLUMNS as Record<string, unknown>)[expr.field];
+      if (!column) continue;
+      predicates.push(buildFilterCondition(column, expr as FilterExpression));
+    }
+
+    // Belt-and-braces passthrough: any of these supplied bare on the URL
+    // become eq predicates. Most callers route through the structured
+    // `filters` JSON, but a hand-crafted URL or stale client should still
+    // get server-side filtering rather than the firm-wide list.
+    const passthroughIdFields = [
+      'clientId',
+      'lawId',
+      'ruleId',
+      'assigneeId',
+      'assigneeTeamId',
+    ] as const;
+    for (const field of passthroughIdFields) {
+      const value = query[field];
+      if (typeof value !== 'string' || value.length === 0) continue;
+      const column = (FILTERABLE_FILING_COLUMNS as Record<string, unknown>)[field];
+      if (!column) continue;
+      predicates.push(buildFilterCondition(column, { field, operator: 'eq', value }));
+    }
+
+    return predicates;
+  }
+
+  /**
+   * OR'd ILIKE across the filing's text columns plus the joined client
+   * name. Matches a single search term against `title`, `description`,
+   * `externalKey`, and `clients.name` — covers what the FilingsPage
+   * search box is actually asked to find. Empty / blank input returns
+   * an empty array (no predicate).
+   */
+  private buildSearchPredicate(search: string | undefined): SQL | undefined {
+    if (typeof search !== 'string') return undefined;
+    const trimmed = search.trim();
+    if (trimmed.length === 0) return undefined;
+    const pattern = `%${trimmed}%`;
+    return or(
+      ilike(complianceFilings.title, pattern),
+      ilike(complianceFilings.description, pattern),
+      ilike(complianceFilings.externalKey, pattern),
+      ilike(clients.name, pattern),
+    );
+  }
+
+  /**
+   * Resolve the request's sort key against the column whitelist, fall
+   * back to the default (`dueDate`) if unknown, and append a stable
+   * `id ASC` tiebreaker so paginated results don't shuffle when the
+   * primary sort key has duplicates.
+   */
+  private buildOrderClauses(
+    sortKey: string | undefined,
+    order: 'asc' | 'desc' | undefined,
+  ): SQL[] {
+    const column =
+      typeof sortKey === 'string' && SORTABLE_FILING_COLUMNS[sortKey]
+        ? SORTABLE_FILING_COLUMNS[sortKey]
+        : DEFAULT_FILING_SORT_COLUMN;
+    const direction = order === 'desc' ? desc : asc;
+    return [direction(column), asc(complianceFilings.id)];
   }
 
   findOne(id: string, accessCtx?: DataAccessContext) {
