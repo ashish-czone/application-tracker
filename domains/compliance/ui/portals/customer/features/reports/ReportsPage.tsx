@@ -36,6 +36,30 @@ import { useDebouncedValue } from '../../../../hooks/useDebouncedValue';
 import { useFilingsList } from '../../../../hooks/useFilingsList';
 import { useFilingsSummary } from '../../../../hooks/useFilingsSummary';
 import { initialsFromName, colorForClient } from '../clients/api/mapClientRecord';
+import { downloadReportCsv } from './downloadReportCsv';
+
+/**
+ * Translates the active report tab into a server CSV path. The path
+ * carries the same date-range filter the user has applied on screen so
+ * the export matches what they're looking at; `q` stays out of the URL
+ * because the export is the operator-friendly artefact ("the full
+ * picture for this period") and search-narrowing belongs to the on-
+ * screen view.
+ */
+function buildCsvPath(tab: ReportTab, range: { from: string; to: string }): string {
+  const params = new URLSearchParams({ from: range.from, to: range.to });
+  switch (tab) {
+    case 'compliance':
+      return `/compliance-filings/reports/compliance.csv?${params.toString()}`;
+    case 'overdue':
+      // Overdue is always "as of today" — date range doesn't apply.
+      return `/compliance-filings/reports/overdue.csv`;
+    case 'workload':
+      return `/org-units/reports/team-workload.csv?${params.toString()}`;
+    default:
+      return `/compliance-filings/reports/compliance.csv?${params.toString()}`;
+  }
+}
 
 function toCalendarDate(d: Date): string {
   const y = d.getFullYear();
@@ -257,9 +281,21 @@ export function ReportsPage() {
       actions={
         <>
           <DateRangePopover value={dateRange} onChange={setDateRange} today={new Date()} />
-          <Button variant="outline" size="sm">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => {
+              // Fire-and-forget: surface failures via a thrown error in the
+              // helper (caught by the global error boundary). No spinner —
+              // the download fires immediately on success.
+              void downloadReportCsv(
+                buildCsvPath(activeTab, range),
+                `${activeTab}-report.csv`,
+              );
+            }}
+          >
             <Download className="w-3.5 h-3.5 mr-1.5" strokeWidth={2} />
-            Export PDF
+            Download CSV
           </Button>
         </>
       }
