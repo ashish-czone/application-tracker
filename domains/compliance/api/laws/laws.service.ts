@@ -1,4 +1,4 @@
-import { Inject, Injectable } from '@nestjs/common';
+import { ConflictException, Inject, Injectable } from '@nestjs/common';
 import { asc, count, eq, inArray, sql, type SQL } from 'drizzle-orm';
 import { BaseCrudService } from '@packages/crud-base';
 import { DatabaseService, withScope } from '@packages/database';
@@ -241,8 +241,19 @@ export class LawsService {
       .where(withScope(complianceLaws, inArray(complianceLaws.id, ids as string[])));
   }
 
-  create(input: CreateLawDto, actorId: string) {
-    return this.crud.create(input as never, actorId);
+  async create(input: CreateLawDto, actorId: string) {
+    try {
+      return await this.crud.create(input as never, actorId);
+    } catch (error) {
+      // The `compliance_laws_code_key` unique index enforces unique `code`
+      // at the DB level. Translate the Postgres 23505 violation to a
+      // 409 Conflict so callers see a domain-meaningful error instead of
+      // a 500. Same pattern as `domains/recruit/api/clients`.
+      if (isUniqueViolation(error)) {
+        throw new ConflictException(`A law with code "${(input as { code?: string }).code}" already exists`);
+      }
+      throw error;
+    }
   }
 
   update(id: string, input: UpdateLawDto, actorId: string, accessCtx?: DataAccessContext) {
@@ -252,6 +263,23 @@ export class LawsService {
   softDelete(id: string, actorId: string, accessCtx?: DataAccessContext) {
     return this.crud.softDelete(id, actorId, accessCtx);
   }
+}
+
+function isUniqueViolation(error: unknown): boolean {
+  // Drizzle wraps the underlying pg-driver error in a generic `Error` whose
+  // `cause` is the actual `DatabaseError` carrying `code: '23505'`. Walk
+  // both the outer error and the cause so callers don't need to know which
+  // layer is throwing today.
+  const hasCode = (e: unknown): boolean =>
+    typeof e === 'object' &&
+    e !== null &&
+    'code' in e &&
+    (e as { code?: unknown }).code === '23505';
+  if (hasCode(error)) return true;
+  if (typeof error === 'object' && error !== null && 'cause' in error) {
+    return hasCode((error as { cause?: unknown }).cause);
+  }
+  return false;
 }
 
 const VALID_JURISDICTIONS: ReadonlySet<LawJurisdiction> = new Set([

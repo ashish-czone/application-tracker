@@ -14,6 +14,12 @@ export const ClientContactRowSchema = createSelectSchema(clientContacts);
 export const CreateClientContactSchema = createInsertSchema(clientContacts, {
   primaryEmail: (s) => s.email().max(160).optional(),
   fullName: (s) => s.min(1),
+  // `complianceClientId` is nullable in the shared `client_contacts` table
+  // (other domains may own the row without a compliance link), but a
+  // compliance contact MUST belong to a compliance client. Promote the
+  // column to a required uuid on the create DTO so the generic POST
+  // endpoint rejects payloads that omit it.
+  complianceClientId: (s) => s.uuid(),
 })
   .pick({
     fullName: true,
@@ -23,7 +29,8 @@ export const CreateClientContactSchema = createInsertSchema(clientContacts, {
     complianceDesignation: true,
     complianceIsPrimary: true,
     complianceNotes: true,
-  });
+  })
+  .required({ complianceClientId: true });
 
 export const UpdateClientContactSchema = CreateClientContactSchema.partial();
 

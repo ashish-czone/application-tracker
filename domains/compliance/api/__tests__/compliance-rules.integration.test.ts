@@ -7,7 +7,9 @@ import {
   createLawWithHandler,
   createFiling,
   createFilingPrereqs,
+  grantPermissions,
 } from './setup/fixtures';
+import { DEFAULT_TEST_USER_ID } from '@packages/platform-testing';
 
 const READ = ['compliance-rules.read'];
 const MANAGE = [
@@ -357,6 +359,11 @@ describe('Compliance Rules (integration)', () => {
     });
 
     it('allows active → deprecated via /transition with the deprecate perm', async () => {
+      // The workflow engine consults `rbacService.getPermissionsForUser`
+      // (DB-backed), not the mock-auth header. Grant `compliance-rules.deprecate`
+      // to the default test user so the transition's `requiredPermissions`
+      // check passes — same pattern as compliance-filings tests.
+      await grantPermissions(ctx.db, DEFAULT_TEST_USER_ID, ['compliance-rules.deprecate']);
       const rule = await createRule();
       await request(ctx.httpServer)
         .post(`/api/v1/compliance-rules/${rule.id}/transition`)
@@ -396,6 +403,8 @@ describe('Compliance Rules (integration)', () => {
     });
 
     it('succeeds with compliance-rules.deprecate', async () => {
+      // Workflow engine reads perms from the DB, not the mock-auth header.
+      await grantPermissions(ctx.db, DEFAULT_TEST_USER_ID, ['compliance-rules.deprecate']);
       const rule = await createRule();
       // Bring it to 'active' first so the cascade path is meaningful.
       await request(ctx.httpServer)
@@ -420,7 +429,15 @@ describe('Compliance Rules (integration)', () => {
   describe('auth coverage', () => {
     const NIL_UUID = '00000000-0000-0000-0000-000000000000';
 
-    describe('GET /api/v1/compliance-rules/layout/list', () => {
+    // SKIPPED — these describe blocks exercise routes that no longer exist
+    // on the controller. PR #1273 ("de-engine remaining 5 entities") removed
+    // the auto-generated entity-engine routes (`GET /<slug>/layout/list`,
+    // `POST /<slug>/:id/clone`, `POST /<slug>/:id/restore`) when each
+    // module switched from `EntityEngineModule.forEntity` to its own
+    // hand-rolled controller. The tests pre-date that migration and now hit
+    // 404 instead of the expected 401/403. Skipped pending user approval to
+    // delete (per .claude/rules/no-deletes-without-approval). See PR #1298.
+    describe.skip('GET /api/v1/compliance-rules/layout/list', () => {
       it('returns 401 without auth', async () => {
         await request(ctx.httpServer).get('/api/v1/compliance-rules/layout/list').expect(401);
       });
@@ -517,7 +534,15 @@ describe('Compliance Rules (integration)', () => {
       });
     });
 
-    describe('POST /api/v1/compliance-rules/:id/clone', () => {
+    // SKIPPED — these describe blocks exercise routes that no longer exist
+    // on the controller. PR #1273 ("de-engine remaining 5 entities") removed
+    // the auto-generated entity-engine routes (`GET /<slug>/layout/list`,
+    // `POST /<slug>/:id/clone`, `POST /<slug>/:id/restore`) when each
+    // module switched from `EntityEngineModule.forEntity` to its own
+    // hand-rolled controller. The tests pre-date that migration and now hit
+    // 404 instead of the expected 401/403. Skipped pending user approval to
+    // delete (per .claude/rules/no-deletes-without-approval). See PR #1298.
+    describe.skip('POST /api/v1/compliance-rules/:id/clone', () => {
       it('returns 401 without auth', async () => {
         await request(ctx.httpServer)
           .post(`/api/v1/compliance-rules/${NIL_UUID}/clone`)
@@ -531,7 +556,15 @@ describe('Compliance Rules (integration)', () => {
       });
     });
 
-    describe('POST /api/v1/compliance-rules/:id/restore', () => {
+    // SKIPPED — these describe blocks exercise routes that no longer exist
+    // on the controller. PR #1273 ("de-engine remaining 5 entities") removed
+    // the auto-generated entity-engine routes (`GET /<slug>/layout/list`,
+    // `POST /<slug>/:id/clone`, `POST /<slug>/:id/restore`) when each
+    // module switched from `EntityEngineModule.forEntity` to its own
+    // hand-rolled controller. The tests pre-date that migration and now hit
+    // 404 instead of the expected 401/403. Skipped pending user approval to
+    // delete (per .claude/rules/no-deletes-without-approval). See PR #1298.
+    describe.skip('POST /api/v1/compliance-rules/:id/restore', () => {
       it('returns 401 without auth', async () => {
         await request(ctx.httpServer)
           .post(`/api/v1/compliance-rules/${NIL_UUID}/restore`)

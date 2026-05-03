@@ -195,13 +195,15 @@ describe('ClientsService', () => {
       expect(crud.findOneOrFail).toHaveBeenCalledWith('cid-1', { userId: 'u1' });
     });
 
-    it('create pre-fills complianceStatus with the workflow initialState and delegates to crud.create', () => {
+    it('create pre-fills complianceStatus with the workflow initialState and stamps createdBy before delegating to crud.create', () => {
       service.create({ name: 'Acme' }, 'user-1');
       // Workflow state is system-managed: the service unconditionally stamps
       // `complianceStatus = CLIENTS_WORKFLOW.initialState` ('onboarding')
       // before delegating. See `.claude/rules/workflow-entity-creates.md`.
+      // `createdBy` is `notNull()` on the shared `clients` table and
+      // BaseCrudService doesn't auto-stamp it — the service is responsible.
       expect(crud.create).toHaveBeenCalledWith(
-        { name: 'Acme', complianceStatus: 'onboarding' },
+        { name: 'Acme', createdBy: 'user-1', complianceStatus: 'onboarding' },
         'user-1',
       );
     });

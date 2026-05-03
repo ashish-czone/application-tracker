@@ -282,7 +282,9 @@ export class ComplianceFilingsService {
       status: COMPLIANCE_FILINGS_WORKFLOW.initialState,
     };
     const finalPayload = applyCompletedAt(withInitialState);
-    return this.crud.create(finalPayload as never, actorId);
+    // `createdBy` is `notNull()` on `compliance_filings`; BaseCrudService.create
+    // does not auto-stamp it, so the service is responsible.
+    return this.crud.create({ ...finalPayload, createdBy: actorId } as never, actorId);
   }
 
   update(id: string, input: UpdateComplianceFilingDto, actorId: string, accessCtx?: DataAccessContext) {
