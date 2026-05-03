@@ -74,11 +74,9 @@ function buildRangeQueryString(params: {
  * Infinite-query hook for the calendar view. Asks `/compliance-filings?
  * dueAfter=…&dueBefore=…&page=N` for the visible window (calculated from
  * the calendar's anchor + view in the parent), appending pages on the
- * "Load more" footer click.
- *
- * Replaces the previous pattern where the calendar consumed
- * `useComplianceFilingRows()` — a `limit=1000` flat fetch with
- * client-side `sameDay` filtering — a data-fetching.md violation.
+ * "Load more" footer click. Page-level filters (search, client/law/team)
+ * propagate identically to list and kanban so the three views stay
+ * consistent.
  */
 export function useFilingsRangeInfinite(
   params: UseFilingsRangeInfiniteParams,

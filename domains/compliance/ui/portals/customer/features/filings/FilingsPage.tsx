@@ -18,7 +18,9 @@ import {
   type KanbanCardData,
   type KanbanColumnState,
 } from '@packages/ui';
+import { useOrgUnits, type OrgUnit } from '@packages/org-units-ui';
 import { ComplianceCalendar, type CalendarView } from '../../../../components/composites/ComplianceCalendar';
+import { TypeaheadFilterPopover } from '../../../../components/composites/TypeaheadFilterPopover';
 import type { FilingRow } from './types';
 import { FilingDetailDrawer } from './components/FilingDetailDrawer';
 import {
@@ -33,13 +35,16 @@ import {
 import { ViewModeSwitcher, type ViewModeOption } from './components/ViewModeSwitcher';
 import { FilingKanbanCard } from './components/FilingKanbanCard';
 import { OverdueAlert } from './components/OverdueAlert';
-import type { Filing } from '../../../../types';
+import type { Filing, Handler } from '../../../../types';
 import { ScreenPreviewTopBar } from '../shared/ScreenPreviewTopBar';
-import { useComplianceFilingRows, useUpdateComplianceFiling } from '../../../../hooks/useComplianceFilings';
+import { useUpdateComplianceFiling } from '../../../../hooks/useComplianceFilings';
 import { useFilingsList, type FilingsListBucket } from '../../../../hooks/useFilingsList';
 import { useFilingsBucketInfinite } from '../../../../hooks/useFilingsBucket';
 import { useFilingsRangeInfinite } from '../../../../hooks/useFilingsRange';
 import { useFilingsSummary } from '../../../../hooks/useFilingsSummary';
+import { useClientOptions } from '../../../../hooks/useClientsApi';
+import { useLawOptions } from '../../../../hooks/useLawsApi';
+import { useDebouncedValue } from '../../../../hooks/useDebouncedValue';
 import type { FilingListRow } from '../../../../hooks/useFilingsByDueWindow';
 
 type StatusTab = 'all' | Filing['status'];
@@ -151,6 +156,17 @@ function mapPriority(p: string): FilingRow['priority'] {
   return PRIORITY_MAP[p] ?? 'normal';
 }
 
+function unitToHandler(unit: OrgUnit | undefined): Handler | undefined {
+  if (!unit) return undefined;
+  const displayName = unit.head?.userName ?? unit.name;
+  return {
+    id: unit.id,
+    name: displayName,
+    initials: initialsFromName(displayName),
+    role: unit.head?.positionName,
+  };
+}
+
 function toISODate(d: Date): string {
   const y = d.getFullYear();
   const m = String(d.getMonth() + 1).padStart(2, '0');
@@ -252,21 +268,67 @@ export function FilingsPage() {
     [listQuery.rows],
   );
 
-  // Kanban + calendar still depend on the legacy hook (PR-3b will migrate
-  // them and retire useComplianceFilingRows). Filter-dropdown options also
-  // come from this hook for now; option-source endpoints are a separate
-  // follow-up.
-  const legacy = useComplianceFilingRows();
   const updateFiling = useUpdateComplianceFiling();
 
-  const clientOptions = legacy.clientOptions;
-  const lawOptions = legacy.lawOptions;
-  const handlers = legacy.handlers;
+  // Filter dropdowns: server-driven typeahead for client + law (the two
+  // unbounded sets); the handler list comes from `useOrgUnits` (a small,
+  // bounded per-deployment registry — qualifies as bounded reference data
+  // under data-fetching.md).
+  const [clientSearch, setClientSearch] = useState('');
+  const [lawSearch, setLawSearch] = useState('');
+  const debouncedClientSearch = useDebouncedValue(clientSearch, 250);
+  const debouncedLawSearch = useDebouncedValue(lawSearch, 250);
+
+  const clientSearchQuery = useClientOptions({ search: debouncedClientSearch });
+  const lawSearchQuery = useLawOptions({ search: debouncedLawSearch });
+  // Hydrate labels for selected chips so they render even when the current
+  // search query no longer matches them. The hook normalises ids so two
+  // permutations of the same set hit the same query-cache entry.
+  const clientSelectedQuery = useClientOptions({
+    ids: clientFilter.length > 0 ? clientFilter : undefined,
+  });
+  const lawSelectedQuery = useLawOptions({
+    ids: lawFilter.length > 0 ? lawFilter : undefined,
+  });
+
+  const orgUnitsQuery = useOrgUnits();
+  const handlers = useMemo<Handler[]>(
+    () =>
+      (orgUnitsQuery.data ?? [])
+        .map(unitToHandler)
+        .filter((h): h is Handler => h !== undefined),
+    [orgUnitsQuery.data],
+  );
+
+  const clientSearchOptions = useMemo(
+    () => (clientSearchQuery.data ?? []).map((c) => ({ value: c.id, label: c.name })),
+    [clientSearchQuery.data],
+  );
+  const lawSearchOptions = useMemo(
+    () =>
+      (lawSearchQuery.data ?? []).map((l) => ({
+        value: l.id,
+        label: l.code ? `${l.code} — ${l.name}` : l.name,
+      })),
+    [lawSearchQuery.data],
+  );
+  const clientSelectedOptions = useMemo(
+    () => (clientSelectedQuery.data ?? []).map((c) => ({ value: c.id, label: c.name })),
+    [clientSelectedQuery.data],
+  );
+  const lawSelectedOptions = useMemo(
+    () =>
+      (lawSelectedQuery.data ?? []).map((l) => ({
+        value: l.id,
+        label: l.code ? `${l.code} — ${l.name}` : l.name,
+      })),
+    [lawSelectedQuery.data],
+  );
 
   const activeFilters: ActiveFilter[] = useMemo(() => {
     const chips: ActiveFilter[] = [];
     for (const key of clientFilter) {
-      const opt = clientOptions.find((o) => o.value === key);
+      const opt = clientSelectedOptions.find((o) => o.value === key);
       chips.push({
         key: `client:${key}`,
         group: 'Client',
@@ -275,7 +337,7 @@ export function FilingsPage() {
       });
     }
     for (const key of lawFilter) {
-      const opt = lawOptions.find((o) => o.value === key);
+      const opt = lawSelectedOptions.find((o) => o.value === key);
       chips.push({
         key: `law:${key}`,
         group: 'Law',
@@ -293,7 +355,7 @@ export function FilingsPage() {
       });
     }
     return chips;
-  }, [clientFilter, lawFilter, handlerFilter, clientOptions, lawOptions, handlers]);
+  }, [clientFilter, lawFilter, handlerFilter, clientSelectedOptions, lawSelectedOptions, handlers]);
 
   const clearAll = () => {
     setClientFilter([]);
@@ -555,17 +617,27 @@ export function FilingsPage() {
             }
             filters={
               <>
-                <FilterPopover
+                <TypeaheadFilterPopover
                   label="Client"
-                  options={clientOptions.map((c) => ({ value: c.value, label: c.label }))}
                   value={clientFilter}
-                  onChange={(v) => setClientFilter(v as string[])}
+                  onChange={setClientFilter}
+                  searchResults={clientSearchOptions}
+                  selectedLabels={clientSelectedOptions}
+                  searchValue={clientSearch}
+                  onSearchChange={setClientSearch}
+                  isLoading={clientSearchQuery.isFetching}
+                  searchPlaceholder="Search clients…"
                 />
-                <FilterPopover
+                <TypeaheadFilterPopover
                   label="Law"
-                  options={lawOptions.map((l) => ({ value: l.value, label: l.label }))}
                   value={lawFilter}
-                  onChange={(v) => setLawFilter(v as string[])}
+                  onChange={setLawFilter}
+                  searchResults={lawSearchOptions}
+                  selectedLabels={lawSelectedOptions}
+                  searchValue={lawSearch}
+                  onSearchChange={setLawSearch}
+                  isLoading={lawSearchQuery.isFetching}
+                  searchPlaceholder="Search laws by code or name…"
                 />
                 <FilterPopover
                   label="Handler"

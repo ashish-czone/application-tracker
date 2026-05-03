@@ -39,10 +39,7 @@ interface PaginatedResponse<T> {
 /**
  * Infinite-query variant of `useFilingsList` for kanban columns. Each column
  * (overdue, due-today, due-this-week, upcoming, filed) gets its own hook
- * instance, so per-column "Load more" pulls page N+1 of THAT bucket only —
- * replacing the previous pattern where the page pulled `limit=1000` of the
- * whole filings table and grouped client-side (a data-fetching.md
- * violation).
+ * instance, so per-column "Load more" pulls page N+1 of THAT bucket only.
  *
  * Filters (search, clientIds, lawIds, assigneeTeamIds) propagate through
  * `buildFilingsListQueryString` so per-column queries stay consistent with
