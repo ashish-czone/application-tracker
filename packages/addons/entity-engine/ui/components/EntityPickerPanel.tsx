@@ -1,5 +1,4 @@
 import { useState, useMemo, useCallback } from 'react';
-import { useQuery, useQueryClient } from '@tanstack/react-query';
 import {
   Sheet,
   SheetContent,
@@ -14,7 +13,6 @@ import {
   type ColumnDef,
 } from '@packages/ui';
 import type { PickerConfig } from '@packages/entity-engine';
-import type { PaginatedResponse } from '@packages/common';
 import { useEntityEngine, useEntityConfig, useEntityHooks } from '../EntityEngineProvider';
 import { useEntityLayout } from '../helpers/useEntityLayout';
 import { buildColumnDefs } from '../helpers/buildColumnDefs';
@@ -59,7 +57,6 @@ export type EntityPickerPanelProps = BrowseMode | PickerMode;
 export function EntityPickerPanel(props: EntityPickerPanelProps) {
   const { open, onOpenChange, entityType } = props;
   const { apiFn } = useEntityEngine();
-  const queryClient = useQueryClient();
   const targetEntity = useEntityConfig(entityType);
   const hooks = useEntityHooks(entityType);
   const { data: layout } = useEntityLayout(entityType);
@@ -93,6 +90,7 @@ export function EntityPickerPanel(props: EntityPickerPanelProps) {
 
   const { data, isLoading } = hooks.useList({
     ...(filter ? { [filter.key]: filter.value } : {}),
+    ...(pickerConfig?.queryParams ?? {}),
     page,
     limit: pageSize,
     sort,
@@ -100,24 +98,11 @@ export function EntityPickerPanel(props: EntityPickerPanelProps) {
     search: search || undefined,
   });
 
-  // Existing check (picker mode only)
-  const existingCheck = pickerConfig?.existingCheck;
-  const { data: existingData } = useQuery({
-    queryKey: ['picker-existing', existingCheck?.listUrl, sourceId],
-    queryFn: () =>
-      apiFn.get<PaginatedResponse<Row>>(
-        `${existingCheck!.listUrl}?${existingCheck!.filterField}=${sourceId}&limit=1000`,
-      ),
-    enabled: open && !!existingCheck,
-    staleTime: 30_000,
-  });
-
-  const existingIds = useMemo(() => {
-    if (!existingCheck || !existingData?.data) return new Set<string>();
-    return new Set(
-      existingData.data.map((r) => String(r[existingCheck.matchField] ?? '')).filter(Boolean),
-    );
-  }, [existingCheck, existingData]);
+  const marker = pickerConfig?.markRowsBy;
+  const isMarked = useCallback(
+    (row: Row) => Boolean(marker && row[marker.field]),
+    [marker],
+  );
 
   const excludeSet = useMemo(() => new Set(excludeFields), [excludeFields]);
 
@@ -130,37 +115,29 @@ export function EntityPickerPanel(props: EntityPickerPanelProps) {
     );
   }, [layout, excludeSet, filter]);
 
-  // Append existing-check badge column (picker mode only)
   const columns = useMemo<ColumnDef<Row, unknown>[]>(() => {
-    if (!existingCheck || existingIds.size === 0) return baseColumns;
+    if (!marker) return baseColumns;
 
-    const statusCol: ColumnDef<Row, unknown> = {
-      id: '__existing_status',
+    const markerCol: ColumnDef<Row, unknown> = {
+      id: '__row_marker',
       header: '',
       size: 120,
       enableSorting: false,
-      cell: ({ row }) => {
-        const rowId = String(row.original.id ?? '');
-        if (existingIds.has(rowId)) {
-          return (
-            <Badge variant="secondary" className="text-xs whitespace-nowrap">
-              {existingCheck.label}
-            </Badge>
-          );
-        }
-        return null;
-      },
+      cell: ({ row }) =>
+        isMarked(row.original) ? (
+          <Badge variant="secondary" className="text-xs whitespace-nowrap">
+            {marker.label}
+          </Badge>
+        ) : null,
     };
 
-    return [...baseColumns, statusCol];
-  }, [baseColumns, existingCheck, existingIds]);
+    return [...baseColumns, markerCol];
+  }, [baseColumns, marker, isMarked]);
 
   const isRowSelectable = useMemo(() => {
-    if (!existingCheck || existingCheck.disableSelection === false || existingIds.size === 0) {
-      return undefined;
-    }
-    return (row: Row) => !existingIds.has(String(row.id ?? ''));
-  }, [existingCheck, existingIds]);
+    if (!marker || marker.disableSelection === false) return undefined;
+    return (row: Row) => !isMarked(row);
+  }, [marker, isMarked]);
 
   const handleConfirm = async () => {
     if (!pickerConfig || selectedIds.length === 0) return;
@@ -184,9 +161,6 @@ export function EntityPickerPanel(props: EntityPickerPanelProps) {
       );
 
       setSelectedIds([]);
-      if (existingCheck) {
-        queryClient.invalidateQueries({ queryKey: ['picker-existing', existingCheck.listUrl, sourceId] });
-      }
       onOpenChange(false);
       if (isPicker) props.onSuccess?.();
     } catch (err: any) {
@@ -234,8 +208,8 @@ export function EntityPickerPanel(props: EntityPickerPanelProps) {
             searchPlaceholder={`Search ${targetEntity.pluralName.toLowerCase()}...`}
             isLoading={isLoading}
             storageKey={`panel-${entityType}`}
-            rowClassName={isPicker && existingIds.size > 0
-              ? (row) => existingIds.has(String((row as Row).id ?? '')) ? 'opacity-50' : undefined
+            rowClassName={isPicker && marker
+              ? (row) => isMarked(row as Row) ? 'opacity-50' : undefined
               : undefined}
           />
         </div>
