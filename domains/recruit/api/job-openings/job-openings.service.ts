@@ -1,13 +1,21 @@
 import { Inject, Injectable } from '@nestjs/common';
-import { DatabaseService } from '@packages/database';
+import { and, eq, inArray } from 'drizzle-orm';
+import { DatabaseService, withScope } from '@packages/database';
 import { EntityService, type BaseListQuery } from '@packages/entity-engine';
 import { MultiValueService } from '@packages/entity-relations';
 import { TaxonomyService } from '@packages/taxonomy';
 import type { DataAccessContext } from '@packages/rbac';
+import type { PaginatedResponse } from '@packages/common';
+import { applications } from '../applications/schema/applications';
 import type { CreateJobOpeningDto, UpdateJobOpeningDto } from './job-openings.dto';
 
 const ENTITY_TYPE = 'job_openings';
 const REQUIRED_SKILLS_TAG_GROUP_SLUG = 'recruit-skills';
+
+interface ListQuery extends BaseListQuery {
+  /** When set, each row is annotated with `__existingApplicationId` for the given candidate. */
+  annotateApplicationsFor?: string;
+}
 
 @Injectable()
 export class JobOpeningsService {
@@ -18,8 +26,39 @@ export class JobOpeningsService {
     private readonly taxonomy: TaxonomyService,
   ) {}
 
-  list(query: BaseListQuery, accessCtx?: DataAccessContext) {
-    return this.entities.list(query, accessCtx);
+  async list(
+    query: ListQuery,
+    accessCtx?: DataAccessContext,
+  ): Promise<PaginatedResponse<Record<string, unknown>>> {
+    const { annotateApplicationsFor, ...rest } = query;
+    const result = await this.entities.list(rest, accessCtx);
+
+    if (!annotateApplicationsFor || result.data.length === 0) {
+      return result;
+    }
+
+    const ids = result.data.map((row) => row.id as string);
+    const rows = await this.database.db
+      .select({ jobOpeningId: applications.jobOpeningId, applicationId: applications.id })
+      .from(applications)
+      .where(
+        withScope(
+          applications,
+          and(
+            eq(applications.candidateId, annotateApplicationsFor),
+            inArray(applications.jobOpeningId, ids),
+          ),
+        ),
+      );
+    const existing = new Map(rows.map((r) => [r.jobOpeningId, r.applicationId]));
+
+    return {
+      ...result,
+      data: result.data.map((row) => ({
+        ...row,
+        __existingApplicationId: existing.get(row.id as string) ?? null,
+      })),
+    };
   }
 
   findOne(id: string, accessCtx?: DataAccessContext) {

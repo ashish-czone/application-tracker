@@ -796,14 +796,10 @@ export interface BaseListQuery {
 
 export type ActionVariant = 'default' | 'destructive';
 
-export interface PickerExistingCheck {
-  /** URL to fetch existing associations from (e.g., '/api/v1/applications') */
-  listUrl: string;
-  /** Query param to filter by the source record (e.g., 'candidateId') */
-  filterField: string;
-  /** Field in results whose value matches picker row IDs (e.g., 'jobOpeningId') */
-  matchField: string;
-  /** Badge label shown on matching rows (e.g., 'Already applied') */
+export interface PickerRowMarker {
+  /** Row field whose truthy value triggers the marker (e.g., '__existingApplicationId'). */
+  field: string;
+  /** Badge label shown on matching rows (e.g., 'Already applied'). */
   label: string;
   /** Whether to prevent selection of matching rows. Defaults to true. */
   disableSelection?: boolean;
@@ -818,8 +814,14 @@ export interface PickerConfig {
   submitUrl: string;
   /** Maps field names to values. :id = current record, :selectedId = picked record */
   fieldMapping: Record<string, string>;
-  /** Optional: check for existing associations and label/disable matching rows */
-  existingCheck?: PickerExistingCheck;
+  /**
+   * Extra query params forwarded to the picker's list call (e.g. server-side annotations).
+   * The literal value `':id'` is substituted with the picker's `sourceId` at runtime, mirroring
+   * `fieldMapping` placeholder semantics — useful for declarative config (e.g. `entity.config.ts`).
+   */
+  queryParams?: Record<string, string>;
+  /** Optional: render a badge and (by default) disable selection on rows whose `field` is truthy. */
+  markRowsBy?: PickerRowMarker;
 }
 
 export interface EntityAction {

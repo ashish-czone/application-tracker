@@ -42,6 +42,8 @@ export class CandidatesController {
       page: query.page ? Number(query.page) : undefined,
       limit: query.limit ? Number(query.limit) : undefined,
       includeDeleted: query.includeDeleted === 'true',
+      annotateApplicationsFor:
+        typeof query.annotateApplicationsFor === 'string' ? query.annotateApplicationsFor : undefined,
     };
     return this.candidates.list(parsed, accessCtx);
   }
