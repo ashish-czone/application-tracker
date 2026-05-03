@@ -99,18 +99,23 @@ const scopePredicate = await this.dataAccessScope.buildPredicate(accessCtx, {
 });
 
 await this.database.db
-  .select({ /* … filings cols + clients.name + orgUnits.name … */ })
+  .select({ /* … filings cols + clients.name + users.firstName + orgUnits.name … */ })
   .from(complianceFilings)
-  .leftJoin(clients,  and(eq(complianceFilings.clientId,        clients.id),  isNull(clients.deletedAt)))
-  .leftJoin(users,    and(eq(complianceFilings.assigneeId,      users.id),    isNull(users.deletedAt)))
-  .leftJoin(orgUnits, eq(complianceFilings.assigneeTeamId, orgUnits.id))
+  .leftJoin(clients,  withScope(clients,  eq(complianceFilings.clientId,        clients.id)))
+  .leftJoin(users,    withScope(users,    eq(complianceFilings.assigneeId,      users.id)))
+  .leftJoin(orgUnits, withScope(orgUnits, eq(complianceFilings.assigneeTeamId, orgUnits.id)))
   .where(withScope(complianceFilings, scopePredicate));
 //                                    ^^^^^^^^^^^^^^^
-//                                    Driver actor-scope only.
-//                                    No buildPredicate for clients / users / orgUnits.
+//                                    Driver actor-scope is built ONCE and ANDed into the WHERE.
+//                                    No buildPredicate call for clients / users / orgUnits.
+//
+// withScope on each LEFT JOIN ON clause adds soft-delete + tenant
+// predicates to the join condition itself — so a filing whose linked
+// client is soft-deleted still appears in the list (with clientName =
+// NULL) rather than being dropped. orgUnits has neither soft-delete nor
+// tenant columns today; withScope is a no-op there but stays in the call
+// site so future schema changes pick up automatically.
 ```
-
-Soft-delete predicates on `clients` and `users` go in the LEFT JOIN's ON clause so a filing whose linked client is soft-deleted still appears in the list (with `clientName = NULL`) — dropping the filing because its joinee was deleted is almost never the intent. Tenant predicates live in `withScope(...)` on the driver (the joined tables share the tenant context).
 
 **Caveat — project columns deliberately.** The rule grants visibility of the columns you `SELECT` from the joined row, not the whole row. Don't `SELECT joinedTable.*` and dump it — pick the display columns intentionally. Sensitive columns (`users.salary`, `clients.taxId`) need column-level care regardless of join semantics.
 
