@@ -1,12 +1,20 @@
 ## Module Boundaries
 
-1. **A module owns its DB tables.** Only its `services/` layer queries those tables. No other module may query them directly — call the owning module's service instead. **Exception:** the shared identity tables `clients`, `client_contacts`, and `users` follow the relaxed pattern in [Shared Identity Tables](#shared-identity-tables) below.
+1. **A module owns its DB tables for writes.** Inserts, updates, and deletes on a module's tables go through that module's service layer. Reads via direct query are governed by bullet 2 — they are allowed across some boundaries and forbidden across others.
 
-2. **Cross-module joins are NOT allowed.** Never join another module's table in a Drizzle query. Fetch via the other module's service. **Exception:** the shared identity tables (`clients`, `client_contacts`, `users`) are joinable from any module. Reads via direct join are allowed. Writes follow the prefix-ownership rule in [Shared Identity Tables](#shared-identity-tables) — base columns through the owning service, prefixed columns through the prefix-owning domain's service.
+2. **Cross-DOMAIN joins are NOT allowed.** A query rooted in `domains/X` MUST NOT join a table owned by `domains/Y`. Cross-domain reads go through the other domain's service. **Allowed reads:**
+   - **Intra-domain sibling joins** — modules within the same domain (e.g. `domains/compliance/api/compliance-filings/` joining `domains/compliance/api/laws/`) MAY query each other's tables directly. The whole domain ships as one unit; intra-domain coupling lifts with it.
+   - **Domain → addon / platform-package joins** — a domain MAY join tables exported by any package listed in its `package.json` deps (e.g. compliance joining `@packages/org-units` for `org_units`, or a domain joining `users` from `@packages/database`). Same transitive dependency that already exists at the service-call layer.
+   - **Shared identity tables** — `clients`, `client_contacts`, `users`, and `org_units` are joinable from any module per [Shared Identity Tables](#shared-identity-tables) below.
+
+   **Caller responsibilities on every join:**
+   - Apply `withScope(joinedTable, …)` for soft-delete + tenant on each joined table per `.claude/rules/data-scoping.md`. These are structural; they apply per-table regardless of the driver.
+   - Actor-scope on joined tables is **NOT** re-applied — the driver of the query is the authorization root. See `.claude/rules/data-access-scope.md` § *Joined tables: the driver is the authorization root*.
+   - Project columns deliberately. Don't `SELECT joinedTable.*`; pick the display columns the response actually needs. Sensitive columns (SSN, salary, password hashes) need column-level care regardless of join semantics.
 
 3. **Foreign key columns across modules are allowed** (data integrity). The module holding the FK column owns it.
 
-4. **Public API via `index.ts` only.** Other code may only import from a module's `index.ts`. Export only what consumers need: service classes, event types, event name constants, enums. DTOs are internal. Within services, only cross-module methods are `public`.
+4. **Public API via `index.ts` only.** Other code may only import service classes, public types, event-name constants, and enums from a module's `index.ts`. DTOs are internal. Within services, only cross-module methods are `public`. **Exception:** cross-module *schema* joins import directly from `<other-module>/<other-module>.schema` — Drizzle table references are stable data constants; the barrel rule covers behavior (services, modules), not table definitions.
 
 5. **No domain logic in packages.** Packages (`packages/*`) have ZERO knowledge of business entities. Never reference "candidate", "order", etc.
 
@@ -18,11 +26,13 @@
 
 ## Shared Identity Tables
 
-The platform-tier identity registries `clients`, `client_contacts`, and `users` follow a relaxed boundary model. They are designed to be **extended** by domains rather than wrapped by per-domain extension tables. This is the CRM-style pattern (Salesforce, HubSpot, Dynamics, Dataverse): one shared identity object, namespaced per-domain extensions, permission scoping by prefix.
+Four platform-tier registries — `clients`, `client_contacts`, `users`, and `org_units` — follow a relaxed boundary model. They are joinable from any module, and (for the first three) extensible by domains via prefixed columns rather than by wrapping in per-domain extension tables. This is the CRM-style pattern (Salesforce, HubSpot, Dynamics, Dataverse): one shared identity object, namespaced per-domain extensions, permission scoping by prefix.
 
-**Why:** every domain in this codebase (recruit, compliance, agency, …) commonly attaches data to the same clients and contact people. The same client is often a recruit client, a compliance subject, and an agency lead. Forcing each domain to wrap the shared row in its own extension table pays ergonomic costs (extra joins, lookup resolvers, dual-insert transactions) for an isolation guarantee the use case doesn't need. The shared-identity pattern is what every mature multi-module business platform uses.
+**Why:** every domain in this codebase (recruit, compliance, agency, …) commonly attaches data to the same clients and contact people, and assigns work to the same users and teams. The same client is often a recruit client, a compliance subject, and an agency lead. Forcing each domain to wrap the shared row in its own extension table pays ergonomic costs (extra joins, lookup resolvers, dual-insert transactions) for an isolation guarantee the use case doesn't need. The shared-identity pattern is what every mature multi-module business platform uses.
 
 > Note: the JS-side names are `clients` / `client_contacts` (exported as `baseClientColumns` / `baseClientContactColumns` from `@packages/directory`). Underlying DB tables are still named `companies` / `people` until a coordinated DB-rename migration ships in a follow-up PR. Code never needs to reference the DB names directly.
+
+> **`org_units` differs from the other three.** It is a hierarchy registry (units, parents, levels), not a per-row identity record. The join allowance applies to it identically — any module may LEFT JOIN `org_units` for display labels or filter on its columns — but the **prefix-extension and permission-by-prefix mechanics below do NOT apply**. Writes go through `OrgUnitService`; the schema is owned end-to-end by `@packages/org-units`. Domains needing org-unit-scoped state attach it to their own tables (e.g. `complianceFilings.assigneeTeamId`), not to `org_units` itself.
 
 ### Schema extension by prefix
 
