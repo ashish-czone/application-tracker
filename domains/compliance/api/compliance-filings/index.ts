@@ -39,3 +39,17 @@ export { ComplianceFilingsCancellationService } from './compliance-filings.cance
 export { ComplianceFilingsAssigneeCleanupService } from './compliance-filings.assignee-cleanup.service';
 
 export { buildFilingExternalKey } from './compliance-filings.external-key';
+
+/**
+ * CSV serialisation helpers shared with the app-level org-units workload
+ * report controller (apps/compliance/src/modules/org-units/...). Lifted
+ * onto the public surface so the workload export endpoint can reuse the
+ * same RFC 4180 escaper and `Content-Disposition` builder the in-domain
+ * compliance / overdue exports use.
+ */
+export {
+  csvEscape,
+  csvRow,
+  toCsv,
+  csvDisposition,
+} from './compliance-filings.csv';
