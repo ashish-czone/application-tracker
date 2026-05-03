@@ -228,6 +228,7 @@ export { KanbanCard } from './components/kanban/KanbanCard';
 export type {
   KanbanBoardProps,
   KanbanColumnDef,
+  KanbanColumnState,
   KanbanCardData,
   KanbanCardMoveEvent,
   KanbanColumnReorderEvent,

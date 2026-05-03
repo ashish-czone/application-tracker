@@ -2,16 +2,23 @@ import { useDroppable } from '@dnd-kit/core';
 import { SortableContext, verticalListSortingStrategy, useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 import { cn } from '../../lib/utils';
-import type { KanbanColumnDef, KanbanCardData } from './types';
+import type { KanbanColumnDef, KanbanCardData, KanbanColumnState } from './types';
 
 interface KanbanColumnProps {
   column: KanbanColumnDef;
   cards: KanbanCardData[];
   children: React.ReactNode;
   sortableColumns?: boolean;
+  state?: KanbanColumnState;
 }
 
-export function KanbanColumn({ column, cards, children, sortableColumns = false }: KanbanColumnProps) {
+function buildCountLabel(rendered: number, state?: KanbanColumnState, column?: KanbanColumnDef): string {
+  if (state?.total != null) return `${rendered}/${state.total}`;
+  if (column?.limit != null) return `${rendered}/${column.limit}`;
+  return `${rendered}`;
+}
+
+export function KanbanColumn({ column, cards, children, sortableColumns = false, state }: KanbanColumnProps) {
   const sortable = useSortable({
     id: `column:${column.id}`,
     data: { type: 'column', columnId: column.id },
@@ -29,7 +36,8 @@ export function KanbanColumn({ column, cards, children, sortableColumns = false 
   };
 
   const cardIds = cards.map((c) => c.id);
-  const limitLabel = column.limit != null ? `${cards.length}/${column.limit}` : `${cards.length}`;
+  const countLabel = buildCountLabel(cards.length, state, column);
+  const showInitialSkeleton = cards.length === 0 && state?.isLoading === true;
 
   return (
     <div
@@ -57,7 +65,7 @@ export function KanbanColumn({ column, cards, children, sortableColumns = false 
           )}
           <span className="truncate">{column.label}</span>
         </div>
-        <span data-slot="kanban-column-count">{limitLabel}</span>
+        <span data-slot="kanban-column-count">{countLabel}</span>
       </div>
 
       <div
@@ -67,10 +75,25 @@ export function KanbanColumn({ column, cards, children, sortableColumns = false 
       >
         <SortableContext items={cardIds} strategy={verticalListSortingStrategy}>
           {children}
-          {cards.length === 0 && (
+          {showInitialSkeleton && (
+            <>
+              <div data-slot="kanban-card" className="animate-pulse">
+                <div className="h-3 w-3/4 rounded bg-muted/40" />
+                <div className="mt-2 h-3 w-1/2 rounded bg-muted/30" />
+              </div>
+              <div data-slot="kanban-card" className="animate-pulse">
+                <div className="h-3 w-2/3 rounded bg-muted/40" />
+                <div className="mt-2 h-3 w-1/3 rounded bg-muted/30" />
+              </div>
+            </>
+          )}
+          {cards.length === 0 && !showInitialSkeleton && (
             <div data-slot="kanban-column-empty">Drop here</div>
           )}
         </SortableContext>
+        {state?.footer != null && (
+          <div data-slot="kanban-column-footer">{state.footer}</div>
+        )}
       </div>
     </div>
   );
