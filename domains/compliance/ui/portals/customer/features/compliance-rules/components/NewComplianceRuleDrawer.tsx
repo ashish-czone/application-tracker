@@ -1,4 +1,4 @@
-import { useState, useMemo, type ReactNode } from 'react';
+import { useState, useMemo, useCallback, type ReactNode } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useForm, useFormContext, FormProvider } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -22,11 +22,13 @@ import {
   FormSelect,
   FormTextarea,
 } from '@packages/ui';
+import { useEntityEngine } from '@packages/entity-engine-ui';
 import { FREQUENCIES, type ComplianceFrequency } from '@domains/compliance-contract';
 import { JurisdictionTag } from '../../../../../components';
 import { RULE_TEMPLATES } from '../templates';
 import { LAW_GROUPS } from '../filterOptions';
 import type { RuleTemplate, LawGroupKey } from '../types';
+import type { LawOption } from '../../../../../hooks/useLawsApi';
 import { FREQUENCY_LABEL, FREQUENCY_OPTIONS } from './FrequencyPill';
 
 // ─── Types ───────────────────────────────────────────────────────────
@@ -77,12 +79,6 @@ export interface NewComplianceRuleValues {
   gracePeriodDays: string;
 }
 
-export interface DrawerLawOption {
-  id: string;
-  code: string;
-  name: string;
-}
-
 const EMPTY_FORM: ComplianceRuleFormValues = {
   code: '',
   name: '',
@@ -96,12 +92,16 @@ const EMPTY_FORM: ComplianceRuleFormValues = {
 
 const TEMPLATE_LAW_OPTIONS = LAW_GROUPS.map((g) => ({ value: g.key, label: g.label }));
 
+/** Build the user-facing label for a law option (`CODE — Name`). */
+function formatLawLabel(law: LawOption): string {
+  return law.code ? `${law.code} — ${law.name}` : law.name;
+}
+
 // ─── Props ───────────────────────────────────────────────────────────
 
 export interface NewComplianceRuleDrawerProps {
   onClose?: () => void;
   onCreate?: (values: NewComplianceRuleValues, templateId?: string) => void;
-  laws: DrawerLawOption[];
   isSubmitting?: boolean;
 }
 
@@ -110,7 +110,6 @@ export interface NewComplianceRuleDrawerProps {
 export function NewComplianceRuleDrawer({
   onClose,
   onCreate,
-  laws,
   isSubmitting,
 }: NewComplianceRuleDrawerProps) {
   const [mode, setMode] = useState<DrawerMode>('pick');
@@ -119,30 +118,34 @@ export function NewComplianceRuleDrawer({
   const [templateSearch, setTemplateSearch] = useState('');
   const [templateLawFilter, setTemplateLawFilter] = useState<LawGroupKey | ''>('');
   const [scheduleOpen, setScheduleOpen] = useState(false);
+  // Cached label for the currently-selected law id. Set when a template
+  // pre-fills `lawId` (we know the resolved law from the lookup) so the
+  // <FormSelect> trigger renders the human-readable code/name without
+  // forcing the user to retype the search.
+  const [lawDisplayLabel, setLawDisplayLabel] = useState<string>('');
+
+  const { apiFn } = useEntityEngine();
 
   const form = useForm<ComplianceRuleFormValues>({
     resolver: zodResolver(complianceRuleSchema),
     defaultValues: EMPTY_FORM,
   });
 
-  const lawOptions = useMemo(
-    () =>
-      laws
-        .filter((l) => l.id && l.name)
-        .map((l) => ({
-          value: l.id,
-          label: l.code ? `${l.code} — ${l.name}` : l.name,
-        })),
-    [laws],
+  // Server-driven typeahead for the law picker. The Combobox engine
+  // debounces keystrokes (300ms) and re-runs this on every distinct
+  // query — no upfront bulk fetch, no `limit=N` ceiling, no client-side
+  // join. Capped at 25 rows to match other typeahead consumers.
+  const searchLaws = useCallback(
+    async (query: string) => {
+      const params = new URLSearchParams();
+      if (query) params.set('search', query);
+      params.set('limit', '25');
+      const qs = params.toString();
+      const rows = await apiFn.get<LawOption[]>(`/laws/options${qs ? `?${qs}` : ''}`);
+      return rows.map((l) => ({ value: l.id, label: formatLawLabel(l) }));
+    },
+    [apiFn],
   );
-
-  const lawByCode = useMemo(() => {
-    const map = new Map<string, DrawerLawOption>();
-    for (const law of laws) {
-      if (law.code) map.set(law.code.toUpperCase(), law);
-    }
-    return map;
-  }, [laws]);
 
   // ── Template search / filter ─────────────────────────────────────
 
@@ -166,11 +169,34 @@ export function NewComplianceRuleDrawer({
 
   // ── Handlers ─────────────────────────────────────────────────────
 
-  function pickTemplate(tpl: RuleTemplate) {
+  async function pickTemplate(tpl: RuleTemplate) {
     setSelectedTemplate(tpl);
-    const matchedLawId = tpl.lawCode ? lawByCode.get(tpl.lawCode.toUpperCase())?.id ?? '' : '';
     const templateFrequency: ComplianceRuleFormValues['frequency'] =
       (FREQUENCIES as readonly string[]).includes(tpl.frequency) ? tpl.frequency : '';
+    // Resolve the template's `lawCode` (e.g. "GST") to an actual law id by
+    // querying the typeahead endpoint. Previously this was an in-memory
+    // lookup against a bulk-fetched list of every law; the bulk fetch is
+    // the violation we're closing. The endpoint ILIKEs both code + name,
+    // so we filter the response to an exact case-insensitive code match
+    // before adopting the id.
+    let matchedLawId = '';
+    let matchedLawLabel = '';
+    if (tpl.lawCode) {
+      try {
+        const candidates = await apiFn.get<LawOption[]>(
+          `/laws/options?search=${encodeURIComponent(tpl.lawCode)}&limit=25`,
+        );
+        const target = tpl.lawCode.toUpperCase();
+        const exact = candidates.find((l) => l.code?.toUpperCase() === target);
+        if (exact) {
+          matchedLawId = exact.id;
+          matchedLawLabel = formatLawLabel(exact);
+        }
+      } catch {
+        // Fall through with no pre-filled law — user picks manually.
+      }
+    }
+    setLawDisplayLabel(matchedLawLabel);
     form.reset({
       code: tpl.code,
       name: tpl.name,
@@ -188,6 +214,7 @@ export function NewComplianceRuleDrawer({
 
   function startScratch() {
     setSelectedTemplate(null);
+    setLawDisplayLabel('');
     form.reset(EMPTY_FORM);
     setScheduleOpen(false);
     setSlideDir('forward');
@@ -289,7 +316,8 @@ export function NewComplianceRuleDrawer({
                       scheduleOpen={scheduleOpen}
                       setScheduleOpen={setScheduleOpen}
                       isTemplate={mode === 'template'}
-                      lawOptions={lawOptions}
+                      searchLaws={searchLaws}
+                      lawDisplayLabel={lawDisplayLabel}
                     />
                   )}
                 </motion.div>
@@ -367,7 +395,7 @@ function PickModeBody({
   groupedTemplates: Record<string, RuleTemplate[]>;
   filteredCount: number;
   totalCount: number;
-  onPickTemplate: (t: RuleTemplate) => void;
+  onPickTemplate: (t: RuleTemplate) => void | Promise<void>;
   onStartScratch: () => void;
 }) {
   return (
@@ -491,13 +519,15 @@ function FormBody({
   scheduleOpen,
   setScheduleOpen,
   isTemplate,
-  lawOptions,
+  searchLaws,
+  lawDisplayLabel,
 }: {
   selectedTemplate: RuleTemplate | null;
   scheduleOpen: boolean;
   setScheduleOpen: (v: boolean) => void;
   isTemplate: boolean;
-  lawOptions: { value: string; label: string }[];
+  searchLaws: (query: string) => Promise<{ value: string; label: string }[]>;
+  lawDisplayLabel: string;
 }) {
   const {
     formState: { dirtyFields },
@@ -544,8 +574,9 @@ function FormBody({
       <ComplianceRuleField name="lawId" label="Law" required isTemplate={isTemplate}>
         <FormSelect
           name="lawId"
-          options={lawOptions}
-          placeholder="Select law"
+          onSearch={searchLaws}
+          initialDisplayValue={lawDisplayLabel || undefined}
+          placeholder="Search laws…"
         />
       </ComplianceRuleField>
 

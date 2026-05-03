@@ -36,17 +36,12 @@ import {
   useComplianceRulesSummary,
   useCreateComplianceRule,
 } from '../../../../hooks/useComplianceRulesApi';
-import { lawsQueries } from '../../../../hooks/useLawsApi';
 import { useDebouncedValue } from '../../../../hooks/useDebouncedValue';
 import { mapComplianceRuleRecord } from './api/mapComplianceRuleRecord';
 
 type StatusTab = 'all' | ComplianceRule['status'];
 
 const PAGE_LIMIT = 25;
-// Limit for the drawer's law-picker dropdown. Bounded reference data —
-// regulators don't add laws often. Past this many laws, the picker should
-// become a debounced search box (follow-up).
-const DRAWER_LAW_LIMIT = 100;
 
 function toCreatePayload(values: NewComplianceRuleValues): Record<string, unknown> | null {
   if (!values.frequency) return null;
@@ -96,7 +91,6 @@ export function ComplianceRulesPage() {
     }),
   );
   const { data: summary } = useComplianceRulesSummary();
-  const { data: lawsPage } = useQuery(lawsQueries(apiFn).list({ limit: DRAWER_LAW_LIMIT }));
 
   const createRule = useCreateComplianceRule({ onSuccess: () => setDrawerOpen(false) });
 
@@ -333,7 +327,6 @@ export function ComplianceRulesPage() {
         {drawerOpen && (
           <NewComplianceRuleDrawer
             onClose={() => setDrawerOpen(false)}
-            laws={lawsPage?.data ?? []}
             isSubmitting={createRule.isPending}
             onCreate={(values) => {
               const payload = toCreatePayload(values);
