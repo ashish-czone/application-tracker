@@ -89,6 +89,7 @@ describe('ClientsService', () => {
         update: vi.fn().mockReturnValue({
           set: vi.fn().mockReturnValue({ where: vi.fn().mockResolvedValue(undefined) }),
         }),
+        select: vi.fn(),
       },
     };
     events = { emitDynamic: vi.fn() };
@@ -149,6 +150,44 @@ describe('ClientsService', () => {
       const ctx = { userId: 'u1', scopes: [{ type: 'any' }] } as never;
       await service.getHandlerOptions(ctx);
       expect(rollup.getHandlerOptions).toHaveBeenCalledWith(undefined);
+    });
+
+    describe('getOptions', () => {
+      function mockSelectChain(rows: unknown[]) {
+        const chain = {
+          from: vi.fn().mockReturnThis(),
+          where: vi.fn().mockReturnThis(),
+          orderBy: vi.fn().mockReturnThis(),
+          limit: vi.fn().mockResolvedValue(rows),
+        };
+        db.db.select = vi.fn().mockReturnValue(chain);
+        return chain;
+      }
+
+      it('returns rows from the select chain limited to the requested limit', async () => {
+        const chain = mockSelectChain([
+          { id: 'c1', name: 'Acme' },
+          { id: 'c2', name: 'Beta' },
+        ]);
+        const result = await service.getOptions({ limit: 25 });
+        expect(result).toEqual([
+          { id: 'c1', name: 'Acme' },
+          { id: 'c2', name: 'Beta' },
+        ]);
+        expect(chain.limit).toHaveBeenCalledWith(25);
+      });
+
+      it('passes a where clause when search is provided', async () => {
+        const chain = mockSelectChain([]);
+        await service.getOptions({ limit: 25, search: 'acm' });
+        expect(chain.where).toHaveBeenCalled();
+      });
+
+      it('hydrates labels by id when ids are provided (search is ignored)', async () => {
+        const chain = mockSelectChain([{ id: 'c1', name: 'Acme' }]);
+        await service.getOptions({ limit: 25, ids: ['c1', 'c2'], search: 'acm' });
+        expect(chain.where).toHaveBeenCalled();
+      });
     });
 
     it('findOne delegates to crud.findOneOrFail', () => {

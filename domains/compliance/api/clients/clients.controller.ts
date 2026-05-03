@@ -24,6 +24,7 @@ import { ClientContactsService } from '../client-contacts/client-contacts.servic
 import { ClientRegistrationsService } from '../client-registrations';
 import {
   ClientsListQuerySchema,
+  ClientsOptionsQuerySchema,
   CreateClientSchema,
   CreateClientWithContactsSchema,
   DeactivateRegistrationSchema,
@@ -61,6 +62,15 @@ export class ClientsController {
   @RequirePermission('clients.read')
   handlerOptions(@AccessContext() accessCtx?: DataAccessContext) {
     return this.clientsService.getHandlerOptions(accessCtx);
+  }
+
+  @Get('options')
+  @RequirePermission('clients.read')
+  options(
+    @Query() query: Record<string, unknown>,
+    @AccessContext() accessCtx?: DataAccessContext,
+  ) {
+    return this.clientsService.getOptions(ClientsOptionsQuerySchema.parse(query), accessCtx);
   }
 
   @Get(':id')

@@ -1,5 +1,5 @@
 import { Inject, Injectable, BadRequestException, UnprocessableEntityException } from '@nestjs/common';
-import { DatabaseService, eq, withScope } from '@packages/database';
+import { DatabaseService, asc, eq, sql, withScope, type SQL } from '@packages/database';
 import { DomainEventEmitter } from '@packages/events';
 import { type BaseListQuery, type TransitionContext } from '@packages/entity-engine';
 import { BaseCrudService } from '@packages/crud-base';
@@ -22,7 +22,7 @@ import {
   type ClientsSummary,
   type HandlerOption,
 } from './clients.rollup.service';
-import type { ClientsListQuery } from './clients.dto';
+import type { ClientsListQuery, ClientsOptionsQuery } from './clients.dto';
 
 interface ClientGuardDeps {
   contacts: ClientContactsService;
@@ -203,6 +203,39 @@ export class ClientsService {
     // controller-level consistency but does not gate any rows.
     const scopePredicate = undefined;
     return this.rollup.getHandlerOptions(scopePredicate);
+  }
+
+  /**
+   * Typeahead options for the compliance-clients filter dropdown. Returns
+   * `{id,name}` rows ordered by name. `search` ILIKEs name + legalName;
+   * `ids` (when present) hydrates labels for already-selected chips and
+   * bypasses search so a reopened page can show its filter chips even when
+   * the saved filter values are off the typeahead's current visible page.
+   */
+  async getOptions(
+    query: ClientsOptionsQuery,
+    accessCtx?: DataAccessContext,
+  ): Promise<Array<{ id: string; name: string }>> {
+    // Clients has no `dataAccess` config — actor scope is a no-op.
+    const conditions: SQL[] = [
+      sql`${clients.complianceBecameClientAt} IS NOT NULL`,
+    ];
+    if (query.ids && query.ids.length > 0) {
+      conditions.push(sql`${clients.id} = ANY(${query.ids}::text[])`);
+    } else if (query.search) {
+      const escaped = query.search.replace(/[%_\\]/g, (c) => `\\${c}`);
+      const pattern = `%${escaped}%`;
+      conditions.push(
+        sql`(${clients.name} ILIKE ${pattern} OR ${clients.legalName} ILIKE ${pattern})`,
+      );
+    }
+    const rows = await this.database.db
+      .select({ id: clients.id, name: clients.name })
+      .from(clients)
+      .where(withScope(clients, ...conditions))
+      .orderBy(asc(clients.name))
+      .limit(query.limit);
+    return rows;
   }
 
   async findOne(id: string, accessCtx?: DataAccessContext) {
