@@ -43,13 +43,14 @@ import {
   type InactiveKind,
 } from '../../../../../components';
 import type { FilingRow } from '../types';
-import { useUsersList } from '../../../../../hooks/useUsersApi';
+import { useUserOptions } from '../../../../../hooks/useUsersApi';
 import {
   formatUserDisplayName,
   formatUserInitials,
   formatUserPositionLabel,
 } from '../../clients/handlerUtils';
 import type { Filing, Handler } from '../../../../../types';
+import { TypeaheadInlinePicker } from './TypeaheadInlinePicker';
 
 // ─── Status workflow ─────────────────────────────────────────────────
 
@@ -77,6 +78,13 @@ const PRIORITY_TONE: Record<string, string> = {
 };
 
 type DrawerMode = 'overview' | 'activity';
+
+interface HandlerOption {
+  value: string;
+  label: string;
+  initials: string;
+  role?: string;
+}
 
 // ─── Note compose form ──────────────────────────────────────────────
 
@@ -261,29 +269,20 @@ function OverviewBody({ filing }: { filing: FilingRow }) {
     noteForm.reset({ note: '' });
   };
 
-  // Live handler list — active platform users. The selected handler stays in
-  // local component state so the inline dropdown can change optimistically;
-  // persisting the change to the filing is wired up by the consumer.
-  const { data: usersData } = useUsersList({ limit: 500 });
-  const handlerById = useMemo(() => {
-    const map = new Map<string, Handler>();
-    for (const u of usersData?.data ?? []) {
-      if (u.status !== 'active') continue;
-      map.set(u.id, {
-        id: u.id,
-        name: formatUserDisplayName(u),
+  // Handler picker is server-driven typeahead — see TypeaheadInlinePicker.
+  // The selected handler stays in local component state so the inline picker
+  // can change optimistically; persisting to the filing is wired by the consumer.
+  const [handlerSearch, setHandlerSearch] = useState('');
+  const { data: usersData, isLoading: handlersLoading } = useUserOptions({ search: handlerSearch });
+  const handlerOptions = useMemo<HandlerOption[]>(
+    () =>
+      (usersData?.data ?? []).map((u) => ({
+        value: u.id,
+        label: formatUserDisplayName(u),
         initials: formatUserInitials(u),
         role: formatUserPositionLabel(u) || undefined,
-      });
-    }
-    return map;
-  }, [usersData]);
-  const handlerOptions = useMemo(
-    () =>
-      Array.from(handlerById.values())
-        .map((h) => ({ value: h.id, label: h.name }))
-        .sort((a, b) => a.label.localeCompare(b.label)),
-    [handlerById],
+      })),
+    [usersData],
   );
 
   return (
@@ -322,34 +321,44 @@ function OverviewBody({ filing }: { filing: FilingRow }) {
             </DetailRow>
             <DetailRow label="Client" value={filing.clientName} />
             {handler && (
-              <InlineDropdown
+              <TypeaheadInlinePicker<HandlerOption>
                 label="Handler"
-                value={handler.id}
+                selected={{
+                  value: handler.id,
+                  label: handler.name,
+                  initials: handler.initials,
+                  role: handler.role,
+                }}
                 options={handlerOptions}
-                onChange={(id) => {
-                  const h = handlerById.get(id);
-                  if (h) setHandler(h);
-                }}
-                renderValue={(v) => {
-                  const h = handlerById.get(v) ?? handler;
-                  if (!h) return null;
-                  return (
-                    <div className="flex items-center gap-2">
-                      <AvatarBadge initials={h.initials} size="sm" />
-                      <span className="text-sm font-sans text-ink">{h.name}</span>
+                isLoading={handlersLoading}
+                onSearchChange={setHandlerSearch}
+                onPick={(opt) =>
+                  setHandler({
+                    id: opt.value,
+                    name: opt.label,
+                    initials: opt.initials,
+                    role: opt.role,
+                  })
+                }
+                searchPlaceholder="Search users…"
+                renderValue={(opt) => (
+                  <div className="flex items-center gap-2">
+                    <AvatarBadge initials={opt.initials} size="sm" />
+                    <span className="text-sm font-sans text-ink">{opt.label}</span>
+                  </div>
+                )}
+                renderOption={(opt, isSelected) => (
+                  <>
+                    <AvatarBadge initials={opt.initials} size="xs" />
+                    <div className="flex-1 min-w-0">
+                      <div className="truncate">{opt.label}</div>
+                      {opt.role && (
+                        <div className="text-[10px] text-ink-muted truncate">{opt.role}</div>
+                      )}
                     </div>
-                  );
-                }}
-                renderOption={(opt, isSelected) => {
-                  const h = handlerById.get(opt.value);
-                  return (
-                    <>
-                      <AvatarBadge initials={h?.initials ?? ''} size="xs" />
-                      <span className="flex-1">{opt.label}</span>
-                      {isSelected && <Check className="w-3 h-3 text-ink-muted" strokeWidth={2} />}
-                    </>
-                  );
-                }}
+                    {isSelected && <Check className="w-3 h-3 text-ink-muted flex-none" strokeWidth={2} />}
+                  </>
+                )}
               />
             )}
           </div>
