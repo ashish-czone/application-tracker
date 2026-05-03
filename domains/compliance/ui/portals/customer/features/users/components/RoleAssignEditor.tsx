@@ -1,9 +1,10 @@
 import { useMemo, useState } from 'react';
 import { X, Shield } from 'lucide-react';
 import { SearchInput, toast } from '@packages/ui';
-import { useRolesList, useAddRoleMember } from '@packages/rbac-ui';
+import { useRoleOptions, useAddRoleMember } from '@packages/rbac-ui';
 import { useOrgPositions } from '@packages/org-units-ui';
 import { useQueryClient } from '@tanstack/react-query';
+import { useDebouncedValue } from '../../../../../hooks/useDebouncedValue';
 import type { UserPosition } from '../types';
 
 // Compliance-seeded roles whose capability is team- or firm-level leadership.
@@ -22,20 +23,27 @@ export interface RoleAssignEditorProps {
 
 export function RoleAssignEditor({ userId, excludeRoleIds, userPositions, onClose }: RoleAssignEditorProps) {
   const [query, setQuery] = useState('');
+  const debouncedQuery = useDebouncedValue(query, 300);
   const queryClient = useQueryClient();
-  const { data, isLoading } = useRolesList({ limit: 100 });
+  // Server-driven typeahead — ILIKE on role.name. We don't pass `userType`
+  // because the picker accepts both audience-agnostic (`userType === null`)
+  // and client-audience roles, but the backend's userType filter is narrow
+  // (single value). The dataset is server-clamped to 25 rows, so the audience
+  // filter runs client-side on a bounded result set — not a data-fetching
+  // violation (the search itself is server-side).
+  const { data: roleOptions, isLoading } = useRoleOptions({
+    search: debouncedQuery || undefined,
+  });
   const { data: positions } = useOrgPositions();
 
   const addMember = useAddRoleMember();
 
   const excluded = useMemo(() => new Set(excludeRoleIds), [excludeRoleIds]);
   const filtered = useMemo(() => {
-    const q = query.trim().toLowerCase();
-    return (data?.data ?? [])
+    return (roleOptions ?? [])
       .filter((r) => r.userType === 'client' || r.userType === null)
-      .filter((r) => !excluded.has(r.id))
-      .filter((r) => (q ? r.name.toLowerCase().includes(q) : true));
-  }, [data, excluded, query]);
+      .filter((r) => !excluded.has(r.id));
+  }, [roleOptions, excluded]);
 
   // A position is leadership-tier when its sortOrder is 0 or lower (Head /
   // Division Head / Firm Admin in the compliance seed — see Q14). Derived
