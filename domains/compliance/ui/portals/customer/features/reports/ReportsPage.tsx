@@ -109,8 +109,8 @@ function mapOverdueFilings(rows: ReturnType<typeof useFilingsList>['rows']): Ove
     const daysOverdue = dueDate
       ? Math.max(0, Math.round((today.getTime() - new Date(dueDate).getTime()) / 86_400_000))
       : 0;
-    const clientName = r.clientId__label ?? '';
-    const handlerName = r.assigneeTeamId__label ?? '';
+    const clientName = r.clientName ?? '';
+    const handlerName = r.assigneeTeamName ?? '';
     return {
       id: r.id,
       filingName: r.title,

@@ -136,8 +136,10 @@ export function buildFilingsListQueryString(params: UseFilingsListParams): strin
  * Server-paginated filings list. Replaces the limit=1000 + client-side filter
  * pattern in `useComplianceFilingRows` for the list view. Bucket chips,
  * client/law/team filters, search, sort, and pagination round-trip to the
- * server. The list response embeds `clientId__label`, `lawCode`, etc., so no
- * cross-list join is needed.
+ * server. The list response embeds `clientName`, `assigneeFirstName`,
+ * `assigneeLastName`, `assigneeTeamName` (SQL LEFT JOIN on shared-identity
+ * tables) plus `lawCode/lawName/lawJurisdiction` (LawsService composition),
+ * so no cross-list client-side join is needed.
  */
 export function useFilingsList(params: UseFilingsListParams): UseFilingsListResult {
   const { apiFn } = useEntityEngine();

@@ -82,17 +82,18 @@ function rowToFilingRow(row: FilingListRow): FilingRow {
   return {
     id: row.id,
     clientId: row.clientId,
-    clientName: row.clientId__label ?? '—',
+    clientName: row.clientName ?? '—',
     lawId: row.lawId,
     lawCode: row.lawCode ?? '',
-    ruleName: row.ruleId__label ?? row.title,
+    // Rule name is not joined server-side today; fall back to the filing's own title.
+    ruleName: row.title,
     dueDate,
     periodLabel: formatPeriodLabel(row.periodStart),
     handler: row.assigneeTeamId
       ? {
           id: row.assigneeTeamId,
-          name: row.assigneeTeamId__label ?? '—',
-          initials: initialsFromName(row.assigneeTeamId__label ?? ''),
+          name: row.assigneeTeamName ?? '—',
+          initials: initialsFromName(row.assigneeTeamName ?? ''),
         }
       : undefined,
     jurisdiction: (row.lawJurisdiction as Filing['jurisdiction']) ?? 'central',

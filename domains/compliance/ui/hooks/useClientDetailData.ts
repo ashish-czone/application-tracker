@@ -60,8 +60,10 @@ export interface UseClientFilingsOptions {
 /**
  * Paginated list of a single client's filings, sorted by due date desc. Wraps
  * the global filings list endpoint with a `clientId=eq` filter and an optional
- * `bucket` alias. Each row has `lawCode`, `lawName`, `lawJurisdiction`,
- * `clientId__label` embedded via the server-side composition done in PR-1.
+ * `bucket` alias. Each row has `lawCode`, `lawName`, `lawJurisdiction` (via
+ * LawsService composition) and `clientName`, `assigneeFirstName`,
+ * `assigneeLastName`, `assigneeTeamName` (via SQL LEFT JOIN on shared-identity
+ * tables) embedded server-side.
  */
 export function useClientFilings(
   clientId: string | null | undefined,
