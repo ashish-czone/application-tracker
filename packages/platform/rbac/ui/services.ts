@@ -3,6 +3,7 @@ import type { ApiFn } from '@packages/platform-ui';
 import type {
   Role,
   RoleMember,
+  RoleOption,
   CreateRoleRequest,
   UpdateRoleRequest,
   PermissionEntry,
@@ -10,6 +11,7 @@ import type {
   BooleanPermissions,
   ListRolesParams,
   ListRoleMembersParams,
+  RoleOptionsParams,
 } from './types';
 
 export function createRbacApi(api: ApiFn) {
@@ -63,6 +65,20 @@ export function createRbacApi(api: ApiFn) {
       if (params.search) searchParams.set('search', params.search);
       const qs = searchParams.toString();
       return api.get<PaginatedResponse<RoleMember>>(`/roles/${roleId}/members${qs ? `?${qs}` : ''}`);
+    },
+
+    listRoleOptions(params: RoleOptionsParams): Promise<RoleOption[]> {
+      const searchParams = new URLSearchParams();
+      if (params.search) searchParams.set('search', params.search);
+      if (params.ids && params.ids.length > 0) {
+        // Sort + dedupe so query keys are stable regardless of input ordering.
+        const ids = [...new Set(params.ids)].sort();
+        searchParams.set('ids', ids.join(','));
+      }
+      if (params.limit != null) searchParams.set('limit', String(params.limit));
+      if (params.userType) searchParams.set('userType', params.userType);
+      const qs = searchParams.toString();
+      return api.get<RoleOption[]>(`/roles/options${qs ? `?${qs}` : ''}`);
     },
 
     addRoleMember(roleId: string, userId: string): Promise<RoleMember> {
