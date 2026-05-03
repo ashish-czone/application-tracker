@@ -1,8 +1,10 @@
 import { Injectable } from '@nestjs/common';
-import { eq, gte, lte, isNotNull, inArray, ilike, sql, count, notInArray } from 'drizzle-orm';
-import { DatabaseService, withScope } from '@packages/database';
+import { asc, eq, gte, lte, isNotNull, inArray, ilike, sql, count, notInArray } from 'drizzle-orm';
+import { DatabaseService, users, withScope } from '@packages/database';
 import { clients } from '@packages/directory';
+import { orgUnits } from '@packages/org-units';
 import { type DataAccessContext, DataAccessScopeService } from '@packages/rbac';
+import { complianceLaws } from '../laws/laws.schema';
 import { complianceFilings } from './compliance-filings.schema';
 import { buildFilingsScopePredicate } from './compliance-filings.scope';
 
@@ -54,6 +56,34 @@ export interface TeamFilingCounts {
 export interface ReportRange {
   from: string;
   to: string;
+}
+
+/**
+ * One row of the unbounded overdue filings export. Display fields
+ * (clientName, lawCode, assigneeTeamName, assignee names) are joined
+ * server-side via the same shared-identity / intra-domain pattern the
+ * list endpoint uses, so the CSV contains user-readable labels without
+ * a client-side join.
+ */
+export interface OverdueFilingExportRow {
+  id: string;
+  title: string;
+  externalKey: string | null;
+  clientId: string;
+  clientName: string;
+  lawId: string;
+  lawCode: string | null;
+  status: string;
+  priority: string;
+  dueDate: string;
+  daysOverdue: number;
+  assigneeTeamId: string | null;
+  assigneeTeamName: string | null;
+  assigneeId: string | null;
+  assigneeFirstName: string | null;
+  assigneeLastName: string | null;
+  periodStart: string | null;
+  periodEnd: string | null;
 }
 
 /**
@@ -284,4 +314,98 @@ export class ComplianceFilingsReportsService {
       late: Number(r.late),
     }));
   }
+
+  /**
+   * Unbounded list of currently-overdue filings (status not completed/cancelled,
+   * dueDate < today). Sibling to the paginated `ComplianceFilingsService.list`
+   * with `bucket=overdue`, but explicitly without LIMIT — the "is currently
+   * overdue" predicate is the bound, not a row count. Used by the CSV export
+   * endpoint so the operator gets the full set, not "the first 50 of N".
+   *
+   * Embeds `clientName` (shared-identity join), `lawCode` (intra-domain
+   * sibling join allowed by module-boundaries.md), and assignee labels
+   * (`assigneeTeamName`, `assigneeFirstName`, `assigneeLastName`) so the
+   * CSV does not need a client-side join.
+   *
+   * Driver actor-scope is applied via `buildFilingsScopePredicate` and
+   * ANDed into the WHERE — joined tables get only the structural soft-
+   * delete + tenant predicates from `withScope` on each LEFT JOIN ON
+   * clause. See `data-access-scope.md` § "Joined tables: the driver is
+   * the authorization root".
+   */
+  async listOverdueForExport(
+    today: string,
+    accessCtx?: DataAccessContext,
+  ): Promise<OverdueFilingExportRow[]> {
+    const scopePredicate = await buildFilingsScopePredicate(this.dataAccessScope, accessCtx);
+
+    const rows = await this.database.db
+      .select({
+        id: complianceFilings.id,
+        title: complianceFilings.title,
+        externalKey: complianceFilings.externalKey,
+        clientId: complianceFilings.clientId,
+        clientName: clients.name,
+        lawId: complianceFilings.lawId,
+        lawCode: complianceLaws.code,
+        status: complianceFilings.status,
+        priority: complianceFilings.priority,
+        dueDate: complianceFilings.dueDate,
+        assigneeTeamId: complianceFilings.assigneeTeamId,
+        assigneeTeamName: orgUnits.name,
+        assigneeId: complianceFilings.assigneeId,
+        assigneeFirstName: users.firstName,
+        assigneeLastName: users.lastName,
+        periodStart: complianceFilings.periodStart,
+        periodEnd: complianceFilings.periodEnd,
+      })
+      .from(complianceFilings)
+      .leftJoin(clients,        withScope(clients,        eq(complianceFilings.clientId,        clients.id)))
+      .leftJoin(complianceLaws, withScope(complianceLaws, eq(complianceFilings.lawId,           complianceLaws.id)))
+      .leftJoin(orgUnits,       withScope(orgUnits,       eq(complianceFilings.assigneeTeamId, orgUnits.id)))
+      .leftJoin(users,          withScope(users,          eq(complianceFilings.assigneeId,      users.id)))
+      .where(withScope(
+        complianceFilings,
+        scopePredicate,
+        inArray(complianceFilings.status, NOT_COMPLETED_STATES),
+        isNotNull(complianceFilings.dueDate),
+        sql`${complianceFilings.dueDate}::date < ${today}::date`,
+      ))
+      .orderBy(asc(complianceFilings.dueDate));
+
+    return rows.map((r) => ({
+      id: r.id,
+      title: r.title,
+      externalKey: r.externalKey ?? null,
+      clientId: r.clientId,
+      clientName: r.clientName ?? '',
+      lawId: r.lawId,
+      lawCode: r.lawCode ?? null,
+      status: r.status,
+      priority: r.priority,
+      dueDate: r.dueDate ?? '',
+      daysOverdue: r.dueDate ? daysBetween(r.dueDate, today) : 0,
+      assigneeTeamId: r.assigneeTeamId ?? null,
+      assigneeTeamName: r.assigneeTeamName ?? null,
+      assigneeId: r.assigneeId ?? null,
+      assigneeFirstName: r.assigneeFirstName ?? null,
+      assigneeLastName: r.assigneeLastName ?? null,
+      periodStart: r.periodStart ?? null,
+      periodEnd: r.periodEnd ?? null,
+    }));
+  }
+}
+
+/**
+ * Calendar-day distance from `from` (earlier) to `to` (later). Both inputs
+ * are `YYYY-MM-DD` strings interpreted in UTC — the underlying column is a
+ * `DATE` (no timezone), so UTC arithmetic gives the right calendar-day
+ * count regardless of the server's timezone.
+ */
+function daysBetween(from: string, to: string): number {
+  const [fy, fm, fd] = from.split('-').map(Number);
+  const [ty, tm, td] = to.split('-').map(Number);
+  const start = Date.UTC(fy, fm - 1, fd);
+  const end = Date.UTC(ty, tm - 1, td);
+  return Math.max(0, Math.round((end - start) / 86_400_000));
 }

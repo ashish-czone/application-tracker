@@ -297,4 +297,113 @@ describe('ComplianceFilingsReportsService', () => {
       expect(dataAccessScope.buildPredicate).toHaveBeenCalledWith(accessCtx, expect.objectContaining({ anchors: expect.any(Object), inlineResolvers: expect.any(Array) }));
     });
   });
+
+  describe('listOverdueForExport', () => {
+    it('maps the joined row shape into OverdueFilingExportRow[] with display labels', async () => {
+      database.db.select.mockReturnValueOnce(
+        chainResolving([
+          {
+            id: 'f1',
+            title: 'Quarterly TDS Return',
+            externalKey: 'k-1',
+            clientId: 'c1',
+            clientName: 'Acme Corp',
+            lawId: 'l1',
+            lawCode: 'IT-194Q',
+            status: 'pending',
+            priority: 'high',
+            dueDate: '2026-04-15',
+            assigneeTeamId: 't1',
+            assigneeTeamName: 'Tax Team',
+            assigneeId: 'u1',
+            assigneeFirstName: 'Alice',
+            assigneeLastName: 'Smith',
+            periodStart: '2026-01-01',
+            periodEnd: '2026-03-31',
+          },
+        ]),
+      );
+
+      const [row] = await service.listOverdueForExport('2026-04-30');
+
+      expect(row).toEqual({
+        id: 'f1',
+        title: 'Quarterly TDS Return',
+        externalKey: 'k-1',
+        clientId: 'c1',
+        clientName: 'Acme Corp',
+        lawId: 'l1',
+        lawCode: 'IT-194Q',
+        status: 'pending',
+        priority: 'high',
+        dueDate: '2026-04-15',
+        // 2026-04-30 minus 2026-04-15 = 15
+        daysOverdue: 15,
+        assigneeTeamId: 't1',
+        assigneeTeamName: 'Tax Team',
+        assigneeId: 'u1',
+        assigneeFirstName: 'Alice',
+        assigneeLastName: 'Smith',
+        periodStart: '2026-01-01',
+        periodEnd: '2026-03-31',
+      });
+    });
+
+    it('coerces null joined display labels to empty/`null` per shape', async () => {
+      database.db.select.mockReturnValueOnce(
+        chainResolving([
+          {
+            id: 'f2',
+            title: 'X',
+            externalKey: null,
+            clientId: 'c1',
+            clientName: null,
+            lawId: 'l1',
+            lawCode: null,
+            status: 'in_progress',
+            priority: 'medium',
+            dueDate: '2026-04-29',
+            assigneeTeamId: null,
+            assigneeTeamName: null,
+            assigneeId: null,
+            assigneeFirstName: null,
+            assigneeLastName: null,
+            periodStart: null,
+            periodEnd: null,
+          },
+        ]),
+      );
+
+      const [row] = await service.listOverdueForExport('2026-04-30');
+
+      // clientName coerces to '' so the CSV row never renders the literal "null".
+      expect(row.clientName).toBe('');
+      expect(row.lawCode).toBe(null);
+      expect(row.assigneeTeamName).toBe(null);
+      expect(row.daysOverdue).toBe(1);
+    });
+
+    it('forwards accessCtx for scope resolution on the driver', async () => {
+      database.db.select.mockReturnValueOnce(chainResolving([]));
+      const accessCtx = { userId: 'u1', scopes: [{ type: 'unit' }] } as never;
+
+      await service.listOverdueForExport('2026-04-30', accessCtx);
+
+      expect(dataAccessScope.buildPredicate).toHaveBeenCalledWith(
+        accessCtx,
+        expect.objectContaining({
+          anchors: expect.any(Object),
+          inlineResolvers: expect.any(Array),
+        }),
+      );
+    });
+
+    it('skips scope resolution when no accessCtx is supplied', async () => {
+      database.db.select.mockReturnValueOnce(chainResolving([]));
+
+      await service.listOverdueForExport('2026-04-30');
+
+      expect(dataAccessScope.buildPredicate).not.toHaveBeenCalled();
+    });
+  });
 });
