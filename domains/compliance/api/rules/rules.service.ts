@@ -1,4 +1,4 @@
-import { forwardRef, Inject, Injectable, BadRequestException, NotFoundException } from '@nestjs/common';
+import { forwardRef, Inject, Injectable, BadRequestException, ConflictException, NotFoundException } from '@nestjs/common';
 import { DatabaseService, and, count, eq, inArray, isNull, ne, not, sql, withScope } from '@packages/database';
 import { type BaseListQuery } from '@packages/entity-engine';
 import { BaseCrudService } from '@packages/crud-base';
@@ -76,6 +76,21 @@ function assertFrequency(value: string): asserts value is ComplianceFrequency {
   if (!(FREQUENCIES as readonly string[]).includes(value)) {
     throw new InvalidFrequencyError(value);
   }
+}
+
+function isUniqueViolation(error: unknown): boolean {
+  // Drizzle wraps the underlying pg-driver error in a generic `Error` whose
+  // `cause` is the actual `DatabaseError` carrying `code: '23505'`.
+  const hasCode = (e: unknown): boolean =>
+    typeof e === 'object' &&
+    e !== null &&
+    'code' in e &&
+    (e as { code?: unknown }).code === '23505';
+  if (hasCode(error)) return true;
+  if (typeof error === 'object' && error !== null && 'cause' in error) {
+    return hasCode((error as { cause?: unknown }).cause);
+  }
+  return false;
 }
 
 export type ComplianceRuleStatus = 'draft' | 'active' | 'deprecated';
@@ -378,10 +393,20 @@ export class ComplianceRulesService {
     }
     // Workflow state is system-managed: pre-fill `status` with the workflow's
     // initialState. The DTO drops any caller-supplied value.
-    return this.crud.create(
-      { ...input, status: RULES_WORKFLOW.initialState } as never,
-      actorId,
-    );
+    try {
+      return await this.crud.create(
+        { ...input, status: RULES_WORKFLOW.initialState } as never,
+        actorId,
+      );
+    } catch (error) {
+      // The `compliance_rules_code_key` unique index enforces unique `code`
+      // at the DB level. Translate the Postgres 23505 violation to a 409
+      // Conflict so callers see a domain-meaningful error instead of a 500.
+      if (isUniqueViolation(error)) {
+        throw new ConflictException(`A rule with code "${(input as { code?: string }).code}" already exists`);
+      }
+      throw error;
+    }
   }
 
   async update(
