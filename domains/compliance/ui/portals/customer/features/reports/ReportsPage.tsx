@@ -1,4 +1,5 @@
 import { useState, useMemo } from 'react';
+import { Link } from 'react-router';
 import { format, startOfMonth, subMonths } from 'date-fns';
 import { Download, TrendingUp, Clock, Users } from 'lucide-react';
 import {
@@ -161,13 +162,21 @@ export function ReportsPage() {
     ...range,
     q: debouncedSearch || undefined,
   });
+  // Show the 20 most-overdue filings on screen — past 20 the user follows the
+  // "View all N" link to the full /filings page (which paginates server-side).
+  // Per .claude/rules/data-fetching.md, a paginated list MUST surface
+  // truncation; we render `meta.total` next to the table so the user knows
+  // how many more rows the export covers.
+  const OVERDUE_TOP_N = 20;
   const overdueFilings = useFilingsList({
     page: 1,
-    limit: 50,
+    limit: OVERDUE_TOP_N,
     sort: 'dueDate:asc',
     bucket: 'overdue',
     search: debouncedSearch || undefined,
   });
+  const overdueTotal = overdueFilings.meta?.total ?? overdueFilings.rows.length;
+  const overdueHasMore = overdueTotal > overdueFilings.rows.length;
   const summary = useFilingsSummary();
 
   const trendForChart = useMemo(
@@ -335,12 +344,24 @@ export function ReportsPage() {
             </div>
           </section>
 
+          {overdueHasMore ? (
+            <p className="mb-3 text-[11px] uppercase tracking-eyebrow font-sans text-ink-muted">
+              Showing top {filteredOverdue.length} of {overdueTotal} overdue ·{' '}
+              <Link
+                to="/filings?status=overdue"
+                className="text-ink hover:text-signal underline underline-offset-2"
+              >
+                view all in filings →
+              </Link>
+            </p>
+          ) : null}
+
           <DataGridShell
             columns={OVERDUE_COLUMNS}
             rows={filteredOverdue}
             getRowKey={(r) => r.id}
             requiredColumns={['filing']}
-            totalRows={filteredOverdue.length}
+            totalRows={overdueTotal}
             filters={
               <SearchInput
                 value={search}
