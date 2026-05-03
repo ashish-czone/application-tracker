@@ -9,6 +9,7 @@ import type {
   CreateRoleRequest,
   UpdateRoleRequest,
   PermissionEntry,
+  RoleOptionsParams,
 } from './types';
 
 function useRbacApi() {
@@ -117,6 +118,38 @@ export function useRoleMembers(roleId: string | null, params: ListRoleMembersPar
     queryKey: ['roles', roleId, 'members', params],
     queryFn: () => api.listRoleMembers(roleId!, params),
     enabled: !!roleId,
+  });
+}
+
+/**
+ * Typeahead role options for picker dropdowns. Mirrors `useClientOptions`
+ * in `@domains/compliance` — returns `{id, name, userType}` rows from
+ * `/roles/options`. `placeholderData: keepPrevious` keeps the previous
+ * results visible while a new search query is in-flight so the dropdown
+ * doesn't collapse on every keystroke.
+ *
+ * Replaces the `useRolesList({ limit: 100 })` pattern in compliance UI
+ * (RolesEditorPage, AddMemberDropdown, RoleAssignEditor) — those callers
+ * never needed paginated CRUD; they wanted a small typeahead.
+ */
+export function useRoleOptions(params: RoleOptionsParams = {}) {
+  const api = useRbacApi();
+  // Stable cache key — sort + dedupe ids so identical sets hit the same key.
+  const ids = params.ids && params.ids.length > 0 ? [...new Set(params.ids)].sort() : null;
+  return useQuery({
+    queryKey: [
+      'roles',
+      'options',
+      {
+        search: params.search ?? '',
+        ids,
+        limit: params.limit ?? null,
+        userType: params.userType ?? null,
+      },
+    ] as const,
+    queryFn: () => api.listRoleOptions(params),
+    staleTime: 60_000,
+    placeholderData: (prev) => prev,
   });
 }
 
