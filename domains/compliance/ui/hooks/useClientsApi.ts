@@ -219,6 +219,64 @@ export function useClientHandlerOptions() {
   });
 }
 
+// ─────────────────────────────────────────────────────────────────────────────
+// Typeahead options — backs `<ClientPicker />` and any client filter dropdown.
+// Replaces the previous `limit=1000` page-fetch pattern (a data-fetching.md
+// violation) with a server-side ILIKE on name + legalName.
+// ─────────────────────────────────────────────────────────────────────────────
+
+export interface ClientOption {
+  id: string;
+  name: string;
+}
+
+export interface ClientOptionsParams {
+  /** Substring query (server ILIKEs name + legalName, case-insensitive). */
+  search?: string;
+  /**
+   * Hydrate labels for already-selected chips. When present, server bypasses
+   * `search` and returns only rows whose id is in this set, so a reopened
+   * page can show its filter chips with names regardless of search state.
+   */
+  ids?: readonly string[];
+  /** Defaults to 25 server-side; clamped to 50 max. */
+  limit?: number;
+}
+
+function normaliseIds(ids: readonly string[] | undefined): string[] | undefined {
+  if (!ids || ids.length === 0) return undefined;
+  return [...new Set(ids)].sort();
+}
+
+function buildOptionsQuery(params: ClientOptionsParams): string {
+  const sp = new URLSearchParams();
+  if (params.search) sp.set('search', params.search);
+  const ids = normaliseIds(params.ids);
+  if (ids) sp.set('ids', ids.join(','));
+  if (params.limit != null) sp.set('limit', String(params.limit));
+  const qs = sp.toString();
+  return qs ? `?${qs}` : '';
+}
+
+/**
+ * `<ClientPicker>` and friends use this for the typeahead dropdown.
+ * `placeholderData: keepPrevious` keeps the previous results visible while a
+ * new search query is in-flight so the dropdown doesn't collapse on every
+ * keystroke.
+ */
+export function useClientOptions(params: ClientOptionsParams = {}) {
+  const { apiFn } = useEntityEngine();
+  const ids = normaliseIds(params.ids);
+  return useQuery({
+    queryKey: [...clientsQueryKey, 'options', { search: params.search ?? '', ids: ids ?? null, limit: params.limit ?? null }] as const,
+    queryFn: () => apiFn.get<ClientOption[]>(`${BASE}/options${buildOptionsQuery(params)}`),
+    staleTime: 60_000,
+    placeholderData: (prev) => prev,
+  });
+}
+
+export const __test__ = { buildOptionsQuery, normaliseIds };
+
 export function useCreateClientWithContacts(options?: {
   onSuccess?: (result: CreateClientWithContactsResult) => void;
 }) {

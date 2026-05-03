@@ -1,4 +1,4 @@
-import { queryOptions, useMutation, useQueryClient } from '@tanstack/react-query';
+import { queryOptions, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { toast } from '@packages/ui';
 import { useEntityEngine } from '@packages/entity-engine-ui';
 
@@ -87,6 +87,65 @@ function buildQuery(params: Record<string, unknown>): string {
   const qs = sp.toString();
   return qs ? `?${qs}` : '';
 }
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Typeahead options — backs `<LawPicker />` and any law filter dropdown.
+// Replaces the previous `limit=1000` page-fetch pattern (a data-fetching.md
+// violation) with a server-side ILIKE on code + name.
+// ─────────────────────────────────────────────────────────────────────────────
+
+export interface LawOption {
+  id: string;
+  code: string;
+  name: string;
+}
+
+export interface LawOptionsParams {
+  /** Substring query (server ILIKEs code + name, case-insensitive). */
+  search?: string;
+  /**
+   * Hydrate labels for already-selected chips. When present, server bypasses
+   * `search` and returns only rows whose id is in this set, so a reopened
+   * page can show its filter chips with codes regardless of search state.
+   */
+  ids?: readonly string[];
+  /** Defaults to 25 server-side; clamped to 50 max. */
+  limit?: number;
+}
+
+function normaliseIds(ids: readonly string[] | undefined): string[] | undefined {
+  if (!ids || ids.length === 0) return undefined;
+  return [...new Set(ids)].sort();
+}
+
+function buildOptionsQuery(params: LawOptionsParams): string {
+  const sp = new URLSearchParams();
+  if (params.search) sp.set('search', params.search);
+  const ids = normaliseIds(params.ids);
+  if (ids) sp.set('ids', ids.join(','));
+  if (params.limit != null) sp.set('limit', String(params.limit));
+  const qs = sp.toString();
+  return qs ? `?${qs}` : '';
+}
+
+/**
+ * `<LawPicker>` and friends use this for the typeahead dropdown.
+ * `placeholderData: keepPrevious` keeps the previous results visible while a
+ * new search query is in-flight so the dropdown doesn't collapse on every
+ * keystroke.
+ */
+export function useLawOptions(params: LawOptionsParams = {}) {
+  const { apiFn } = useEntityEngine();
+  const ids = normaliseIds(params.ids);
+  return useQuery({
+    queryKey: [...lawsQueryKey, 'options', { search: params.search ?? '', ids: ids ?? null, limit: params.limit ?? null }] as const,
+    queryFn: () => apiFn.get<LawOption[]>(`${BASE}/options${buildOptionsQuery(params)}`),
+    staleTime: 60_000,
+    placeholderData: (prev) => prev,
+  });
+}
+
+export const __test__ = { buildOptionsQuery, normaliseIds };
 
 export function useCreateLaw(options?: { onSuccess?: (law: LawApiRecord) => void }) {
   const { apiFn } = useEntityEngine();
