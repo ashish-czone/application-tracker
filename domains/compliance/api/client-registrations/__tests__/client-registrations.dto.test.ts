@@ -39,4 +39,16 @@ describe('RegistrationsListQuerySchema', () => {
     expect(out.sort).toBe('registeredAt');
     expect(out.order).toBe('desc');
   });
+
+  it('parses the search field as an optional string (empty stripped)', () => {
+    expect(RegistrationsListQuerySchema.parse({ search: 'GST-' }).search).toBe('GST-');
+    expect(RegistrationsListQuerySchema.parse({ search: '' }).search).toBeUndefined();
+    expect(RegistrationsListQuerySchema.parse({}).search).toBeUndefined();
+  });
+
+  it('parses sort:dir compound values as a single string field', () => {
+    // The service splits on ':'; the DTO just delivers the raw string.
+    const out = RegistrationsListQuerySchema.parse({ sort: 'registeredAt:asc' });
+    expect(out.sort).toBe('registeredAt:asc');
+  });
 });
