@@ -600,11 +600,12 @@ describe('ClientRegistrationsService', () => {
 
       expect(chain.limit).toHaveBeenCalledWith(25);
       expect(chain.offset).toHaveBeenCalledWith(0);
-      // orderBy called with one drizzle SQL arg — we can't introspect its
-      // direction without coupling to drizzle internals, but we can at
-      // least assert it was invoked once with a single arg.
+      // orderBy is called with two drizzle SQL args — primary sort
+      // (registeredAt) plus the stable `id ASC` tiebreaker that
+      // `buildListQuery` appends so paginated results don't shuffle when
+      // the primary key has duplicates.
       expect(chain.orderBy).toHaveBeenCalledTimes(1);
-      expect(chain.orderBy.mock.calls[0]).toHaveLength(1);
+      expect(chain.orderBy.mock.calls[0]).toHaveLength(2);
     });
 
     it('returns 0 totalPages floor of 1 even on empty result', async () => {
