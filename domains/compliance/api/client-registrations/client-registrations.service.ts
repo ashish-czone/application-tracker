@@ -8,12 +8,9 @@ import {
 import {
   DatabaseService,
   and,
-  asc,
   count,
-  desc,
   eq,
   gt,
-  ilike,
   inArray,
   isNull,
   lte,
@@ -22,6 +19,7 @@ import {
 } from '@packages/database';
 import { DomainEventEmitter } from '@packages/events';
 import { BaseCrudService } from '@packages/crud-base';
+import { buildListQuery } from '@packages/query-builder';
 import { CLIENT_REGISTRATIONS_CRUD_TOKEN } from './client-registrations.crud-token';
 import type { DataAccessContext } from '@packages/rbac';
 import { AppLoggerService, type ContextLogger } from '@packages/logger';
@@ -84,6 +82,52 @@ const REASON_MANUALLY_CANCELLED = 'Registration deactivation cleanup';
  */
 function toDateString(d: Date): string {
   return d.toISOString().slice(0, 10);
+}
+
+/**
+ * Whitelisted filterable columns. Drives BOTH the structured `filters`
+ * JSON resolver AND the bare-passthrough id filter (clientId / lawId)
+ * inside `buildListQuery`. Anything outside this map is silently
+ * dropped so the frontend can send extra params without 400-ing.
+ */
+const FILTERABLE_REGISTRATION_COLUMNS = {
+  id: complianceClientRegistrations.id,
+  clientId: complianceClientRegistrations.clientId,
+  lawId: complianceClientRegistrations.lawId,
+} as const;
+
+/**
+ * Whitelisted sort keys. Anything outside this map falls back to the
+ * `defaultSort` registered with `buildListQuery` (`registeredAt` DESC).
+ * Mirrors the columns the client-registrations.ui list config surfaces
+ * — preventing arbitrary column probing via the URL.
+ */
+const SORTABLE_REGISTRATION_COLUMNS = {
+  registrationNumber: complianceClientRegistrations.registrationNumber,
+  effectiveFrom: complianceClientRegistrations.effectiveFrom,
+  registeredAt: complianceClientRegistrations.registeredAt,
+  deactivatedAt: complianceClientRegistrations.deactivatedAt,
+  createdAt: complianceClientRegistrations.createdAt,
+} as const;
+
+/**
+ * Normalise the `sort` param shape to what `buildListQuery` consumes.
+ *
+ * UI callers (and `useClientDetailData`) send `sort=field:dir` as a
+ * single colon-joined string for back-compat with the prior bespoke
+ * order parser. The DTO leaves the raw string in place; this helper
+ * splits it back into separate `sort` / `order` params before handing
+ * the query to the helper. A bare `sort=field` (no colon) flows
+ * through unchanged so callers using the new shape keep working.
+ */
+function normaliseRegistrationsSort(
+  query: Record<string, unknown>,
+): Record<string, unknown> {
+  const raw = query.sort;
+  if (typeof raw !== 'string' || !raw.includes(':')) return query;
+  const [field, dir] = raw.split(':');
+  const order = dir === 'asc' || dir === 'desc' ? dir : query.order;
+  return { ...query, sort: field, order };
 }
 
 export interface ClientRegistration {
@@ -149,24 +193,29 @@ export class ClientRegistrationsService {
    * same legs to the joined table per `data-scoping.md`.
    */
   async list(query: RegistrationsListQuery, _accessCtx?: DataAccessContext) {
-    const limit = Math.max(1, Math.min(query.limit ?? 25, 100));
-    const page = Math.max(1, query.page ?? 1);
-    const offset = (page - 1) * limit;
-
-    const conditions = [];
-    if (query.clientId) {
-      conditions.push(eq(complianceClientRegistrations.clientId, query.clientId));
-    }
-    if (typeof query.lawId === 'string' && query.lawId.length > 0) {
-      conditions.push(eq(complianceClientRegistrations.lawId, query.lawId));
-    }
-    if (query.search) {
-      const term = `%${query.search.trim()}%`;
-      conditions.push(ilike(complianceClientRegistrations.registrationNumber, term));
-    }
-
-    const where = withScope(complianceClientRegistrations, ...conditions);
-    const orderBy = this.buildOrderBy(query.sort, query.order);
+    // The shared `buildListQuery` helper composes scope (tenant +
+    // soft-delete + actor-scope), structured `filters` JSON, bare
+    // passthrough id filters (clientId / lawId), search across
+    // `registrationNumber`, sort + pagination, and the SQL count() that
+    // feeds `meta.total`.
+    //
+    // `complianceClientRegistrations` has no actor-scope anchors today
+    // (see `client-registrations.module.ts`), so no scope predicate is
+    // built — `withScope` covers the structural soft-delete + tenant
+    // legs on the driver, and `withScope(complianceLaws, …)` on the
+    // LEFT JOIN ON adds the same legs to the joined table per
+    // `data-scoping.md`.
+    //
+    // UI callers historically send `sort=field:dir` as a single string;
+    // `normaliseRegistrationsSort` re-splits that into separate
+    // `sort` + `order` so the helper consumes the shape it expects.
+    const built = buildListQuery(complianceClientRegistrations, normaliseRegistrationsSort(query), {
+      filterableColumns: FILTERABLE_REGISTRATION_COLUMNS,
+      sortableColumns: SORTABLE_REGISTRATION_COLUMNS,
+      searchableColumns: [complianceClientRegistrations.registrationNumber],
+      defaultSort: { field: 'registeredAt', order: 'desc' },
+      includeDeleted: query.includeDeleted,
+    });
 
     const rows = await this.database.db
       .select({
@@ -181,16 +230,18 @@ export class ClientRegistrationsService {
         complianceLaws,
         withScope(complianceLaws, eq(complianceClientRegistrations.lawId, complianceLaws.id)),
       )
-      .where(where)
-      .orderBy(...orderBy)
-      .limit(limit)
-      .offset(offset);
+      .where(built.where)
+      .orderBy(...built.orderBy)
+      .limit(built.limit)
+      .offset(built.offset);
 
+    // The COUNT query doesn't reference the joined `complianceLaws`
+    // columns in any filter / search arm, so no JOIN is needed here —
+    // the WHERE only references driver columns.
     const [totalRow] = await this.database.db
       .select({ total: count() })
       .from(complianceClientRegistrations)
-      .where(where);
-    const total = Number(totalRow?.total ?? 0);
+      .where(built.where);
 
     const data = rows.map((row) => ({
       ...(row.registration as Record<string, unknown>),
@@ -202,45 +253,8 @@ export class ClientRegistrationsService {
 
     return {
       data,
-      meta: {
-        page,
-        limit,
-        total,
-        totalPages: Math.max(1, Math.ceil(total / limit)),
-      },
+      meta: built.paginationMeta(Number(totalRow?.total ?? 0)),
     };
-  }
-
-  /**
-   * Translate the `sort` / `order` query params into a Drizzle `orderBy` arg
-   * list. Unknown / missing sort field falls back to `registeredAt:desc` so
-   * the most recent registration is on top.
-   *
-   * Allowlist mirrors the columns the client-registrations.ui list config
-   * surfaces — preventing arbitrary column probing via the URL.
-   */
-  private buildOrderBy(sortRaw?: string, orderRaw?: string) {
-    const t = complianceClientRegistrations;
-    const allowed = {
-      registrationNumber: t.registrationNumber,
-      effectiveFrom: t.effectiveFrom,
-      registeredAt: t.registeredAt,
-      deactivatedAt: t.deactivatedAt,
-      createdAt: t.createdAt,
-    } as const;
-
-    let field: keyof typeof allowed | undefined;
-    let dir: 'asc' | 'desc' | undefined;
-
-    if (sortRaw) {
-      const [f, d] = sortRaw.split(':');
-      if (f && f in allowed) field = f as keyof typeof allowed;
-      if (d === 'asc' || d === 'desc') dir = d;
-    }
-    if (!dir && (orderRaw === 'asc' || orderRaw === 'desc')) dir = orderRaw;
-
-    const column = field ? allowed[field] : t.registeredAt;
-    return [(dir ?? 'desc') === 'asc' ? asc(column) : desc(column)];
   }
 
   findOne(id: string, accessCtx?: DataAccessContext) {

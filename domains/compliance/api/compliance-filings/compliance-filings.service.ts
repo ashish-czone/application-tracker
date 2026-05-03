@@ -1,17 +1,11 @@
 import { BadRequestException, Inject, Injectable } from '@nestjs/common';
 import {
-  asc,
   count,
   DatabaseService,
-  desc,
   eq,
-  ilike,
-  or,
-  type SQL,
   sql,
   users,
   withScope,
-  withScopeIncludingDeleted,
 } from '@packages/database';
 import { BaseCrudService } from '@packages/crud-base';
 // `BaseListQuery` from entity-engine has the wide `[key: string]: unknown`
@@ -24,7 +18,7 @@ import type { BaseListQuery } from '@packages/entity-engine';
 import { WorkflowEngineService, WorkflowRegistryService } from '@packages/workflows';
 import { DomainEventEmitter } from '@packages/events';
 import { orgUnits } from '@packages/org-units';
-import { buildFilterCondition, parseFilterParam, type FilterExpression } from '@packages/query-builder';
+import { buildListQuery } from '@packages/query-builder';
 import { type DataAccessContext, DataAccessScopeService } from '@packages/rbac';
 import { complianceFilings } from './compliance-filings.schema';
 import { clients } from '../clients/clients.schema';
@@ -109,27 +103,28 @@ const FILTERABLE_FILING_COLUMNS = {
 
 /**
  * Whitelisted sort columns. Driver columns sort directly; joined display
- * columns sort via the JOIN-resolved column reference (one round-trip,
- * no extra query). Anything outside the whitelist falls back to the
- * default (`dueDate ASC, id ASC` tiebreaker).
+ * columns (clientName / assigneeFirstName / assigneeLastName /
+ * assigneeTeamName) sort via the JOIN-resolved column reference so the
+ * primary sort happens server-side in the same round-trip — no
+ * post-fetch reordering. Anything outside the whitelist falls back to
+ * the default registered with `buildListQuery` (`dueDate ASC` + the
+ * helper's `id ASC` tiebreaker).
  */
-const SORTABLE_FILING_COLUMNS: Record<string, ReturnType<typeof sql>> = {
-  dueDate: sql`${complianceFilings.dueDate}`,
-  periodStart: sql`${complianceFilings.periodStart}`,
-  periodEnd: sql`${complianceFilings.periodEnd}`,
-  completedAt: sql`${complianceFilings.completedAt}`,
-  status: sql`${complianceFilings.status}`,
-  priority: sql`${complianceFilings.priority}`,
-  createdAt: sql`${complianceFilings.createdAt}`,
-  updatedAt: sql`${complianceFilings.updatedAt}`,
-  title: sql`${complianceFilings.title}`,
-  clientName: sql`${clients.name}`,
-  assigneeFirstName: sql`${users.firstName}`,
-  assigneeLastName: sql`${users.lastName}`,
-  assigneeTeamName: sql`${orgUnits.name}`,
-};
-
-const DEFAULT_FILING_SORT_COLUMN = SORTABLE_FILING_COLUMNS.dueDate;
+const SORTABLE_FILING_COLUMNS = {
+  dueDate: complianceFilings.dueDate,
+  periodStart: complianceFilings.periodStart,
+  periodEnd: complianceFilings.periodEnd,
+  completedAt: complianceFilings.completedAt,
+  status: complianceFilings.status,
+  priority: complianceFilings.priority,
+  createdAt: complianceFilings.createdAt,
+  updatedAt: complianceFilings.updatedAt,
+  title: complianceFilings.title,
+  clientName: clients.name,
+  assigneeFirstName: users.firstName,
+  assigneeLastName: users.lastName,
+  assigneeTeamName: orgUnits.name,
+} as const;
 
 @Injectable()
 export class ComplianceFilingsService {
@@ -178,29 +173,34 @@ export class ComplianceFilingsService {
    * the same WHERE so `meta.total` matches the rendered page.
    */
   async list(query: BaseListQuery, accessCtx?: DataAccessContext) {
-    const limit = Math.max(1, Math.min(query.limit ?? 25, 100));
-    const page = Math.max(1, query.page ?? 1);
-    const offset = (page - 1) * limit;
-
     const scopePredicate = await buildFilingsScopePredicate(this.dataAccessScope, accessCtx);
 
-    // Compose the structured-filter, search, and passthrough-id predicates
-    // ahead of the WHERE so both the data and count queries see the same
-    // shape. Per `.claude/rules/data-scoping.md` we honor `includeDeleted`
-    // by switching to `withScopeIncludingDeleted` — soft-delete is the only
-    // leg that flips; tenant + actor-scope still apply.
-    const filterPredicates = this.buildListFilterPredicates(query);
-    const searchPredicate = this.buildSearchPredicate(query.search);
-    if (searchPredicate) filterPredicates.push(searchPredicate);
-
-    // `includeDeleted=true` is the explicit caller opt-in (e.g. an admin
-    // "show deleted" toggle on the list page). Tenant + actor-scope still
-    // apply; only the soft-delete leg flips. See `.claude/rules/data-scoping.md`
-    // — the verbose primitive name is the audit-trail surface.
-    const scopeFn = query.includeDeleted ? withScopeIncludingDeleted : withScope;
-    const driverWhere = scopeFn(complianceFilings, scopePredicate, ...filterPredicates);
-
-    const orderClauses = this.buildOrderClauses(query.sort, query.order);
+    // The shared `buildListQuery` helper composes scope (tenant +
+    // soft-delete + actor-scope), structured `filters` JSON, bare
+    // passthrough id filters, search, and pagination into one WHERE +
+    // ORDER BY pair that both the rows query and the COUNT query reuse.
+    // The search column list crosses table boundaries (clients.name) —
+    // the helper just builds an `OR(ilike(...), ...)` against whichever
+    // columns it's given; the caller is responsible for adding the
+    // matching JOIN to BOTH the rows AND the count queries so the WHERE
+    // resolves against the same FROM shape.
+    //
+    // Per `.claude/rules/data-scoping.md`, `includeDeleted` flips the
+    // soft-delete leg only (via `withScopeIncludingDeleted`); tenant +
+    // actor-scope still apply unchanged.
+    const built = buildListQuery(complianceFilings, query, {
+      scopePredicate,
+      filterableColumns: FILTERABLE_FILING_COLUMNS,
+      sortableColumns: SORTABLE_FILING_COLUMNS,
+      searchableColumns: [
+        complianceFilings.title,
+        complianceFilings.description,
+        complianceFilings.externalKey,
+        clients.name,
+      ],
+      defaultSort: { field: 'dueDate', order: 'asc' },
+      includeDeleted: query.includeDeleted,
+    });
 
     const rows = await this.database.db
       .select({
@@ -214,16 +214,25 @@ export class ComplianceFilingsService {
       .leftJoin(clients,  withScope(clients,  eq(complianceFilings.clientId,        clients.id)))
       .leftJoin(users,    withScope(users,    eq(complianceFilings.assigneeId,      users.id)))
       .leftJoin(orgUnits, withScope(orgUnits, eq(complianceFilings.assigneeTeamId, orgUnits.id)))
-      .where(driverWhere)
-      .orderBy(...orderClauses)
-      .limit(limit)
-      .offset(offset);
+      .where(built.where)
+      .orderBy(...built.orderBy)
+      .limit(built.limit)
+      .offset(built.offset);
 
+    // The COUNT must JOIN `clients` because the WHERE may reference
+    // `clients.name` via the search predicate. Without the JOIN, the
+    // search arm would compile against a missing FROM table. The other
+    // joined tables (users / orgUnits) aren't referenced by any filter
+    // / search arm today, but joining them keeps the COUNT FROM shape
+    // identical to the rows FROM shape and removes a foot-gun the next
+    // time someone adds a filterable assignee predicate.
     const [totalRow] = await this.database.db
       .select({ total: count() })
       .from(complianceFilings)
-      .where(driverWhere);
-    const total = Number(totalRow?.total ?? 0);
+      .leftJoin(clients,  withScope(clients,  eq(complianceFilings.clientId,        clients.id)))
+      .leftJoin(users,    withScope(users,    eq(complianceFilings.assigneeId,      users.id)))
+      .leftJoin(orgUnits, withScope(orgUnits, eq(complianceFilings.assigneeTeamId, orgUnits.id)))
+      .where(built.where);
 
     const flat: Record<string, unknown>[] = rows.map((row) => ({
       ...(row.filing as Record<string, unknown>),
@@ -250,102 +259,8 @@ export class ComplianceFilingsService {
 
     return {
       data: flat,
-      meta: {
-        page,
-        limit,
-        total,
-        totalPages: Math.max(1, Math.ceil(total / limit)),
-      },
+      meta: built.paginationMeta(Number(totalRow?.total ?? 0)),
     };
-  }
-
-  /**
-   * Translate the `BaseListQuery` filter inputs into Drizzle predicates
-   * over the `complianceFilings` table. Reads two sources:
-   *  - `query.filters` (JSON string): structured `[{field, operator, value}]`
-   *    array, parsed via `parseFilterParam`. The controller's
-   *    `buildBaseListQuery` already merges shorthand (bucket / dueBefore /
-   *    dueAfter / notCompleted / status) into this JSON, so this method
-   *    sees one canonical filter shape regardless of how the URL was
-   *    written.
-   *  - bare passthrough id params (`clientId` / `lawId` / `ruleId` /
-   *    `assigneeId` / `assigneeTeamId`) — defensive support so a caller
-   *    that bypasses the helper still gets server-side filtering rather
-   *    than a silently-unfiltered list.
-   *
-   * Unknown filter fields are ignored, not 400'd: the same shape may be
-   * routed through downstream services (EAV resolvers in other modules)
-   * that want to handle unresolved fields themselves. For this service,
-   * only the columns in `FILTERABLE_FILING_COLUMNS` are honored.
-   */
-  private buildListFilterPredicates(query: BaseListQuery): SQL[] {
-    const predicates: SQL[] = [];
-
-    const expressions = typeof query.filters === 'string' ? parseFilterParam(query.filters) : [];
-    for (const expr of expressions) {
-      const column = (FILTERABLE_FILING_COLUMNS as Record<string, unknown>)[expr.field];
-      if (!column) continue;
-      predicates.push(buildFilterCondition(column, expr as FilterExpression));
-    }
-
-    // Belt-and-braces passthrough: any of these supplied bare on the URL
-    // become eq predicates. Most callers route through the structured
-    // `filters` JSON, but a hand-crafted URL or stale client should still
-    // get server-side filtering rather than the firm-wide list.
-    const passthroughIdFields = [
-      'clientId',
-      'lawId',
-      'ruleId',
-      'assigneeId',
-      'assigneeTeamId',
-    ] as const;
-    for (const field of passthroughIdFields) {
-      const value = query[field];
-      if (typeof value !== 'string' || value.length === 0) continue;
-      const column = (FILTERABLE_FILING_COLUMNS as Record<string, unknown>)[field];
-      if (!column) continue;
-      predicates.push(buildFilterCondition(column, { field, operator: 'eq', value }));
-    }
-
-    return predicates;
-  }
-
-  /**
-   * OR'd ILIKE across the filing's text columns plus the joined client
-   * name. Matches a single search term against `title`, `description`,
-   * `externalKey`, and `clients.name` — covers what the FilingsPage
-   * search box is actually asked to find. Empty / blank input returns
-   * an empty array (no predicate).
-   */
-  private buildSearchPredicate(search: string | undefined): SQL | undefined {
-    if (typeof search !== 'string') return undefined;
-    const trimmed = search.trim();
-    if (trimmed.length === 0) return undefined;
-    const pattern = `%${trimmed}%`;
-    return or(
-      ilike(complianceFilings.title, pattern),
-      ilike(complianceFilings.description, pattern),
-      ilike(complianceFilings.externalKey, pattern),
-      ilike(clients.name, pattern),
-    );
-  }
-
-  /**
-   * Resolve the request's sort key against the column whitelist, fall
-   * back to the default (`dueDate`) if unknown, and append a stable
-   * `id ASC` tiebreaker so paginated results don't shuffle when the
-   * primary sort key has duplicates.
-   */
-  private buildOrderClauses(
-    sortKey: string | undefined,
-    order: 'asc' | 'desc' | undefined,
-  ): SQL[] {
-    const column =
-      typeof sortKey === 'string' && SORTABLE_FILING_COLUMNS[sortKey]
-        ? SORTABLE_FILING_COLUMNS[sortKey]
-        : DEFAULT_FILING_SORT_COLUMN;
-    const direction = order === 'desc' ? desc : asc;
-    return [direction(column), asc(complianceFilings.id)];
   }
 
   findOne(id: string, accessCtx?: DataAccessContext) {
