@@ -18,7 +18,11 @@ import {
   type DataAccessContext,
 } from '@packages/rbac';
 import { ClientContactsService } from './client-contacts.service';
-import { CreateClientContactSchema, UpdateClientContactSchema } from './client-contacts.dto';
+import {
+  ClientContactsListQuerySchema,
+  CreateClientContactSchema,
+  UpdateClientContactSchema,
+} from './client-contacts.dto';
 
 @Controller('client-contacts')
 export class ClientContactsController {
@@ -27,12 +31,7 @@ export class ClientContactsController {
   @Get()
   @RequirePermission('client-contacts.read')
   list(@Query() query: Record<string, unknown>, @AccessContext() accessCtx?: DataAccessContext) {
-    const parsed = {
-      ...query,
-      page: query.page ? Number(query.page) : undefined,
-      limit: query.limit ? Number(query.limit) : undefined,
-      includeDeleted: query.includeDeleted === 'true',
-    };
+    const parsed = ClientContactsListQuerySchema.parse(query);
     return this.clientContacts.list(parsed, accessCtx);
   }
 
