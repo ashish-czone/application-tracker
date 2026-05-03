@@ -2,7 +2,7 @@ import { describe, it, expect, beforeAll, afterAll, beforeEach } from 'vitest';
 import { randomUUID } from 'crypto';
 import request from 'supertest';
 import { createPackageTestApp, withAuth, cleanDatabase, type PackageTestApp } from '@packages/platform-testing';
-import { users } from '@packages/database';
+import { users, eq } from '@packages/database';
 import { RBAC_PERMISSIONS } from '../../permissions';
 
 const READ = [RBAC_PERMISSIONS.ROLES_READ];
@@ -153,6 +153,127 @@ describe('RbacController (integration)', () => {
       expect(res.body.data.length).toBe(2);
       expect(res.body.meta.total).toBe(5);
       expect(res.body.meta.page).toBe(2);
+    });
+  });
+
+  describe('GET /api/v1/roles/options', () => {
+    it('returns id/name/userType rows ordered by name', async () => {
+      await createRole({ name: 'Beta' });
+      await createRole({ name: 'Alpha' });
+
+      const res = await request(ctx.httpServer)
+        .get('/api/v1/roles/options')
+        .set(withAuth(READ))
+        .expect(200);
+
+      expect(Array.isArray(res.body)).toBe(true);
+      expect(res.body.length).toBeGreaterThanOrEqual(2);
+      const names = res.body.map((r: { name: string }) => r.name);
+      const sorted = [...names].sort((a, b) => a.localeCompare(b));
+      expect(names).toEqual(sorted);
+      expect(res.body[0]).toMatchObject({
+        id: expect.any(String),
+        name: expect.any(String),
+        userType: expect.anything(),
+      });
+    });
+
+    it('filters by search (ILIKE on name)', async () => {
+      await createRole({ name: 'TypeaheadAdmin' });
+      await createRole({ name: 'TypeaheadEditor' });
+      await createRole({ name: 'OtherRole' });
+
+      const res = await request(ctx.httpServer)
+        .get('/api/v1/roles/options?search=Typeahead')
+        .set(withAuth(READ))
+        .expect(200);
+
+      expect(res.body.length).toBe(2);
+      const names = res.body.map((r: { name: string }) => r.name);
+      expect(names).toContain('TypeaheadAdmin');
+      expect(names).toContain('TypeaheadEditor');
+      expect(names).not.toContain('OtherRole');
+    });
+
+    it('rejects limit above the cap (max 50)', async () => {
+      // The DTO uses class-validator @Max(50). Combined with the global
+      // ValidationPipe (forbidNonWhitelisted + transform), exceeding the cap
+      // returns 400 instead of silently clamping — keeps the contract honest.
+      await request(ctx.httpServer)
+        .get('/api/v1/roles/options?limit=999')
+        .set(withAuth(READ))
+        .expect(400);
+    });
+
+    it('accepts limit at the cap (50)', async () => {
+      const res = await request(ctx.httpServer)
+        .get('/api/v1/roles/options?limit=50')
+        .set(withAuth(READ))
+        .expect(200);
+      expect(Array.isArray(res.body)).toBe(true);
+    });
+
+    it('honours the limit query param when within bounds', async () => {
+      for (let i = 0; i < 5; i++) {
+        await createRole({ name: `OptRole ${i}` });
+      }
+      const res = await request(ctx.httpServer)
+        .get('/api/v1/roles/options?limit=2')
+        .set(withAuth(READ))
+        .expect(200);
+      expect(res.body.length).toBe(2);
+    });
+
+    it('hydrates by ids and bypasses search', async () => {
+      const a = await createRole({ name: 'IdsHydrateA' });
+      const b = await createRole({ name: 'IdsHydrateB' });
+      await createRole({ name: 'OtherIgnore' });
+
+      const res = await request(ctx.httpServer)
+        .get(`/api/v1/roles/options?ids=${a.id},${b.id}&search=ignored-by-server`)
+        .set(withAuth(READ))
+        .expect(200);
+
+      expect(res.body.length).toBe(2);
+      const ids = res.body.map((r: { id: string }) => r.id).sort();
+      expect(ids).toEqual([a.id, b.id].sort());
+    });
+
+    it('filters by userType when provided', async () => {
+      await createRole({ name: 'UTypeAdmin', userType: 'admin' });
+      await createRole({ name: 'UTypeClient', userType: 'client' });
+
+      const res = await request(ctx.httpServer)
+        .get('/api/v1/roles/options?userType=client')
+        .set(withAuth(READ))
+        .expect(200);
+
+      // Filter is precise — only the userType=client rows come back.
+      expect(res.body.every((r: { userType: string | null }) => r.userType === 'client')).toBe(true);
+      expect(res.body.some((r: { name: string }) => r.name === 'UTypeClient')).toBe(true);
+      expect(res.body.some((r: { name: string }) => r.name === 'UTypeAdmin')).toBe(false);
+    });
+
+    it('returns empty array when no roles match search', async () => {
+      await createRole({ name: 'Nothing' });
+      const res = await request(ctx.httpServer)
+        .get('/api/v1/roles/options?search=zzzz-no-match-zzzz')
+        .set(withAuth(READ))
+        .expect(200);
+      expect(res.body).toEqual([]);
+    });
+
+    it('should 401 without auth', async () => {
+      await request(ctx.httpServer)
+        .get('/api/v1/roles/options')
+        .expect(401);
+    });
+
+    it('should 403 without rbac.roles.read', async () => {
+      await request(ctx.httpServer)
+        .get('/api/v1/roles/options')
+        .set(withAuth([]))
+        .expect(403);
     });
   });
 
@@ -358,6 +479,70 @@ describe('RbacController (integration)', () => {
           .get(`/api/v1/roles/${randomUUID()}/members`)
           .set(withAuth(READ))
           .expect(404);
+      });
+
+      it('filters members by search (name or email)', async () => {
+        const role = await createRole();
+        const matching = await createUser();
+        // Override email/name so the search term hits this user only.
+        const [renamed] = await ctx.db
+          .update(users)
+          .set({
+            firstName: 'Searchable',
+            lastName: 'Person',
+            email: `searchable-${randomUUID()}@example.com`,
+          })
+          .where(eq(users.id, matching.id))
+          .returning();
+        const other = await createUser();
+
+        await request(ctx.httpServer)
+          .post(`/api/v1/roles/${role.id}/members`)
+          .set(withAuth(MANAGE))
+          .send({ userId: renamed.id })
+          .expect(201);
+        await request(ctx.httpServer)
+          .post(`/api/v1/roles/${role.id}/members`)
+          .set(withAuth(MANAGE))
+          .send({ userId: other.id })
+          .expect(201);
+
+        const res = await request(ctx.httpServer)
+          .get(`/api/v1/roles/${role.id}/members?search=Searchable`)
+          .set(withAuth(READ))
+          .expect(200);
+
+        expect(res.body.data.length).toBe(1);
+        expect(res.body.data[0].id).toBe(renamed.id);
+        expect(res.body.meta.total).toBe(1);
+      });
+
+      it('paginates members and reports correct meta.total', async () => {
+        const role = await createRole();
+        for (let i = 0; i < 5; i++) {
+          const u = await createUser();
+          await request(ctx.httpServer)
+            .post(`/api/v1/roles/${role.id}/members`)
+            .set(withAuth(MANAGE))
+            .send({ userId: u.id })
+            .expect(201);
+        }
+
+        const page1 = await request(ctx.httpServer)
+          .get(`/api/v1/roles/${role.id}/members?page=1&limit=2`)
+          .set(withAuth(READ))
+          .expect(200);
+
+        expect(page1.body.data.length).toBe(2);
+        expect(page1.body.meta).toMatchObject({ total: 5, page: 1, limit: 2, totalPages: 3 });
+
+        const page3 = await request(ctx.httpServer)
+          .get(`/api/v1/roles/${role.id}/members?page=3&limit=2`)
+          .set(withAuth(READ))
+          .expect(200);
+
+        expect(page3.body.data.length).toBe(1);
+        expect(page3.body.meta.page).toBe(3);
       });
     });
 

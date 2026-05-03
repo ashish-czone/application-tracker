@@ -15,6 +15,18 @@ export interface RoleMember {
   addedAt: Date;
 }
 
+/**
+ * Typeahead row for the role picker dropdown. Mirrors the shape returned by
+ * the compliance `/clients/options` and `/laws/options` endpoints — id +
+ * label. `userType` is included so client-side picker UIs can filter or
+ * group by audience without a follow-up call.
+ */
+export interface RoleOption {
+  id: string;
+  name: string;
+  userType: string | null;
+}
+
 /** Role with computed isSystem flag (true when role has wildcard '*' permission) */
 export interface RoleWithSystem extends Role {
   isSystem: boolean;

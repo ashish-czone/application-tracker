@@ -1,5 +1,5 @@
 import { Injectable, NotFoundException, ConflictException, ForbiddenException } from '@nestjs/common';
-import { DatabaseService, eq, and, or, isNull, ilike, asc, desc, count, inArray, users, type SQL, type DrizzleDB } from '@packages/database';
+import { DatabaseService, eq, and, or, isNull, ilike, asc, desc, count, inArray, withScope, users, type SQL, type DrizzleDB } from '@packages/database';
 import type { PaginatedResponse } from '@packages/common';
 import { withTenant, withTenantInsert } from '@packages/tenancy/helpers';
 import {
@@ -14,7 +14,7 @@ import { rolePermissionScopes } from '../schema/role-permission-scopes';
 import { userRoles } from '../schema/user-roles';
 import { PermissionManifestRegistry, type PermissionManifest } from '../permission-manifest';
 import { normaliseScopes } from '../scope-types';
-import type { Role, RoleMember, RoleWithSystem, ScopedPermissions, BooleanPermissions, ScopeSpec } from '../types';
+import type { Role, RoleMember, RoleOption, RoleWithSystem, ScopedPermissions, BooleanPermissions, ScopeSpec } from '../types';
 
 @Injectable()
 export class RbacService {
@@ -174,6 +174,49 @@ export class RbacService {
         totalPages: Math.ceil(Number(total) / limit),
       },
     };
+  }
+
+  /**
+   * Typeahead options for the role picker dropdown. Returns `{id,name,userType}`
+   * rows ordered by name. `search` ILIKEs role name; `ids` (when present)
+   * hydrates labels for already-selected chips and bypasses search so a
+   * reopened page can show its filter chips even when the saved value is off
+   * the typeahead's current visible page. `limit` is clamped at the DTO layer
+   * (default 25, max 50). Mirrors the shape of `/clients/options` and
+   * `/laws/options`.
+   *
+   * Soft-delete + tenant scoping via `withScope`. Roles have no actor-scope
+   * anchors today, so no `buildPredicate` call is needed — when row-level
+   * RBAC plumbing for roles lands, this is the place to add it.
+   */
+  async listRoleOptions(query: {
+    search?: string;
+    ids?: string[];
+    limit: number;
+    userType?: string;
+  }): Promise<RoleOption[]> {
+    const conditions: SQL[] = [];
+    if (query.userType) {
+      conditions.push(eq(roles.userType, query.userType));
+    }
+    if (query.ids && query.ids.length > 0) {
+      conditions.push(inArray(roles.id, query.ids));
+    } else if (query.search) {
+      const escaped = query.search.replace(/[%_\\]/g, (c) => `\\${c}`);
+      const pattern = `%${escaped}%`;
+      conditions.push(ilike(roles.name, pattern));
+    }
+
+    return this.database.db
+      .select({
+        id: roles.id,
+        name: roles.name,
+        userType: roles.userType,
+      })
+      .from(roles)
+      .where(withScope(roles, ...conditions))
+      .orderBy(asc(roles.name))
+      .limit(query.limit);
   }
 
   // --- Permissions ---

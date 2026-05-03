@@ -21,6 +21,7 @@ import type { BooleanPermissions } from '../types';
 import { CreateRoleDto } from '../dto/create-role.dto';
 import { UpdateRoleDto } from '../dto/update-role.dto';
 import { ListRolesQueryDto } from '../dto/list-roles-query.dto';
+import { ListRolesOptionsQueryDto } from '../dto/list-roles-options-query.dto';
 import { SetRolePermissionsDto } from '../dto/set-role-permissions.dto';
 import { AddRoleMemberDto } from '../dto/add-role-member.dto';
 import { ListRoleMembersQueryDto } from '../dto/list-role-members-query.dto';
@@ -41,6 +42,22 @@ export class RbacController {
   @ApiOperation({ summary: 'List roles with pagination and filtering' })
   async listRoles(@Query() query: ListRolesQueryDto) {
     return this.rbacService.listRoles(query);
+  }
+
+  @Get('roles/options')
+  @RequirePermission(RBAC_PERMISSIONS.ROLES_READ)
+  @ApiOperation({
+    summary: 'Typeahead options for role pickers',
+    description:
+      'Returns up to `limit` (default 25, max 50) roles ordered by name. `search` ILIKEs name; `ids` (CSV) hydrates labels for already-selected chips and bypasses search.',
+  })
+  async listRoleOptions(@Query() query: ListRolesOptionsQueryDto) {
+    return this.rbacService.listRoleOptions({
+      search: query.search,
+      ids: query.ids,
+      limit: query.limit ?? 25,
+      userType: query.userType,
+    });
   }
 
   @Get('roles/:id')

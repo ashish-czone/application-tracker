@@ -7,7 +7,7 @@ export { buildAccessContext } from './scope-context';
 export type { AccessScopeSpec, DataAccessContext } from './scope-context';
 export { RBAC_PERMISSIONS } from './permissions';
 export { FieldPermissionsController } from './controllers/field-permissions.controller';
-export type { Role, RoleMember, RoleWithSystem, PermissionScope, ScopedPermissions, BooleanPermissions, ScopeSpec, BuiltInScopeType, FieldPermissionEntityResolver } from './types';
+export type { Role, RoleMember, RoleOption, RoleWithSystem, PermissionScope, ScopedPermissions, BooleanPermissions, ScopeSpec, BuiltInScopeType, FieldPermissionEntityResolver } from './types';
 export { BUILT_IN_SCOPE_TYPES, FIELD_PERMISSION_ENTITY_RESOLVER } from './types';
 export { registerCustomScopeType, isKnownScopeType, listCustomScopeTypes, normaliseScopes } from './scope-types';
 export { roles, rolePermissions, rolePermissionScopes, userRoles } from './schema';
