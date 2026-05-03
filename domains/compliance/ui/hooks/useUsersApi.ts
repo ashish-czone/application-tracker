@@ -28,6 +28,31 @@ export function useUsersList(params: ListUsersParams) {
   return usePackageUsers(params);
 }
 
+export interface UserOptionsParams {
+  /** Substring query — server ILIKEs first/last/email. */
+  search?: string;
+  /** Defaults to 25 (server-side cap for typeahead UX). */
+  limit?: number;
+}
+
+/**
+ * Typeahead-shaped wrapper around the active-user list. Replaces the previous
+ * `limit=500` page-fetch + client-side `Map` build pattern (a data-fetching.md
+ * violation) with server-side filter + small page. `placeholderData: keepPrevious`
+ * is inherited from the underlying `useUsers` hook so the dropdown doesn't
+ * collapse on every keystroke.
+ */
+export function useUserOptions(params: UserOptionsParams = {}) {
+  return usePackageUsers({
+    status: 'active',
+    search: params.search,
+    limit: params.limit ?? 25,
+    page: 1,
+    sort: 'firstName',
+    order: 'asc',
+  });
+}
+
 export function useUsersSummary() {
   return usePackageUsersSummary();
 }
