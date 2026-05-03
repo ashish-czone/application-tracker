@@ -1,11 +1,12 @@
 import { Inject, Injectable } from '@nestjs/common';
-import { asc, eq, inArray, sql, type SQL } from 'drizzle-orm';
-import { BaseCrudService, type BaseListQuery } from '@packages/crud-base';
+import { asc, count, eq, inArray, sql, type SQL } from 'drizzle-orm';
+import { BaseCrudService } from '@packages/crud-base';
 import { DatabaseService, withScope } from '@packages/database';
+import { buildListQuery } from '@packages/query-builder';
 import type { DataAccessContext } from '@packages/rbac';
 import { complianceLaws } from './laws.schema';
 import { LAWS_CRUD_TOKEN } from './laws.crud-token';
-import type { CreateLawDto, LawsOptionsQuery, UpdateLawDto } from './laws.dto';
+import type { CreateLawDto, LawsListQuery, LawsOptionsQuery, UpdateLawDto } from './laws.dto';
 
 export interface LawDisplayFields {
   id: string;
@@ -31,6 +32,37 @@ export interface LawTreeResponse {
   counts: Record<LawJurisdiction, number>;
 }
 
+/**
+ * Whitelisted columns for the list endpoint's structured `filters`
+ * JSON and bare passthrough id filters. Anything outside this map is
+ * silently dropped — the frontend cannot push arbitrary column
+ * predicates through.
+ */
+const FILTERABLE_LAW_COLUMNS = {
+  id: complianceLaws.id,
+  parentId: complianceLaws.parentId,
+  code: complianceLaws.code,
+  name: complianceLaws.name,
+  jurisdiction: complianceLaws.jurisdiction,
+  issuingAuthority: complianceLaws.issuingAuthority,
+  effectiveFrom: complianceLaws.effectiveFrom,
+  createdAt: complianceLaws.createdAt,
+  updatedAt: complianceLaws.updatedAt,
+} as const;
+
+/**
+ * Whitelisted sort keys. Anything outside this map falls back to the
+ * `defaultSort` registered with `buildListQuery` (`code` ASC).
+ */
+const SORTABLE_LAW_COLUMNS = {
+  code: complianceLaws.code,
+  name: complianceLaws.name,
+  jurisdiction: complianceLaws.jurisdiction,
+  effectiveFrom: complianceLaws.effectiveFrom,
+  createdAt: complianceLaws.createdAt,
+  updatedAt: complianceLaws.updatedAt,
+} as const;
+
 @Injectable()
 export class LawsService {
   constructor(
@@ -38,8 +70,52 @@ export class LawsService {
     private readonly database: DatabaseService,
   ) {}
 
-  list(query: BaseListQuery, accessCtx?: DataAccessContext) {
-    return this.crud.list(query, accessCtx);
+  /**
+   * Server-paginated list with structured filters JSON, bare passthrough
+   * id filters (`?jurisdiction=central`), ILIKE search across code +
+   * name, whitelisted sort, and a SQL `count()` for `meta.total`.
+   *
+   * Bypasses `BaseCrudService.list` because the base is by design a
+   * trivial pagination wrapper that drops filters and reports
+   * `total = rows.length` (the page size, not the table count). The
+   * `buildListQuery` helper composes search + sort + filters + scope
+   * into one WHERE that is reused for the count query so the rendered
+   * page and the reported total always agree.
+   *
+   * Laws has no row-level actor-scope (entity is firm-wide; permission
+   * scope is `'all'`), so no `scopePredicate` is built. If a future
+   * release scopes laws by jurisdiction or assignee, that's a
+   * `DataAccessScopeService.buildPredicate(...)` call wired in here —
+   * the helper just ANDs it through.
+   */
+  async list(query: LawsListQuery, accessCtx?: DataAccessContext) {
+    void accessCtx; // reserved for future actor-scope; today laws is firm-wide
+
+    const built = buildListQuery(complianceLaws, query, {
+      filterableColumns: FILTERABLE_LAW_COLUMNS,
+      sortableColumns: SORTABLE_LAW_COLUMNS,
+      searchableColumns: [complianceLaws.code, complianceLaws.name],
+      defaultSort: { field: 'code', order: 'asc' },
+      includeDeleted: query.includeDeleted,
+    });
+
+    const rows = await this.database.db
+      .select()
+      .from(complianceLaws)
+      .where(built.where)
+      .orderBy(...built.orderBy)
+      .limit(built.limit)
+      .offset(built.offset);
+
+    const [totalRow] = await this.database.db
+      .select({ total: count() })
+      .from(complianceLaws)
+      .where(built.where);
+
+    return {
+      data: rows,
+      meta: built.paginationMeta(Number(totalRow?.total ?? 0)),
+    };
   }
 
   findOne(id: string, accessCtx?: DataAccessContext) {
