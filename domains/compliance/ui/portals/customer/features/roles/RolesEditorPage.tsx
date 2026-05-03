@@ -1,25 +1,81 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { Plus } from 'lucide-react';
-import { ScreenLayout } from '@packages/ui';
+import { useSearchParams } from 'react-router';
+import { ChevronLeft, ChevronRight, Plus } from 'lucide-react';
+import { ScreenLayout, SearchInput } from '@packages/ui';
 import { useRolesList, usePermissionManifests, type Role } from '@packages/rbac-ui';
 import { ScreenPreviewTopBar } from '../shared/ScreenPreviewTopBar';
 import { RoleListItem } from './components/RoleListItem';
 import { RoleDetailPanel } from './components/RoleDetailPanel';
 import { AddRoleDrawer } from './components/AddRoleDrawer';
 import { EditRoleDrawer } from './components/EditRoleDrawer';
+import { useDebouncedValue } from '../../../../hooks/useDebouncedValue';
 import { groupPermissionsByModule } from './utils/permissions';
 
+const SIDEBAR_PAGE_SIZE = 25;
+
 export function RolesEditorPage() {
-  const { data: rolesData, isLoading: rolesLoading } = useRolesList({ limit: 100 });
+  // URL-synced page + search so sidebar state survives reload (and is
+  // shareable). The detail-pane selection is local because it's tied to
+  // the current visible page and mostly transient.
+  const [searchParams, setSearchParams] = useSearchParams();
+  const page = Number(searchParams.get('page')) || 1;
+  const search = searchParams.get('search') ?? '';
+
+  const setPage = useCallback(
+    (p: number) => {
+      setSearchParams(
+        (prev) => {
+          const next = new URLSearchParams(prev);
+          if (p <= 1) next.delete('page');
+          else next.set('page', String(p));
+          return next;
+        },
+        { replace: true },
+      );
+    },
+    [setSearchParams],
+  );
+
+  const setSearch = useCallback(
+    (value: string) => {
+      setSearchParams(
+        (prev) => {
+          const next = new URLSearchParams(prev);
+          if (value) next.set('search', value);
+          else next.delete('search');
+          next.delete('page');
+          return next;
+        },
+        { replace: true },
+      );
+    },
+    [setSearchParams],
+  );
+
+  const debouncedSearch = useDebouncedValue(search, 300);
+
+  const { data: rolesData, isLoading: rolesLoading } = useRolesList({
+    page,
+    limit: SIDEBAR_PAGE_SIZE,
+    search: debouncedSearch.trim() || undefined,
+    sort: 'name',
+    order: 'asc',
+  });
   const { data: manifests, isLoading: manifestsLoading } = usePermissionManifests();
 
   const roles = rolesData?.data ?? [];
+  const totalRoles = rolesData?.meta.total ?? 0;
+  const totalPages = rolesData?.meta.totalPages ?? 0;
   const [selectedRoleId, setSelectedRoleId] = useState<string | null>(null);
   const [addOpen, setAddOpen] = useState(false);
   const [editOpen, setEditOpen] = useState(false);
 
   useEffect(() => {
-    if (!selectedRoleId && roles.length > 0) {
+    // Auto-select first row of the current page when nothing is selected,
+    // OR when the previous selection isn't in the current page (e.g. user
+    // changed page or refined the search and the prior pick is gone).
+    if (roles.length === 0) return;
+    if (!selectedRoleId || !roles.some((r) => r.id === selectedRoleId)) {
       setSelectedRoleId(roles[0].id);
     }
   }, [roles, selectedRoleId]);
@@ -65,7 +121,7 @@ export function RolesEditorPage() {
           <>Loading…</>
         ) : (
           <>
-            {roles.length} roles · {totalPermissions} permissions across{' '}
+            {totalRoles} roles · {totalPermissions} permissions across{' '}
             {permissionGroups.length} modules.
           </>
         )
@@ -95,11 +151,21 @@ export function RolesEditorPage() {
               New
             </button>
           </div>
+          <div className="px-3 py-2 border-b border-rule">
+            <SearchInput
+              variant="bare"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              placeholder="Search roles…"
+            />
+          </div>
           <div className="flex-1 overflow-y-auto">
             {rolesLoading ? (
               <div className="px-4 py-6 text-sm text-ink-muted font-sans">Loading roles…</div>
             ) : roles.length === 0 ? (
-              <div className="px-4 py-6 text-sm text-ink-muted font-sans">No roles defined.</div>
+              <div className="px-4 py-6 text-sm text-ink-muted font-sans">
+                {debouncedSearch ? 'No roles match your search.' : 'No roles defined.'}
+              </div>
             ) : (
               roles.map((role) => (
                 <RoleListItem
@@ -111,6 +177,33 @@ export function RolesEditorPage() {
               ))
             )}
           </div>
+          {totalPages > 1 && (
+            <div className="px-3 py-2 border-t border-rule flex items-center justify-between text-[10px] uppercase tracking-eyebrow font-sans font-semibold text-ink-muted">
+              <span>
+                {page} / {totalPages}
+              </span>
+              <div className="flex items-center gap-1">
+                <button
+                  type="button"
+                  onClick={() => setPage(Math.max(1, page - 1))}
+                  disabled={page <= 1}
+                  aria-label="Previous page"
+                  className="p-1 border border-rule hover:border-ink hover:text-ink transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
+                >
+                  <ChevronLeft className="w-3 h-3" strokeWidth={2} />
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setPage(Math.min(totalPages, page + 1))}
+                  disabled={page >= totalPages}
+                  aria-label="Next page"
+                  className="p-1 border border-rule hover:border-ink hover:text-ink transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
+                >
+                  <ChevronRight className="w-3 h-3" strokeWidth={2} />
+                </button>
+              </div>
+            </div>
+          )}
 
           <div
             onPointerDown={onPointerDown}

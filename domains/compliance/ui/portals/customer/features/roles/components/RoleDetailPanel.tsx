@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { Pencil, Shield, Trash2, UserPlus } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Pencil, Shield, Trash2, UserPlus } from 'lucide-react';
 import { ConfirmDialog, SearchInput } from '@packages/ui';
 import {
   useDeleteRole,
@@ -15,8 +15,11 @@ import {
 import { PermissionGroup } from './PermissionGroup';
 import { MemberRow } from './MemberRow';
 import { AddMemberDropdown } from './AddMemberDropdown';
+import { useDebouncedValue } from '../../../../../hooks/useDebouncedValue';
 import type { PermissionModuleGroup } from '../utils/permissions';
 import { formatMemberName } from '../utils/permissions';
+
+const MEMBERS_PAGE_SIZE = 20;
 
 type DetailTab = 'permissions' | 'members';
 
@@ -38,9 +41,17 @@ export function RoleDetailPanel({
   const [activeTab, setActiveTab] = useState<DetailTab>('permissions');
   const [permSearch, setPermSearch] = useState('');
   const [memberSearch, setMemberSearch] = useState('');
+  const [memberPage, setMemberPage] = useState(1);
   const [addMemberOpen, setAddMemberOpen] = useState(false);
   const [deleteOpen, setDeleteOpen] = useState(false);
   const [memberToRemove, setMemberToRemove] = useState<RoleMember | null>(null);
+
+  // Reset to page 1 whenever search changes — otherwise a user on page 3
+  // who narrows the query lands on an empty page.
+  const debouncedMemberSearch = useDebouncedValue(memberSearch, 300);
+  useEffect(() => {
+    setMemberPage(1);
+  }, [debouncedMemberSearch]);
 
   const deleteMutation = useDeleteRole({
     onSuccess: () => {
@@ -50,7 +61,14 @@ export function RoleDetailPanel({
   });
 
   const { data: rolePermissions, isLoading: permsLoading } = useRolePermissions(role.id);
-  const { data: membersData, isLoading: membersLoading } = useRoleMembers(role.id, { limit: 100 });
+  // Server-paginated members list. Search ILIKEs first/last/email on the
+  // server; client-side `.filter()` over a 100-row fetch was the previous
+  // shape — that broke silently for any role with >100 members.
+  const { data: membersData, isLoading: membersLoading } = useRoleMembers(role.id, {
+    page: memberPage,
+    limit: MEMBERS_PAGE_SIZE,
+    search: debouncedMemberSearch.trim() || undefined,
+  });
 
   const [selected, setSelected] = useState<BooleanPermissions>({});
   useEffect(() => {
@@ -64,16 +82,14 @@ export function RoleDetailPanel({
   const enabledPermissions = useMemo(() => new Set(Object.keys(selected)), [selected]);
 
   const members = membersData?.data ?? [];
+  const memberTotal = membersData?.meta.total ?? 0;
+  const memberTotalPages = membersData?.meta.totalPages ?? 0;
+  // The Add Member dropdown excludes already-listed members from its
+  // suggestions. With server-side pagination we only know about the
+  // currently visible page, so exclusion is now scoped to that page —
+  // adding a user who's already a member on a different page is rejected
+  // by the backend (409 / duplicate) and surfaced via the mutation toast.
   const excludedUserIds = useMemo(() => new Set(members.map((m) => m.id)), [members]);
-
-  const filteredMembers = useMemo(() => {
-    const q = memberSearch.trim().toLowerCase();
-    if (!q) return members;
-    return members.filter((m) => {
-      const name = formatMemberName(m).toLowerCase();
-      return name.includes(q) || m.email.toLowerCase().includes(q);
-    });
-  }, [members, memberSearch]);
 
   const normalizedPermSearch = permSearch.trim().toLowerCase();
 
@@ -200,7 +216,7 @@ export function RoleDetailPanel({
           >
             {tab === 'permissions'
               ? `Permissions (${enabledCount}/${totalPermissions})`
-              : `Members (${members.length})`}
+              : `Members (${memberTotal})`}
           </button>
         ))}
       </div>
@@ -314,16 +330,16 @@ export function RoleDetailPanel({
                 <div className="px-4 py-10 text-center">
                   <p className="text-sm text-ink-muted font-sans">Loading members…</p>
                 </div>
-              ) : filteredMembers.length === 0 ? (
+              ) : members.length === 0 ? (
                 <div className="px-4 py-10 text-center">
                   <p className="text-sm text-ink-muted font-sans">
-                    {memberSearch
+                    {debouncedMemberSearch
                       ? 'No members match your search.'
                       : 'No members assigned to this role.'}
                   </p>
                 </div>
               ) : (
-                filteredMembers.map((member) => (
+                members.map((member) => (
                   <MemberRow
                     key={member.id}
                     member={member}
@@ -334,6 +350,34 @@ export function RoleDetailPanel({
                 ))
               )}
             </div>
+
+            {memberTotalPages > 1 && (
+              <div className="mt-3 flex items-center justify-between text-[10px] uppercase tracking-eyebrow font-sans font-semibold text-ink-muted">
+                <span>
+                  Page {memberPage} of {memberTotalPages} · {memberTotal} total
+                </span>
+                <div className="flex items-center gap-1">
+                  <button
+                    type="button"
+                    onClick={() => setMemberPage((p) => Math.max(1, p - 1))}
+                    disabled={memberPage <= 1}
+                    aria-label="Previous page"
+                    className="p-1.5 border border-rule hover:border-ink hover:text-ink transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
+                  >
+                    <ChevronLeft className="w-3 h-3" strokeWidth={2} />
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setMemberPage((p) => Math.min(memberTotalPages, p + 1))}
+                    disabled={memberPage >= memberTotalPages}
+                    aria-label="Next page"
+                    className="p-1.5 border border-rule hover:border-ink hover:text-ink transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
+                  >
+                    <ChevronRight className="w-3 h-3" strokeWidth={2} />
+                  </button>
+                </div>
+              </div>
+            )}
           </div>
         )}
       </div>
