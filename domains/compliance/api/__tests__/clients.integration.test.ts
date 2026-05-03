@@ -1,8 +1,8 @@
 import { describe, it, expect, beforeAll, afterAll, beforeEach } from 'vitest';
 import request from 'supertest';
-import { withAuth, type PackageTestApp } from '@packages/platform-testing';
+import { DEFAULT_TEST_USER_ID, withAuth, type PackageTestApp } from '@packages/platform-testing';
 import { createComplianceTestApp, resetComplianceTestDb } from './setup/app';
-import { createLaw, createLawWithHandler } from './setup/fixtures';
+import { createLaw, createLawWithHandler, grantPermissions } from './setup/fixtures';
 
 const READ = ['clients.read'];
 const MANAGE = [
@@ -236,6 +236,11 @@ describe('Clients (integration)', () => {
     });
 
     it('active → dormant succeeds when actor holds clients.dormantise', async () => {
+      // The workflow engine consults `rbacService.getPermissionsForUser`
+      // (DB-backed), not the mock-auth header — grant `clients.dormantise`
+      // to the default test user so the transition's `requiredPermissions`
+      // check passes.
+      await grantPermissions(ctx.db, DEFAULT_TEST_USER_ID, ['clients.dormantise']);
       const created = await request(ctx.httpServer)
         .post('/api/v1/clients/with-contacts')
         .set(withAuth(MANAGE))

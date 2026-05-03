@@ -7,7 +7,9 @@ import {
   createLawWithHandler,
   createFiling,
   createFilingPrereqs,
+  grantPermissions,
 } from './setup/fixtures';
+import { DEFAULT_TEST_USER_ID } from '@packages/platform-testing';
 
 const READ = ['compliance-rules.read'];
 const MANAGE = [
@@ -357,6 +359,11 @@ describe('Compliance Rules (integration)', () => {
     });
 
     it('allows active → deprecated via /transition with the deprecate perm', async () => {
+      // The workflow engine consults `rbacService.getPermissionsForUser`
+      // (DB-backed), not the mock-auth header. Grant `compliance-rules.deprecate`
+      // to the default test user so the transition's `requiredPermissions`
+      // check passes — same pattern as compliance-filings tests.
+      await grantPermissions(ctx.db, DEFAULT_TEST_USER_ID, ['compliance-rules.deprecate']);
       const rule = await createRule();
       await request(ctx.httpServer)
         .post(`/api/v1/compliance-rules/${rule.id}/transition`)
@@ -396,6 +403,8 @@ describe('Compliance Rules (integration)', () => {
     });
 
     it('succeeds with compliance-rules.deprecate', async () => {
+      // Workflow engine reads perms from the DB, not the mock-auth header.
+      await grantPermissions(ctx.db, DEFAULT_TEST_USER_ID, ['compliance-rules.deprecate']);
       const rule = await createRule();
       // Bring it to 'active' first so the cascade path is meaningful.
       await request(ctx.httpServer)
