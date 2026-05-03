@@ -1,4 +1,5 @@
-import { queryOptions, useQuery } from '@tanstack/react-query';
+import { useMemo } from 'react';
+import { queryOptions, useInfiniteQuery } from '@tanstack/react-query';
 import { useEntityEngine } from '@packages/entity-engine-ui';
 
 interface PaginatedResponse<T> {
@@ -29,9 +30,15 @@ export interface OrgUnitLawAssignment {
   isGlobal: boolean;
 }
 
-interface OrgUnitLawAssignmentsResult {
+export interface OrgUnitLawAssignmentsResult {
   data: OrgUnitLawAssignment[];
+  /** Server-known total of assignments for this unit (across all pages). */
+  total: number;
+  /** A page beyond `data.length` exists. */
+  hasMore: boolean;
   isLoading: boolean;
+  isFetchingNextPage: boolean;
+  fetchNextPage: () => void;
   error: unknown;
 }
 
@@ -54,6 +61,7 @@ type ApiFn = {
 };
 
 const BASE = '/law-handlers';
+const DEFAULT_PAGE_SIZE = 25;
 
 export const lawHandlersQueryKey = ['law-handlers'] as const;
 
@@ -84,28 +92,61 @@ function buildQuery(params: Record<string, unknown>): string {
 }
 
 /**
- * Returns law assignments for a single org unit. The list response embeds
- * `lawCode` / `lawName` per row via server-side composition in
- * LawHandlersService — no second query and no client-side join.
+ * Returns law assignments for a single org unit, paginated. The list
+ * response embeds `lawCode` / `lawName` per row via server-side composition
+ * in LawHandlersService — no second query and no client-side join.
+ *
+ * Replaces the previous single-shot `?limit=100` fetch (silent truncation
+ * the moment a unit handles > 100 laws). `useInfiniteQuery` mirrors
+ * `useFilingsBucketInfinite` / `useFilingsRangeInfinite`: callers render
+ * `data` and surface `total`, `hasMore`, `fetchNextPage` as a "Showing N
+ * of M — Load more" affordance per `.claude/rules/data-fetching.md`.
  */
 export function useLawHandlersByOrgUnit(
   orgEntityId: string | null | undefined,
+  options: { limit?: number } = {},
 ): OrgUnitLawAssignmentsResult {
   const { apiFn } = useEntityEngine();
-  const handlersQuery = useQuery(
-    lawHandlersQueries(apiFn).list(
-      orgEntityId ? { orgEntityId, limit: 100 } : { limit: 0 },
-    ),
+  const limit = options.limit ?? DEFAULT_PAGE_SIZE;
+  const enabled = !!orgEntityId;
+
+  const query = useInfiniteQuery<PaginatedResponse<LawHandlerRow>>({
+    queryKey: [
+      ...lawHandlersQueryKey,
+      'list',
+      'by-org-unit',
+      { orgEntityId: orgEntityId ?? null, limit },
+    ] as const,
+    queryFn: ({ pageParam = 1 }) =>
+      apiFn.get<PaginatedResponse<LawHandlerRow>>(
+        `${BASE}${buildQuery({ orgEntityId, limit, page: pageParam })}`,
+      ),
+    initialPageParam: 1,
+    getNextPageParam: (lastPage) => {
+      const next = lastPage.meta.page + 1;
+      return next <= lastPage.meta.totalPages ? next : undefined;
+    },
+    enabled,
+    placeholderData: (prev) => prev,
+  });
+
+  const rows = useMemo(
+    () => (query.data?.pages ?? []).flatMap((p) => p.data),
+    [query.data],
   );
+  const data = useMemo(() => rows.map(projectLawHandler), [rows]);
+  const total = query.data?.pages[0]?.meta.total ?? 0;
 
-  if (!orgEntityId) {
-    return { data: [], isLoading: false, error: null };
-  }
-
-  const handlers = handlersQuery.data?.data ?? [];
   return {
-    data: handlers.map(projectLawHandler),
-    isLoading: handlersQuery.isLoading,
-    error: handlersQuery.error,
+    data: enabled ? data : [],
+    total: enabled ? total : 0,
+    hasMore: enabled ? (query.hasNextPage ?? false) : false,
+    isLoading: enabled ? query.isLoading : false,
+    isFetchingNextPage: query.isFetchingNextPage,
+    fetchNextPage: () => {
+      void query.fetchNextPage();
+    },
+    error: enabled ? query.error : null,
   };
 }
+
