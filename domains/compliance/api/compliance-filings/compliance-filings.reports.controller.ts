@@ -1,9 +1,19 @@
 import { Controller, Get, Header, Query, Res } from '@nestjs/common';
-import type { Response } from 'express';
 import { todayInTimezone } from '@packages/common';
 import { AccessContext, RequirePermission, type DataAccessContext } from '@packages/rbac';
 import { ComplianceFilingsReportsService } from './compliance-filings.reports.service';
 import { csvDisposition, toCsv } from './compliance-filings.csv';
+
+/**
+ * Minimal structural type for the Express `Response` object — covers
+ * the two methods the CSV endpoints need (setHeader, send). Avoids
+ * adding `@types/express` to the domain's dev deps; the runtime object
+ * is the same Express response Nest passes to `@Res()`.
+ */
+interface CsvResponse {
+  setHeader: (name: string, value: string) => void;
+  send: (body: string) => void;
+}
 
 const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
 
@@ -91,7 +101,7 @@ export class ComplianceFilingsReportsController {
   @RequirePermission('reports.read')
   @Header('Content-Type', 'text/csv; charset=utf-8')
   async getComplianceCsv(
-    @Res() res: Response,
+    @Res() res: CsvResponse,
     @Query('from') fromParam: string | undefined,
     @Query('to') toParam: string | undefined,
     @Query('today') todayParam: string | undefined,
@@ -141,7 +151,7 @@ export class ComplianceFilingsReportsController {
   @RequirePermission('reports.read')
   @Header('Content-Type', 'text/csv; charset=utf-8')
   async getOverdueCsv(
-    @Res() res: Response,
+    @Res() res: CsvResponse,
     @Query('today') todayParam: string | undefined,
     @AccessContext() accessCtx?: DataAccessContext,
   ): Promise<void> {

@@ -8,6 +8,11 @@ import {
 } from '@domains/compliance-api/compliance-filings';
 import { OrgUnitsReportsService } from './org-units.reports.service';
 
+// `apps/compliance` already depends on `@types/express`, so we type
+// the response as the real Express `Response` here. The domain-side
+// reports controller uses a structural alias because the domain's
+// package.json intentionally doesn't pull `@types/express` in.
+
 const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
 
 function resolveCalendarDate(input: string | undefined, fallback: string): string {
