@@ -2024,6 +2024,9 @@ importers:
       '@packages/org-units':
         specifier: workspace:*
         version: link:../../../packages/addons/org-units/api
+      '@packages/query-builder':
+        specifier: workspace:*
+        version: link:../../../packages/core/query-builder
       '@packages/rbac':
         specifier: workspace:*
         version: link:../../../packages/platform/rbac/api
