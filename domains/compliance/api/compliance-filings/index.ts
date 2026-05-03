@@ -53,3 +53,19 @@ export {
   toCsv,
   csvDisposition,
 } from './compliance-filings.csv';
+
+/**
+ * PDF rendering helpers — sibling to the CSV exports. Exposed so the
+ * app-level org-units workload report controller can render the team
+ * workload tab as a PDF without re-implementing the CSS / header /
+ * footer chrome the compliance + overdue exports use.
+ */
+export {
+  escapeHtml,
+  pdfDisposition,
+  pdfFooterHtml,
+  renderCompliancePdf,
+  renderOverduePdf,
+  renderTeamWorkloadPdf,
+  type TeamWorkloadPdfRow,
+} from './compliance-filings.pdf-templates';

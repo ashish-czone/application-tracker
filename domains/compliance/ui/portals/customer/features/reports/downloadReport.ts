@@ -1,5 +1,8 @@
 import { tokenStore } from '@packages/auth-ui';
 
+/** Supported export formats for the report download helpers. */
+export type ReportDownloadFormat = 'csv' | 'pdf';
+
 /**
  * Resolves the API base URL the same way `apps/compliance-web/src/lib/api.ts`
  * does — `VITE_API_URL` if set, else `/api/v1`. Reading the same env var
@@ -13,27 +16,31 @@ function apiBaseUrl(): string {
 }
 
 /**
- * Download a CSV report from the API as a file.
+ * Download a report from the API as a file. Format-agnostic: the server
+ * dictates the bytes (CSV string or PDF binary) and the filename via
+ * `Content-Disposition`; this helper just attaches the auth token and
+ * triggers a synthetic-anchor download.
  *
  * Why a custom helper instead of `apiFn.get(...)`:
  *
  *  - The shared `ApiFn` always parses the response as JSON; CSV would
- *    be mangled on the way back.
- *  - `window.location = '/api/.../foo.csv'` would skip the `Authorization:
- *    Bearer` header (the auth tokens live in localStorage, not cookies),
- *    so the request 401s before it reaches the controller.
+ *    be mangled and a PDF (binary) corrupted on the way back.
+ *  - `window.location = '/api/.../foo.pdf'` would skip the
+ *    `Authorization: Bearer` header (the auth tokens live in
+ *    localStorage, not cookies), so the request 401s before it
+ *    reaches the controller.
  *
- * The helper attaches the current access token, fetches as a blob, and
- * triggers a download via a synthetic `<a download>`. Filename is taken
- * from the server's `Content-Disposition` header so the date stamp the
- * controller produced (today's calendar date) wins.
+ * The helper attaches the current access token, fetches as a blob,
+ * and triggers a download via a synthetic `<a download>`. Filename
+ * is taken from the server's `Content-Disposition` header so the
+ * date stamp the controller produced (today's calendar date) wins.
  *
  * Lives in the customer reports feature folder because nothing else in
- * compliance needs CSV downloads today. If a second consumer ever needs
+ * compliance needs file downloads today. If a second consumer ever needs
  * it, lift verbatim into a shared customer-portal helper — there is no
  * state.
  */
-export async function downloadReportCsv(
+export async function downloadReport(
   path: string,
   fallbackFilename: string,
 ): Promise<void> {
@@ -44,7 +51,7 @@ export async function downloadReportCsv(
   const res = await fetch(`${apiBaseUrl()}${path}`, { headers });
   if (!res.ok) {
     const errorBody = await res.text().catch(() => '');
-    throw new Error(`CSV download failed (${res.status}): ${errorBody}`);
+    throw new Error(`Report download failed (${res.status}): ${errorBody}`);
   }
 
   const blob = await res.blob();

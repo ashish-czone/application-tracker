@@ -1,11 +1,15 @@
 import { useState, useMemo } from 'react';
 import { Link } from 'react-router';
 import { format, startOfMonth, subMonths } from 'date-fns';
-import { Download, TrendingUp, Clock, Users } from 'lucide-react';
+import { ChevronDown, Download, TrendingUp, Clock, Users } from 'lucide-react';
 import {
   DataGridShell,
   Button,
   CoarseTabs,
+  DropdownMenu,
+  DropdownMenuTrigger,
+  DropdownMenuContent,
+  DropdownMenuItem,
   Eyebrow,
   SearchInput,
   ScreenLayout,
@@ -36,28 +40,32 @@ import { useDebouncedValue } from '../../../../hooks/useDebouncedValue';
 import { useFilingsList } from '../../../../hooks/useFilingsList';
 import { useFilingsSummary } from '../../../../hooks/useFilingsSummary';
 import { initialsFromName, colorForClient } from '../clients/api/mapClientRecord';
-import { downloadReportCsv } from './downloadReportCsv';
+import { downloadReport, type ReportDownloadFormat } from './downloadReport';
 
 /**
- * Translates the active report tab into a server CSV path. The path
- * carries the same date-range filter the user has applied on screen so
- * the export matches what they're looking at; `q` stays out of the URL
- * because the export is the operator-friendly artefact ("the full
- * picture for this period") and search-narrowing belongs to the on-
- * screen view.
+ * Translates the active report tab + format into a server export path.
+ * The path carries the same date-range filter the user has applied on
+ * screen so the export matches what they're looking at; `q` stays out
+ * of the URL because the export is the operator-friendly artefact ("the
+ * full picture for this period") and search-narrowing belongs to the
+ * on-screen view.
  */
-function buildCsvPath(tab: ReportTab, range: { from: string; to: string }): string {
+function buildExportPath(
+  tab: ReportTab,
+  format: ReportDownloadFormat,
+  range: { from: string; to: string },
+): string {
   const params = new URLSearchParams({ from: range.from, to: range.to });
   switch (tab) {
     case 'compliance':
-      return `/compliance-filings/reports/compliance.csv?${params.toString()}`;
+      return `/compliance-filings/reports/compliance.${format}?${params.toString()}`;
     case 'overdue':
       // Overdue is always "as of today" — date range doesn't apply.
-      return `/compliance-filings/reports/overdue.csv`;
+      return `/compliance-filings/reports/overdue.${format}`;
     case 'workload':
-      return `/org-units/reports/team-workload.csv?${params.toString()}`;
+      return `/org-units/reports/team-workload.${format}?${params.toString()}`;
     default:
-      return `/compliance-filings/reports/compliance.csv?${params.toString()}`;
+      return `/compliance-filings/reports/compliance.${format}?${params.toString()}`;
   }
 }
 
@@ -281,22 +289,33 @@ export function ReportsPage() {
       actions={
         <>
           <DateRangePopover value={dateRange} onChange={setDateRange} today={new Date()} />
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => {
-              // Fire-and-forget: surface failures via a thrown error in the
-              // helper (caught by the global error boundary). No spinner —
-              // the download fires immediately on success.
-              void downloadReportCsv(
-                buildCsvPath(activeTab, range),
-                `${activeTab}-report.csv`,
-              );
-            }}
-          >
-            <Download className="w-3.5 h-3.5 mr-1.5" strokeWidth={2} />
-            Download CSV
-          </Button>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="outline" size="sm">
+                <Download className="w-3.5 h-3.5 mr-1.5" strokeWidth={2} />
+                Download
+                <ChevronDown className="w-3.5 h-3.5 ml-1.5" strokeWidth={2} />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" sideOffset={4} className="min-w-[140px]">
+              {(['csv', 'pdf'] as const).map((fmt) => (
+                <DropdownMenuItem
+                  key={fmt}
+                  onSelect={() => {
+                    // Fire-and-forget: surface failures via a thrown error
+                    // in the helper (caught by the global error boundary).
+                    // No spinner — the download fires immediately on success.
+                    void downloadReport(
+                      buildExportPath(activeTab, fmt, range),
+                      `${activeTab}-report.${fmt}`,
+                    );
+                  }}
+                >
+                  {fmt.toUpperCase()}
+                </DropdownMenuItem>
+              ))}
+            </DropdownMenuContent>
+          </DropdownMenu>
         </>
       }
     >
