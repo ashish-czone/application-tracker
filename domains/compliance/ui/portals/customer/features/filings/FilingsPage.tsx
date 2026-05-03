@@ -16,6 +16,7 @@ import {
   type ActiveFilter,
   type KanbanColumnDef,
   type KanbanCardData,
+  type KanbanColumnState,
 } from '@packages/ui';
 import { ComplianceCalendar } from '../../../../components/composites';
 import type { FilingRow } from './types';
@@ -36,6 +37,7 @@ import type { Filing } from '../../../../types';
 import { ScreenPreviewTopBar } from '../shared/ScreenPreviewTopBar';
 import { useComplianceFilingRows, useUpdateComplianceFiling } from '../../../../hooks/useComplianceFilings';
 import { useFilingsList, type FilingsListBucket } from '../../../../hooks/useFilingsList';
+import { useFilingsBucketInfinite } from '../../../../hooks/useFilingsBucket';
 import { useFilingsSummary } from '../../../../hooks/useFilingsSummary';
 import type { FilingListRow } from '../../../../hooks/useFilingsByDueWindow';
 
@@ -146,6 +148,27 @@ const PRIORITY_MAP: Record<string, FilingRow['priority']> = {
 
 function mapPriority(p: string): FilingRow['priority'] {
   return PRIORITY_MAP[p] ?? 'normal';
+}
+
+interface LoadMoreButtonProps {
+  rendered: number;
+  total: number;
+  isFetching: boolean;
+  onClick: () => void;
+}
+
+function LoadMoreButton({ rendered, total, isFetching, onClick }: LoadMoreButtonProps) {
+  const remaining = Math.max(0, total - rendered);
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      disabled={isFetching || remaining === 0}
+      className="mt-2 w-full px-3 py-2 text-[11px] uppercase tracking-eyebrow font-sans font-medium border border-rule text-ink-muted hover:text-ink hover:border-ink disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+    >
+      {isFetching ? 'Loading…' : `Load more (${remaining} remaining)`}
+    </button>
+  );
 }
 
 export function FilingsPage() {
@@ -297,12 +320,74 @@ export function FilingsPage() {
     { value: 'filed' as const, label: 'Filed', count: summary.completed },
   ];
 
-  // Kanban + calendar both still derive from the legacy hook's full row set —
-  // see PR-3b for the per-column / per-month migration.
-  const kanbanCards: KanbanCardData[] = useMemo(
-    () => legacy.rows.map((f) => ({ ...f, id: f.id, columnId: f.status })),
-    [legacy.rows],
-  );
+  // Kanban: each column fires its own paginated query against the same
+  // /compliance-filings endpoint with a fixed bucket. Filters (search,
+  // client/law/team) propagate to all 5 columns. `enabled` gates fetching to
+  // when the kanban tab is actually visible — switching to list/calendar
+  // doesn't keep these queries refetching, but cached pages survive so
+  // returning to kanban is instant.
+  const kanbanFilters = {
+    search: search.trim() || undefined,
+    clientIds: clientFilter.length > 0 ? clientFilter : undefined,
+    lawIds: lawFilter.length > 0 ? lawFilter : undefined,
+    assigneeTeamIds: handlerFilter.length > 0 ? handlerFilter : undefined,
+    enabled: viewMode === 'kanban',
+  };
+  const overdueBucket = useFilingsBucketInfinite({ bucket: 'overdue', ...kanbanFilters });
+  const dueTodayBucket = useFilingsBucketInfinite({ bucket: 'due-today', ...kanbanFilters });
+  const dueThisWeekBucket = useFilingsBucketInfinite({ bucket: 'due-this-week', ...kanbanFilters });
+  const upcomingBucket = useFilingsBucketInfinite({ bucket: 'upcoming', ...kanbanFilters });
+  const filedBucket = useFilingsBucketInfinite({ bucket: 'filed', ...kanbanFilters });
+
+  const bucketsByColumn: Record<string, ReturnType<typeof useFilingsBucketInfinite>> = {
+    overdue: overdueBucket,
+    'due-today': dueTodayBucket,
+    'due-this-week': dueThisWeekBucket,
+    upcoming: upcomingBucket,
+    filed: filedBucket,
+  };
+
+  // Concatenate per-bucket rows in column order, stamping `columnId` from the
+  // bucket key. We trust the server's bucket assignment over a client-side
+  // dueDate recompute — `notCompleted + dueBefore=today-1` etc. are the
+  // single source of truth (see useFilingsList.bucketToQueryParams).
+  const kanbanCards: KanbanCardData[] = useMemo(() => {
+    const out: KanbanCardData[] = [];
+    for (const col of KANBAN_COLUMNS) {
+      const bucket = bucketsByColumn[col.id];
+      for (const row of bucket.rows) {
+        const filingRow = rowToFilingRow(row);
+        out.push({ ...filingRow, status: col.id as FilingRow['status'], id: filingRow.id, columnId: col.id });
+      }
+    }
+    return out;
+  }, [overdueBucket.rows, dueTodayBucket.rows, dueThisWeekBucket.rows, upcomingBucket.rows, filedBucket.rows]);
+
+  const kanbanColumnState: Record<string, KanbanColumnState> = useMemo(() => {
+    const state: Record<string, KanbanColumnState> = {};
+    for (const col of KANBAN_COLUMNS) {
+      const bucket = bucketsByColumn[col.id];
+      state[col.id] = {
+        total: bucket.total,
+        isLoading: bucket.isLoading,
+        footer: bucket.hasMore ? (
+          <LoadMoreButton
+            rendered={bucket.rows.length}
+            total={bucket.total}
+            isFetching={bucket.isFetchingNextPage}
+            onClick={bucket.fetchNextPage}
+          />
+        ) : undefined,
+      };
+    }
+    return state;
+  }, [
+    overdueBucket.rows.length, overdueBucket.total, overdueBucket.hasMore, overdueBucket.isLoading, overdueBucket.isFetchingNextPage,
+    dueTodayBucket.rows.length, dueTodayBucket.total, dueTodayBucket.hasMore, dueTodayBucket.isLoading, dueTodayBucket.isFetchingNextPage,
+    dueThisWeekBucket.rows.length, dueThisWeekBucket.total, dueThisWeekBucket.hasMore, dueThisWeekBucket.isLoading, dueThisWeekBucket.isFetchingNextPage,
+    upcomingBucket.rows.length, upcomingBucket.total, upcomingBucket.hasMore, upcomingBucket.isLoading, upcomingBucket.isFetchingNextPage,
+    filedBucket.rows.length, filedBucket.total, filedBucket.hasMore, filedBucket.isLoading, filedBucket.isFetchingNextPage,
+  ]);
 
   function handleCardMove(event: {
     cardId: string;
@@ -536,15 +621,14 @@ export function FilingsPage() {
               <KanbanBoard
                 columns={KANBAN_COLUMNS}
                 cards={kanbanCards}
+                columnState={kanbanColumnState}
                 onCardMove={handleCardMove}
                 renderCard={(card) => {
                   const f = card as unknown as FilingRow;
                   return (
                     <FilingKanbanCard
                       filing={f}
-                      onOpen={(row) =>
-                        setSelectedFiling(legacy.rows.find((r) => r.id === row.id) ?? null)
-                      }
+                      onOpen={(row) => setSelectedFiling(row)}
                     />
                   );
                 }}
