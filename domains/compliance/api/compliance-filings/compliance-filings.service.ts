@@ -1,10 +1,12 @@
 import { BadRequestException, Inject, Injectable } from '@nestjs/common';
-import { DatabaseService, eq, sql, withScope } from '@packages/database';
+import { count, DatabaseService, eq, sql, users, withScope } from '@packages/database';
 import { BaseCrudService, type BaseListQuery } from '@packages/crud-base';
 import { WorkflowEngineService, WorkflowRegistryService } from '@packages/workflows';
 import { DomainEventEmitter } from '@packages/events';
+import { orgUnits } from '@packages/org-units';
 import { type DataAccessContext, DataAccessScopeService } from '@packages/rbac';
 import { complianceFilings } from './compliance-filings.schema';
+import { clients } from '../clients/clients.schema';
 import { LawsService } from '../laws';
 import { buildFilingExternalKey } from './compliance-filings.external-key';
 import { COMPLIANCE_FILINGS_WORKFLOW } from './compliance-filings.workflow';
@@ -72,36 +74,89 @@ export class ComplianceFilingsService {
   ) {}
 
   /**
-   * List filings with embedded law display fields (`lawCode`, `lawName`,
-   * `lawJurisdiction`) per row. The entity engine already injects `__label`
-   * fields for lookup columns (clientId, lawId, ruleId, assigneeTeamId,
-   * assigneeId), but lookup labels are single-valued; the dashboard widgets
-   * and list page need the law's code AND jurisdiction together. We resolve
-   * those via a single batched call to LawsService — service composition
-   * across modules, never a JOIN.
+   * List filings with embedded display fields per row: `clientName`,
+   * `assigneeFirstName`, `assigneeLastName`, `assigneeTeamName` (all four
+   * via SQL LEFT JOIN), plus `lawCode` / `lawName` / `lawJurisdiction`
+   * (still via service composition — laws is not a shared identity table,
+   * so the cross-module-join allowance doesn't extend to it).
+   *
+   * The driver (`compliance_filings`) carries the actor-scope predicate;
+   * joined tables (`clients`, `users`, `org_units`) get only structural
+   * scope — soft-delete + tenant via `withScope(...)` on each LEFT JOIN
+   * ON clause. Soft-delete predicates living in the JOIN ON (rather than
+   * the WHERE) means a filing whose linked client / assignee is soft-
+   * deleted still appears in the response with the joined column NULL,
+   * instead of disappearing from the user's list. See `data-access-scope.md`
+   * § "Joined tables: the driver is the authorization root".
+   *
+   * Bypasses `BaseCrudService.list` because the base only handles a
+   * single-table SELECT — joins, projection, and total-count are
+   * consumer responsibilities once the shape grows. Driver scope is
+   * built explicitly via `buildFilingsScopePredicate(...)` (same helper
+   * used by `getSummary` and the report endpoints) so the filings.read
+   * scope shape stays in one place.
    */
   async list(query: BaseListQuery, accessCtx?: DataAccessContext) {
-    const result = await this.crud.list(query, accessCtx);
-    const data = result.data as Record<string, unknown>[];
-    const lawIds = collectLawIds(data);
-    if (lawIds.size === 0) return result;
+    const limit = Math.max(1, Math.min(query.limit ?? 25, 100));
+    const page = Math.max(1, query.page ?? 1);
+    const offset = (page - 1) * limit;
 
-    const laws = await this.lawsService.findDisplayByIds([...lawIds]);
-    const byId = new Map(laws.map((l) => [l.id, l]));
+    const scopePredicate = await buildFilingsScopePredicate(this.dataAccessScope, accessCtx);
+    const driverWhere = withScope(complianceFilings, scopePredicate);
 
-    return {
-      ...result,
-      data: data.map((row) => {
+    const rows = await this.database.db
+      .select({
+        filing: complianceFilings,
+        clientName: clients.name,
+        assigneeFirstName: users.firstName,
+        assigneeLastName: users.lastName,
+        assigneeTeamName: orgUnits.name,
+      })
+      .from(complianceFilings)
+      .leftJoin(clients,  withScope(clients,  eq(complianceFilings.clientId,        clients.id)))
+      .leftJoin(users,    withScope(users,    eq(complianceFilings.assigneeId,      users.id)))
+      .leftJoin(orgUnits, withScope(orgUnits, eq(complianceFilings.assigneeTeamId, orgUnits.id)))
+      .where(driverWhere)
+      .limit(limit)
+      .offset(offset);
+
+    const [totalRow] = await this.database.db
+      .select({ total: count() })
+      .from(complianceFilings)
+      .where(driverWhere);
+    const total = Number(totalRow?.total ?? 0);
+
+    const flat: Record<string, unknown>[] = rows.map((row) => ({
+      ...(row.filing as Record<string, unknown>),
+      clientName: row.clientName,
+      assigneeFirstName: row.assigneeFirstName,
+      assigneeLastName: row.assigneeLastName,
+      assigneeTeamName: row.assigneeTeamName,
+    }));
+
+    const lawIds = collectLawIds(flat);
+    if (lawIds.size > 0) {
+      const laws = await this.lawsService.findDisplayByIds([...lawIds]);
+      const byId = new Map(laws.map((l) => [l.id, l]));
+      for (const row of flat) {
         const lawId = typeof row.lawId === 'string' ? row.lawId : null;
         const law = lawId ? byId.get(lawId) : undefined;
-        if (!law) return row;
-        return {
-          ...row,
-          lawCode: law.code,
-          lawName: law.name,
-          lawJurisdiction: law.jurisdiction,
-        };
-      }),
+        if (law) {
+          row.lawCode = law.code;
+          row.lawName = law.name;
+          row.lawJurisdiction = law.jurisdiction;
+        }
+      }
+    }
+
+    return {
+      data: flat,
+      meta: {
+        page,
+        limit,
+        total,
+        totalPages: Math.max(1, Math.ceil(total / limit)),
+      },
     };
   }
 
