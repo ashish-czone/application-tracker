@@ -1,14 +1,57 @@
 import { Inject, Injectable, NotFoundException } from '@nestjs/common';
+import { count } from 'drizzle-orm';
 import { DatabaseService, eq, withScope } from '@packages/database';
 import { DomainEventEmitter } from '@packages/events';
 import { BaseCrudService } from '@packages/crud-base';
-import type { DataAccessContext } from '@packages/rbac';
+import { buildListQuery } from '@packages/query-builder';
+import { DataAccessScopeService, type DataAccessContext } from '@packages/rbac';
 import { clientContacts } from './client-contacts.schema';
 import { CLIENT_CONTACTS_UPDATED } from '../events/types';
 import { CLIENT_CONTACTS_CRUD_TOKEN } from './client-contacts.crud-token';
-import type { CreateClientContactDto, UpdateClientContactDto } from './client-contacts.dto';
+import { CLIENT_CONTACTS_ANCHORS } from './client-contacts.scope';
+import type {
+  ClientContactsListQuery,
+  CreateClientContactDto,
+  UpdateClientContactDto,
+} from './client-contacts.dto';
 
 type ContactRow = typeof clientContacts.$inferSelect;
+
+/**
+ * Whitelisted columns for the list endpoint's structured `filters`
+ * JSON and bare passthrough id filters. Anything outside this map is
+ * silently dropped — the frontend cannot push arbitrary column
+ * predicates through. `complianceClientId` is the primary access
+ * pattern (the client detail page sends `?complianceClientId=…`).
+ */
+const FILTERABLE_CLIENT_CONTACT_COLUMNS = {
+  id: clientContacts.id,
+  clientId: clientContacts.clientId,
+  complianceClientId: clientContacts.complianceClientId,
+  complianceDesignation: clientContacts.complianceDesignation,
+  complianceIsPrimary: clientContacts.complianceIsPrimary,
+  primaryEmail: clientContacts.primaryEmail,
+  primaryPhone: clientContacts.primaryPhone,
+  jobTitle: clientContacts.jobTitle,
+  doNotContact: clientContacts.doNotContact,
+  createdAt: clientContacts.createdAt,
+  updatedAt: clientContacts.updatedAt,
+} as const;
+
+/**
+ * Whitelisted sort keys. Anything outside this map falls back to the
+ * `defaultSort` registered with `buildListQuery` (`fullName` ASC — the
+ * typical user-facing label on the contacts list).
+ */
+const SORTABLE_CLIENT_CONTACT_COLUMNS = {
+  fullName: clientContacts.fullName,
+  primaryEmail: clientContacts.primaryEmail,
+  jobTitle: clientContacts.jobTitle,
+  complianceDesignation: clientContacts.complianceDesignation,
+  complianceIsPrimary: clientContacts.complianceIsPrimary,
+  createdAt: clientContacts.createdAt,
+  updatedAt: clientContacts.updatedAt,
+} as const;
 
 /**
  * Client contacts service. Composes with `BaseCrudService` (no inheritance)
@@ -33,13 +76,67 @@ export class ClientContactsService {
     private readonly crud: BaseCrudService<typeof clientContacts>,
     private readonly database: DatabaseService,
     private readonly events: DomainEventEmitter,
+    private readonly dataAccessScope: DataAccessScopeService,
   ) {}
 
-  list(
-    query: Parameters<BaseCrudService<typeof clientContacts>['list']>[0] = {},
-    accessCtx?: DataAccessContext,
-  ) {
-    return this.crud.list(query, accessCtx);
+  /**
+   * Server-paginated list with structured filters JSON, bare passthrough
+   * id filters (`?complianceClientId=…`), ILIKE search across name +
+   * contact channels, whitelisted sort, and a SQL `count()` for
+   * `meta.total`.
+   *
+   * Bypasses `BaseCrudService.list` because the base is by design a
+   * trivial pagination wrapper that drops filters and reports
+   * `total = rows.length` (the page size, not the table count). Without
+   * this, the client detail page's `?complianceClientId=…` filter was
+   * silently ignored — every fetch returned the first 10 contacts in the
+   * tenant, not the contacts for that client.
+   *
+   * Actor-scope: `CLIENT_CONTACTS_ANCHORS` is registered on the
+   * `BaseCrudService` and is dormant today (no role grant uses a
+   * non-`'any'` scope on `client-contacts.read`). We still call
+   * `buildPredicate(...)` so a future scoped grant lights up without a
+   * code change here — `buildPredicate` returns `undefined` when scope is
+   * `'any'`, which composes as a no-op through `withScope`.
+   */
+  async list(query: ClientContactsListQuery, accessCtx?: DataAccessContext) {
+    const scopePredicate = accessCtx
+      ? await this.dataAccessScope.buildPredicate(accessCtx, {
+          anchors: CLIENT_CONTACTS_ANCHORS,
+        })
+      : undefined;
+
+    const built = buildListQuery(clientContacts, query, {
+      scopePredicate,
+      filterableColumns: FILTERABLE_CLIENT_CONTACT_COLUMNS,
+      sortableColumns: SORTABLE_CLIENT_CONTACT_COLUMNS,
+      searchableColumns: [
+        clientContacts.fullName,
+        clientContacts.primaryEmail,
+        clientContacts.primaryPhone,
+        clientContacts.jobTitle,
+      ],
+      defaultSort: { field: 'fullName', order: 'asc' },
+      includeDeleted: query.includeDeleted,
+    });
+
+    const rows = await this.database.db
+      .select()
+      .from(clientContacts)
+      .where(built.where)
+      .orderBy(...built.orderBy)
+      .limit(built.limit)
+      .offset(built.offset);
+
+    const [totalRow] = await this.database.db
+      .select({ total: count() })
+      .from(clientContacts)
+      .where(built.where);
+
+    return {
+      data: rows,
+      meta: built.paginationMeta(Number(totalRow?.total ?? 0)),
+    };
   }
 
   findOneOrFail(id: string, accessCtx?: DataAccessContext) {
