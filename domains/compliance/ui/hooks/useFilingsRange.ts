@@ -9,7 +9,14 @@ export interface UseFilingsRangeInfiniteParams {
   dueAfter: string;
   /** Inclusive upper bound (YYYY-MM-DD). */
   dueBefore: string;
-  /** Page size. Defaults to 100 — calendar cells fan out a flat list, so larger pages keep the "Load more" tail rare. */
+  /**
+   * Page size. Defaults to 25 to align with the rest of the compliance
+   * infinite-query hooks (`useFilingsBucketInfinite` = 20, `useUsersApi`
+   * = 25). The calendar surfaces a "Showing N of M filings" footer and
+   * a "Load more" button via `ComplianceCalendar`'s `meta`/`onLoadMore`
+   * props, so any window with > limit filings is visible to the user
+   * rather than silently truncated.
+   */
   limit?: number;
   search?: string;
   sort?: string;
@@ -82,7 +89,7 @@ export function useFilingsRangeInfinite(
   params: UseFilingsRangeInfiniteParams,
 ): UseFilingsRangeInfiniteResult {
   const { apiFn } = useEntityEngine();
-  const limit = params.limit ?? 100;
+  const limit = params.limit ?? 25;
   const enabled = params.enabled ?? true;
 
   const query = useInfiniteQuery<PaginatedResponse<FilingListRow>>({

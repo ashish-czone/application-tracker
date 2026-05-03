@@ -39,16 +39,23 @@ export function UnitDetailPanel({
 
   const breadcrumb = useMemo(() => buildBreadcrumb(allUnits, unit.id), [allUnits, unit.id]);
   const children = useMemo(() => getUnitChildren(allUnits, unit.id), [allUnits, unit.id]);
-  const { data: lawAssignments, isLoading: lawAssignmentsLoading } = useLawHandlersByOrgUnit(
-    unit.id,
-  );
+  const {
+    data: lawAssignments,
+    total: lawAssignmentsTotal,
+    hasMore: lawAssignmentsHasMore,
+    isLoading: lawAssignmentsLoading,
+    isFetchingNextPage: lawAssignmentsFetchingMore,
+    fetchNextPage: fetchMoreLawAssignments,
+  } = useLawHandlersByOrgUnit(unit.id);
 
   const head = unit.head;
 
   const tabsWithCount: CoarseTabItem<DetailTab>[] = TABS.map((t) => {
     if (t.value === 'members') return { ...t, count: unit.memberCount };
     if (t.value === 'sub-units') return { ...t, count: children.length };
-    if (t.value === 'compliance') return { ...t, count: lawAssignments.length };
+    // Use server-known total so the tab badge reflects the full count
+    // even when only the first page has loaded.
+    if (t.value === 'compliance') return { ...t, count: lawAssignmentsTotal };
     return t;
   });
 
@@ -114,11 +121,11 @@ export function UnitDetailPanel({
               </div>
             </>
           )}
-          {lawAssignments.length > 0 && (
+          {lawAssignmentsTotal > 0 && (
             <>
               <div className="h-4 border-l border-rule" />
               <div className="text-[11px] font-sans text-ink-muted">
-                <span className="text-ink font-medium">{lawAssignments.length}</span> laws assigned
+                <span className="text-ink font-medium">{lawAssignmentsTotal}</span> laws assigned
               </div>
             </>
           )}
@@ -137,7 +144,14 @@ export function UnitDetailPanel({
           <MembersTab members={members} isLoading={membersLoading} onAddMember={onAddMember} />
         )}
         {tab === 'compliance' && (
-          <ComplianceTab assignments={lawAssignments} isLoading={lawAssignmentsLoading} />
+          <ComplianceTab
+            assignments={lawAssignments}
+            total={lawAssignmentsTotal}
+            hasMore={lawAssignmentsHasMore}
+            isLoading={lawAssignmentsLoading}
+            isFetchingMore={lawAssignmentsFetchingMore}
+            onLoadMore={fetchMoreLawAssignments}
+          />
         )}
       </div>
     </div>
@@ -272,10 +286,18 @@ function MembersTab({
 
 function ComplianceTab({
   assignments,
+  total,
+  hasMore,
   isLoading,
+  isFetchingMore,
+  onLoadMore,
 }: {
   assignments: OrgUnitLawAssignment[];
+  total: number;
+  hasMore: boolean;
   isLoading: boolean;
+  isFetchingMore: boolean;
+  onLoadMore: () => void;
 }) {
   return (
     <div>
@@ -305,27 +327,44 @@ function ComplianceTab({
           </p>
         </div>
       ) : (
-        <div className="border border-rule divide-y divide-rule">
-          {assignments.map((a) => (
-            <div
-              key={a.id}
-              className="flex items-center gap-4 px-4 py-3 hover:bg-paper-sunken/30 transition-colors"
-            >
-              <span className="font-mono text-[11px] tracking-wider text-ink-muted w-10 shrink-0">
-                {a.lawCode}
-              </span>
-              <div className="flex-1 min-w-0">
-                <div className="text-[13px] font-sans text-ink leading-none truncate">
-                  {a.lawName}
-                </div>
-                <div className="text-[10px] text-ink-muted font-sans mt-1">
-                  {a.isGlobal ? 'Default handler' : 'Client override'}
-                  {a.isPrimary ? ' · Primary' : ''}
+        <>
+          <div className="border border-rule divide-y divide-rule">
+            {assignments.map((a) => (
+              <div
+                key={a.id}
+                className="flex items-center gap-4 px-4 py-3 hover:bg-paper-sunken/30 transition-colors"
+              >
+                <span className="font-mono text-[11px] tracking-wider text-ink-muted w-10 shrink-0">
+                  {a.lawCode}
+                </span>
+                <div className="flex-1 min-w-0">
+                  <div className="text-[13px] font-sans text-ink leading-none truncate">
+                    {a.lawName}
+                  </div>
+                  <div className="text-[10px] text-ink-muted font-sans mt-1">
+                    {a.isGlobal ? 'Default handler' : 'Client override'}
+                    {a.isPrimary ? ' · Primary' : ''}
+                  </div>
                 </div>
               </div>
+            ))}
+          </div>
+          {(hasMore || isFetchingMore) && (
+            <div className="flex items-center justify-between mt-3">
+              <span className="text-[11px] font-sans tabular-nums text-ink-soft">
+                Showing {assignments.length} of {total} laws assigned
+              </span>
+              <button
+                type="button"
+                onClick={onLoadMore}
+                disabled={isFetchingMore || !hasMore}
+                className="px-3 h-7 border border-rule hover:border-ink text-[10px] uppercase tracking-eyebrow font-sans font-medium text-ink-muted hover:text-ink disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+              >
+                {isFetchingMore ? 'Loading…' : 'Load more'}
+              </button>
             </div>
-          ))}
-        </div>
+          )}
+        </>
       )}
     </div>
   );
