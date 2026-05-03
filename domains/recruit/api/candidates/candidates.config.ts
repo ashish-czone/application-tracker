@@ -84,10 +84,9 @@ export const candidatesConfig: EntityConfig = {
           selectionMode: 'single',
           submitUrl: '/applications',
           fieldMapping: { candidateId: ':id', jobOpeningId: ':selectedId' },
-          existingCheck: {
-            listUrl: '/applications',
-            filterField: 'candidateId',
-            matchField: 'jobOpeningId',
+          queryParams: { annotateApplicationsFor: ':id' },
+          markRowsBy: {
+            field: '__existingApplicationId',
             label: 'Already applied',
             disableSelection: true,
           },

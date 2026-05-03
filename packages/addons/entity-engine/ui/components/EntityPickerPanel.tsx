@@ -88,9 +88,18 @@ export function EntityPickerPanel(props: EntityPickerPanelProps) {
     setPage(1);
   }, []);
 
+  const resolvedQueryParams = useMemo(() => {
+    if (!pickerConfig?.queryParams) return {};
+    const out: Record<string, string> = {};
+    for (const [key, value] of Object.entries(pickerConfig.queryParams)) {
+      out[key] = value === ':id' ? sourceId : value;
+    }
+    return out;
+  }, [pickerConfig?.queryParams, sourceId]);
+
   const { data, isLoading } = hooks.useList({
     ...(filter ? { [filter.key]: filter.value } : {}),
-    ...(pickerConfig?.queryParams ?? {}),
+    ...resolvedQueryParams,
     page,
     limit: pageSize,
     sort,

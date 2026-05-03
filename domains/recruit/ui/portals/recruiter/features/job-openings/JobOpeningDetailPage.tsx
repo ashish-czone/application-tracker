@@ -829,10 +829,9 @@ export function JobOpeningDetailPage() {
             selectionMode: 'multiple',
             submitUrl: '/applications',
             fieldMapping: { jobOpeningId: ':id', candidateId: ':selectedId' },
-            existingCheck: {
-              listUrl: '/applications',
-              filterField: 'jobOpeningId',
-              matchField: 'candidateId',
+            queryParams: { annotateApplicationsFor: ':id' },
+            markRowsBy: {
+              field: '__existingApplicationId',
               label: 'Already applied',
               disableSelection: true,
             },

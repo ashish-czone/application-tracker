@@ -814,7 +814,11 @@ export interface PickerConfig {
   submitUrl: string;
   /** Maps field names to values. :id = current record, :selectedId = picked record */
   fieldMapping: Record<string, string>;
-  /** Extra query params forwarded to the picker's list call (e.g. server-side annotations). */
+  /**
+   * Extra query params forwarded to the picker's list call (e.g. server-side annotations).
+   * The literal value `':id'` is substituted with the picker's `sourceId` at runtime, mirroring
+   * `fieldMapping` placeholder semantics — useful for declarative config (e.g. `entity.config.ts`).
+   */
   queryParams?: Record<string, string>;
   /** Optional: render a badge and (by default) disable selection on rows whose `field` is truthy. */
   markRowsBy?: PickerRowMarker;
