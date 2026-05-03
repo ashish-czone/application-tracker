@@ -1,18 +1,27 @@
 import { Controller, Get, Header, Query, Res } from '@nestjs/common';
 import { todayInTimezone } from '@packages/common';
+import { PdfGeneratorService } from '@packages/pdf-generator';
 import { AccessContext, RequirePermission, type DataAccessContext } from '@packages/rbac';
 import { ComplianceFilingsReportsService } from './compliance-filings.reports.service';
 import { csvDisposition, toCsv } from './compliance-filings.csv';
+import {
+  pdfDisposition,
+  pdfFooterHtml,
+  renderCompliancePdf,
+  renderOverduePdf,
+} from './compliance-filings.pdf-templates';
 
 /**
  * Minimal structural type for the Express `Response` object — covers
- * the two methods the CSV endpoints need (setHeader, send). Avoids
+ * the methods the CSV + PDF endpoints need (setHeader, send). Avoids
  * adding `@types/express` to the domain's dev deps; the runtime object
- * is the same Express response Nest passes to `@Res()`.
+ * is the same Express response Nest passes to `@Res()`. The CSV path
+ * sends a string; the PDF path sends a Buffer (binary), so `send` is
+ * typed as the union of both — the runtime accepts each.
  */
-interface CsvResponse {
+interface ReportResponse {
   setHeader: (name: string, value: string) => void;
-  send: (body: string) => void;
+  send: (body: string | Buffer) => void;
 }
 
 const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
@@ -37,7 +46,10 @@ function defaultRange(today: string): { from: string; to: string } {
 
 @Controller('compliance-filings/reports')
 export class ComplianceFilingsReportsController {
-  constructor(private readonly reports: ComplianceFilingsReportsService) {}
+  constructor(
+    private readonly reports: ComplianceFilingsReportsService,
+    private readonly pdfGenerator: PdfGeneratorService,
+  ) {}
 
   @Get('trend')
   @RequirePermission('reports.read')
@@ -101,7 +113,7 @@ export class ComplianceFilingsReportsController {
   @RequirePermission('reports.read')
   @Header('Content-Type', 'text/csv; charset=utf-8')
   async getComplianceCsv(
-    @Res() res: CsvResponse,
+    @Res() res: ReportResponse,
     @Query('from') fromParam: string | undefined,
     @Query('to') toParam: string | undefined,
     @Query('today') todayParam: string | undefined,
@@ -151,7 +163,7 @@ export class ComplianceFilingsReportsController {
   @RequirePermission('reports.read')
   @Header('Content-Type', 'text/csv; charset=utf-8')
   async getOverdueCsv(
-    @Res() res: CsvResponse,
+    @Res() res: ReportResponse,
     @Query('today') todayParam: string | undefined,
     @AccessContext() accessCtx?: DataAccessContext,
   ): Promise<void> {
@@ -199,5 +211,75 @@ export class ComplianceFilingsReportsController {
 
     res.setHeader('Content-Disposition', csvDisposition('overdue', today));
     res.send(csv);
+  }
+
+  /**
+   * PDF export of the per-client compliance summary — same data as
+   * `/compliance.csv`, rendered as a portrait A4 PDF via Puppeteer.
+   * No LIMIT (the date range is the bound). Does not accept a `limit`
+   * parameter; the data-fetching rule forbids one for full-result
+   * exports.
+   */
+  @Get('compliance.pdf')
+  @RequirePermission('reports.read')
+  @Header('Content-Type', 'application/pdf')
+  async getCompliancePdf(
+    @Res() res: ReportResponse,
+    @Query('from') fromParam: string | undefined,
+    @Query('to') toParam: string | undefined,
+    @Query('today') todayParam: string | undefined,
+    @Query('q') q: string | undefined,
+    @AccessContext() accessCtx?: DataAccessContext,
+  ): Promise<void> {
+    const today = resolveCalendarDate(todayParam, resolveToday());
+    const range = defaultRange(today);
+    const from = resolveCalendarDate(fromParam, range.from);
+    const to = resolveCalendarDate(toParam, range.to);
+
+    // Reuses the same service method that powers the CSV sibling — no
+    // SQL duplication, same scope predicate, same shape of rows.
+    const rows = await this.reports.getByClient({ from, to }, today, { q }, accessCtx);
+
+    const html = renderCompliancePdf({ rows, range: { from, to }, today });
+    const pdfBuffer = await this.pdfGenerator.generatePdf(html, {
+      format: 'A4',
+      landscape: false,
+      printBackground: true,
+      footerHtml: pdfFooterHtml(),
+    });
+
+    res.setHeader('Content-Disposition', pdfDisposition('compliance', today));
+    res.send(pdfBuffer);
+  }
+
+  /**
+   * PDF export of the unbounded overdue filings list — same data as
+   * `/overdue.csv`, rendered as a landscape A4 PDF (the column set is
+   * wide). Same predicate as the on-screen table; same display joins
+   * (clientName / lawCode / assignee labels) so the file is readable
+   * without a side-fetch.
+   */
+  @Get('overdue.pdf')
+  @RequirePermission('reports.read')
+  @Header('Content-Type', 'application/pdf')
+  async getOverduePdf(
+    @Res() res: ReportResponse,
+    @Query('today') todayParam: string | undefined,
+    @AccessContext() accessCtx?: DataAccessContext,
+  ): Promise<void> {
+    const today = resolveCalendarDate(todayParam, resolveToday());
+
+    const rows = await this.reports.listOverdueForExport(today, accessCtx);
+
+    const html = renderOverduePdf({ rows, today });
+    const pdfBuffer = await this.pdfGenerator.generatePdf(html, {
+      format: 'A4',
+      landscape: true,
+      printBackground: true,
+      footerHtml: pdfFooterHtml(),
+    });
+
+    res.setHeader('Content-Disposition', pdfDisposition('overdue', today));
+    res.send(pdfBuffer);
   }
 }

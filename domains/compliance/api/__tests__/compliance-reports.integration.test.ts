@@ -14,8 +14,11 @@ const REPORT_PATHS = [
   '/api/v1/compliance-filings/reports/severity',
   '/api/v1/compliance-filings/reports/compliance.csv',
   '/api/v1/compliance-filings/reports/overdue.csv',
+  '/api/v1/compliance-filings/reports/compliance.pdf',
+  '/api/v1/compliance-filings/reports/overdue.pdf',
   '/api/v1/org-units/reports/team-workload',
   '/api/v1/org-units/reports/team-workload.csv',
+  '/api/v1/org-units/reports/team-workload.pdf',
 ] as const;
 
 /**
