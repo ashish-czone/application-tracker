@@ -13,7 +13,14 @@ import {
   withScope,
   withScopeIncludingDeleted,
 } from '@packages/database';
-import { BaseCrudService, type BaseListQuery } from '@packages/crud-base';
+import { BaseCrudService } from '@packages/crud-base';
+// `BaseListQuery` from entity-engine has the wide `[key: string]: unknown`
+// passthrough that the controller's `buildBaseListQuery(...)` output relies on
+// (filters/sort/search/order plus bare clientId/lawId/etc.). The crud-base
+// version is `{page?, limit?}` only — too narrow for the custom list path
+// here. The two type names match by design; the engine's is the consumer-
+// facing shape.
+import type { BaseListQuery } from '@packages/entity-engine';
 import { WorkflowEngineService, WorkflowRegistryService } from '@packages/workflows';
 import { DomainEventEmitter } from '@packages/events';
 import { orgUnits } from '@packages/org-units';
