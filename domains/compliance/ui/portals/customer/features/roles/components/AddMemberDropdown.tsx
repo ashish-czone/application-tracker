@@ -19,8 +19,12 @@ export function AddMemberDropdown({
 }: AddMemberDropdownProps) {
   const [query, setQuery] = useState('');
   const debouncedQuery = useDebouncedValue(query, 300);
+  // Server-driven typeahead — `useUsers` ILIKEs first/last/email when
+  // `search` is set. Default page size is 25 server-side, which is plenty
+  // for a typeahead dropdown; users narrow further by typing. The previous
+  // `limit: 100` was a data-fetching.md violation: it raised the implicit
+  // ceiling without actually solving "find a specific user to add".
   const { data: users, isLoading } = useUsers({
-    limit: 100,
     search: debouncedQuery || undefined,
   });
 
