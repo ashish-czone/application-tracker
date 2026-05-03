@@ -19,24 +19,32 @@ export const ClientRowSchema = createSelectSchema(clients);
  * (set by `ClientsService.create`); state changes go only through
  * `POST /clients/:id/transition`. See `.claude/rules/workflow-entity-creates.md`.
  */
-export const CreateClientSchema = createInsertSchema(clients).pick({
-  name: true,
-  legalName: true,
-  email: true,
-  phone: true,
-  websiteDomain: true,
-  taxId: true,
-  industry: true,
-  addressLine1: true,
-  addressLine2: true,
-  city: true,
-  state: true,
-  postalCode: true,
-  addressCountryId: true,
-  complianceAccountManagerId: true,
-  complianceOnboardedAt: true,
-  complianceNotes: true,
-});
+export const CreateClientSchema = createInsertSchema(clients, {
+  // `legal_name` is nullable on the shared `clients` table (other domains
+  // may own a row without a legal name). For compliance clients, we
+  // require it on create — the legal name is what compliance reports
+  // and registrations attribute filings to.
+  legalName: (s) => s.min(1),
+})
+  .pick({
+    name: true,
+    legalName: true,
+    email: true,
+    phone: true,
+    websiteDomain: true,
+    taxId: true,
+    industry: true,
+    addressLine1: true,
+    addressLine2: true,
+    city: true,
+    state: true,
+    postalCode: true,
+    addressCountryId: true,
+    complianceAccountManagerId: true,
+    complianceOnboardedAt: true,
+    complianceNotes: true,
+  })
+  .required({ legalName: true });
 
 export const UpdateClientSchema = CreateClientSchema.partial();
 
