@@ -76,7 +76,8 @@ function filingRowToClientFiling(row: FilingListRow): ClientFiling {
   return {
     id: row.id,
     lawCode: row.lawCode ?? '',
-    ruleName: row.ruleId__label ?? row.title,
+    // Rule name is not joined server-side today; fall back to the filing's own title.
+    ruleName: row.title,
     period: formatPeriod(row.periodStart),
     dueDate: row.dueDate ?? '',
     filedDate: row.completedAt ? row.completedAt.slice(0, 10) : undefined,
@@ -85,8 +86,8 @@ function filingRowToClientFiling(row: FilingListRow): ClientFiling {
     handler: row.assigneeTeamId
       ? {
           id: row.assigneeTeamId,
-          name: row.assigneeTeamId__label ?? '—',
-          initials: initialsFromName(row.assigneeTeamId__label ?? ''),
+          name: row.assigneeTeamName ?? '—',
+          initials: initialsFromName(row.assigneeTeamName ?? ''),
         }
       : UNASSIGNED_HANDLER,
     jurisdiction,

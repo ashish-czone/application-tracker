@@ -1,13 +1,34 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { ComplianceFilingsService } from '../compliance-filings.service';
 
+/**
+ * Helper for mocking a Drizzle query chain: every method call returns the
+ * same proxy, and `await`-ing the chain resolves to the supplied value.
+ * Lets list tests stub `db.select(...).from(...).leftJoin(...).where(...).limit(...).offset()`
+ * with a single line per call.
+ */
+function thenableChain<T>(value: T): unknown {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const chain: any = new Proxy(
+    {},
+    {
+      get(_target, prop) {
+        if (prop === 'then') return (cb: (v: T) => unknown) => cb(value);
+        return () => chain;
+      },
+    },
+  );
+  return chain;
+}
+
 describe('ComplianceFilingsService', () => {
   // After the workflow-lift, the service no longer injects EntityService.
   // CRUD goes through `crud` (BaseCrudService). Workflow ops go through
   // `workflowEngine` + `workflowRegistry`. Scope predicates come from
-  // `dataAccessScope` directly. getSummary is a single raw SQL with
-  // COUNT FILTER, so its tests now mock `database.db.execute` rather than
-  // 7 entityService.list calls.
+  // `dataAccessScope` directly. `list` builds its own SQL (driver +
+  // LEFT JOINs to clients/users/org_units) and is tested by stubbing
+  // `database.db.select` per call. `getSummary` is a single raw SQL with
+  // COUNT FILTER, so its tests mock `database.db.execute`.
   let crud: {
     list: ReturnType<typeof vi.fn>;
     findOneOrFail: ReturnType<typeof vi.fn>;
@@ -23,7 +44,13 @@ describe('ComplianceFilingsService', () => {
   let dataAccessScope: { buildPredicate: ReturnType<typeof vi.fn> };
   let events: { emitDynamic: ReturnType<typeof vi.fn> };
   let lawsService: { findDisplayByIds: ReturnType<typeof vi.fn> };
-  let database: { db: { execute: ReturnType<typeof vi.fn>; transaction: ReturnType<typeof vi.fn> } };
+  let database: {
+    db: {
+      execute: ReturnType<typeof vi.fn>;
+      transaction: ReturnType<typeof vi.fn>;
+      select: ReturnType<typeof vi.fn>;
+    };
+  };
   let service: ComplianceFilingsService;
 
   beforeEach(() => {
@@ -48,6 +75,7 @@ describe('ComplianceFilingsService', () => {
       db: {
         execute: vi.fn().mockResolvedValue({ rows: [{}] }),
         transaction: vi.fn(),
+        select: vi.fn(),
       },
     };
     service = new ComplianceFilingsService(
@@ -138,16 +166,45 @@ describe('ComplianceFilingsService', () => {
     });
   });
 
-  describe('list — law display injection', () => {
-    it('injects lawCode, lawName, lawJurisdiction onto each row from a single batched LawsService call', async () => {
-      crud.list.mockResolvedValue({
-        data: [
-          { id: 'f1', lawId: 'law-a', clientId: 'c1' },
-          { id: 'f2', lawId: 'law-b', clientId: 'c2' },
-          { id: 'f3', lawId: 'law-a', clientId: 'c3' },
+  describe('list — joined display columns + law hydration', () => {
+    /**
+     * Stubs the two `database.db.select` calls in `service.list`:
+     * 1. rows query (filing + clientName + assigneeFirstName/LastName + assigneeTeamName)
+     * 2. count query ([{ total }])
+     */
+    function stubSelect(rows: unknown[], total: number) {
+      database.db.select
+        .mockReturnValueOnce(thenableChain(rows))
+        .mockReturnValueOnce(thenableChain([{ total }]));
+    }
+
+    it('flattens joined columns and stamps lawCode/lawName/lawJurisdiction from a single batched LawsService call', async () => {
+      stubSelect(
+        [
+          {
+            filing: { id: 'f1', lawId: 'law-a', clientId: 'c1', assigneeId: 'u1', assigneeTeamId: 't1' },
+            clientName: 'Acme',
+            assigneeFirstName: 'Jane',
+            assigneeLastName: 'Doe',
+            assigneeTeamName: 'GST Team',
+          },
+          {
+            filing: { id: 'f2', lawId: 'law-b', clientId: 'c2', assigneeId: 'u2', assigneeTeamId: 't1' },
+            clientName: 'Beta Corp',
+            assigneeFirstName: 'John',
+            assigneeLastName: 'Smith',
+            assigneeTeamName: 'GST Team',
+          },
+          {
+            filing: { id: 'f3', lawId: 'law-a', clientId: 'c3', assigneeId: null, assigneeTeamId: 't2' },
+            clientName: 'Gamma Ltd',
+            assigneeFirstName: null,
+            assigneeLastName: null,
+            assigneeTeamName: 'TDS Team',
+          },
         ],
-        meta: { total: 3, page: 1, limit: 20, totalPages: 1 },
-      });
+        3,
+      );
       lawsService.findDisplayByIds.mockResolvedValue([
         { id: 'law-a', code: 'XYZ-12', name: 'Law A', jurisdiction: 'central' },
         { id: 'law-b', code: 'ABC-99', name: 'Law B', jurisdiction: 'state' },
@@ -155,37 +212,69 @@ describe('ComplianceFilingsService', () => {
 
       const result = await service.list({});
 
+      // One batched call to laws covering both law-a and law-b.
       expect(lawsService.findDisplayByIds).toHaveBeenCalledTimes(1);
       const idsArg = lawsService.findDisplayByIds.mock.calls[0][0] as string[];
       expect(new Set(idsArg)).toEqual(new Set(['law-a', 'law-b']));
 
       expect(result.data).toEqual([
-        { id: 'f1', lawId: 'law-a', clientId: 'c1', lawCode: 'XYZ-12', lawName: 'Law A', lawJurisdiction: 'central' },
-        { id: 'f2', lawId: 'law-b', clientId: 'c2', lawCode: 'ABC-99', lawName: 'Law B', lawJurisdiction: 'state' },
-        { id: 'f3', lawId: 'law-a', clientId: 'c3', lawCode: 'XYZ-12', lawName: 'Law A', lawJurisdiction: 'central' },
+        {
+          id: 'f1', lawId: 'law-a', clientId: 'c1', assigneeId: 'u1', assigneeTeamId: 't1',
+          clientName: 'Acme', assigneeFirstName: 'Jane', assigneeLastName: 'Doe', assigneeTeamName: 'GST Team',
+          lawCode: 'XYZ-12', lawName: 'Law A', lawJurisdiction: 'central',
+        },
+        {
+          id: 'f2', lawId: 'law-b', clientId: 'c2', assigneeId: 'u2', assigneeTeamId: 't1',
+          clientName: 'Beta Corp', assigneeFirstName: 'John', assigneeLastName: 'Smith', assigneeTeamName: 'GST Team',
+          lawCode: 'ABC-99', lawName: 'Law B', lawJurisdiction: 'state',
+        },
+        {
+          id: 'f3', lawId: 'law-a', clientId: 'c3', assigneeId: null, assigneeTeamId: 't2',
+          clientName: 'Gamma Ltd', assigneeFirstName: null, assigneeLastName: null, assigneeTeamName: 'TDS Team',
+          lawCode: 'XYZ-12', lawName: 'Law A', lawJurisdiction: 'central',
+        },
       ]);
     });
 
-    it('returns rows unchanged when no rows have a lawId', async () => {
-      crud.list.mockResolvedValue({
-        data: [{ id: 'f1', clientId: 'c1' }],
-        meta: { total: 1, page: 1, limit: 20, totalPages: 1 },
-      });
+    it('skips the LawsService call when no rows have a lawId', async () => {
+      stubSelect(
+        [
+          {
+            filing: { id: 'f1', clientId: 'c1', assigneeId: null, assigneeTeamId: 't1' },
+            clientName: 'Acme',
+            assigneeFirstName: null,
+            assigneeLastName: null,
+            assigneeTeamName: 'GST Team',
+          },
+        ],
+        1,
+      );
 
       const result = await service.list({});
 
       expect(lawsService.findDisplayByIds).not.toHaveBeenCalled();
-      expect(result.data).toEqual([{ id: 'f1', clientId: 'c1' }]);
+      expect(result.data).toEqual([
+        {
+          id: 'f1', clientId: 'c1', assigneeId: null, assigneeTeamId: 't1',
+          clientName: 'Acme', assigneeFirstName: null, assigneeLastName: null, assigneeTeamName: 'GST Team',
+        },
+      ]);
     });
 
-    it('leaves a row untouched when its lawId is missing from the law batch', async () => {
-      crud.list.mockResolvedValue({
-        data: [
-          { id: 'f1', lawId: 'law-a' },
-          { id: 'f2', lawId: 'law-deleted' },
+    it('leaves law-display columns off a row whose lawId is missing from the law batch', async () => {
+      stubSelect(
+        [
+          {
+            filing: { id: 'f1', lawId: 'law-a' },
+            clientName: null, assigneeFirstName: null, assigneeLastName: null, assigneeTeamName: null,
+          },
+          {
+            filing: { id: 'f2', lawId: 'law-deleted' },
+            clientName: null, assigneeFirstName: null, assigneeLastName: null, assigneeTeamName: null,
+          },
         ],
-        meta: { total: 2, page: 1, limit: 20, totalPages: 1 },
-      });
+        2,
+      );
       lawsService.findDisplayByIds.mockResolvedValue([
         { id: 'law-a', code: 'XYZ-12', name: 'Law A', jurisdiction: 'central' },
       ]);
@@ -193,18 +282,33 @@ describe('ComplianceFilingsService', () => {
       const result = await service.list({});
 
       expect(result.data).toEqual([
-        { id: 'f1', lawId: 'law-a', lawCode: 'XYZ-12', lawName: 'Law A', lawJurisdiction: 'central' },
-        { id: 'f2', lawId: 'law-deleted' },
+        {
+          id: 'f1', lawId: 'law-a',
+          clientName: null, assigneeFirstName: null, assigneeLastName: null, assigneeTeamName: null,
+          lawCode: 'XYZ-12', lawName: 'Law A', lawJurisdiction: 'central',
+        },
+        {
+          id: 'f2', lawId: 'law-deleted',
+          clientName: null, assigneeFirstName: null, assigneeLastName: null, assigneeTeamName: null,
+        },
       ]);
     });
 
-    it('preserves meta from the underlying base CRUD list call', async () => {
-      const meta = { total: 47, page: 2, limit: 20, totalPages: 3 };
-      crud.list.mockResolvedValue({ data: [], meta });
+    it('returns meta computed from the count query and pagination inputs', async () => {
+      stubSelect([], 47);
 
       const result = await service.list({ page: 2, limit: 20 });
 
-      expect(result.meta).toEqual(meta);
+      expect(result.meta).toEqual({ page: 2, limit: 20, total: 47, totalPages: 3 });
+    });
+
+    it('clamps limit to the [1, 100] range and computes totalPages accordingly', async () => {
+      stubSelect([], 0);
+
+      // limit > 100 clamps to 100; total=0 still yields totalPages=1 (Math.ceil(0/100)=0 → max(1,0)).
+      const result = await service.list({ page: 1, limit: 9999 });
+
+      expect(result.meta).toEqual({ page: 1, limit: 100, total: 0, totalPages: 1 });
     });
   });
 

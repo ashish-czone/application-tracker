@@ -3,12 +3,15 @@ import { useEntityEngine } from '@packages/entity-engine-ui';
 
 /**
  * Row shape for filings rendered in dashboard widgets and the filings list.
- * The compliance-filings list endpoint embeds:
- *  - lookup labels via the entity engine: `clientId__label`, `assigneeTeamId__label`,
- *    `assigneeId__label`, `ruleId__label`
- *  - law display fields via ComplianceFilingsService.list(): `lawCode`,
- *    `lawName`, `lawJurisdiction`
- * No client-side joining is needed.
+ * The compliance-filings list endpoint embeds display fields per row via
+ * SQL LEFT JOINs (clients, users, org_units) and a service-composition
+ * call into LawsService:
+ *  - `clientName` from clients
+ *  - `assigneeFirstName` / `assigneeLastName` from users
+ *  - `assigneeTeamName` from org_units
+ *  - `lawCode` / `lawName` / `lawJurisdiction` via ComplianceFilingsService
+ * Rule name is not currently embedded — fall back to the filing's own
+ * `title` when a rule label is needed.
  */
 export interface FilingListRow {
   id: string;
@@ -28,12 +31,12 @@ export interface FilingListRow {
   externalKey: string | null;
   createdAt: string;
   updatedAt: string;
-  // Server-side embedded display fields:
-  clientId__label?: string | null;
-  ruleId__label?: string | null;
-  lawId__label?: string | null;
-  assigneeId__label?: string | null;
-  assigneeTeamId__label?: string | null;
+  // Server-embedded display fields (LEFT-JOINed; null when joinee missing or soft-deleted):
+  clientName?: string | null;
+  assigneeFirstName?: string | null;
+  assigneeLastName?: string | null;
+  assigneeTeamName?: string | null;
+  // Server-composed law display fields (via LawsService.findDisplayByIds):
   lawCode?: string;
   lawName?: string;
   lawJurisdiction?: string | null;

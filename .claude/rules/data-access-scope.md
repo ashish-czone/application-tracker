@@ -70,6 +70,57 @@ async getReport(today: string, ctx?: DataAccessContext) {
 
 `compliance-filings.scope.ts` ships a thin `buildFilingsScopePredicate(dataAccessScope, accessCtx)` helper that wraps the canonical anchors+inline-scopes for that entity — five report endpoints + `getSummary` use it. Other entities should follow the same pattern.
 
+### Joined tables: the driver is the authorization root
+
+When a list / findOne / aggregation joins additional tables (for display columns or attribute filters), the actor-scope predicate is applied **only to the driver** — the table the query is rooted on. Joined tables do **not** need their `buildPredicate(...)` ANDed in.
+
+**The reasoning:**
+
+- The driver's scope predicate already established that the user is allowed to see this row.
+- Joined columns are display data of the authorized parent — once the user clears the bar to see the parent, the parent's labeled fields come along.
+- Re-scoping every joined table would conflate attribute filters (`WHERE clients.industry = 'tech'`) with scope filters, breaking natural query semantics. A filter on a joined column should mean "rows whose joined attribute matches", not "rows whose joined attribute matches **and** I'm assigned to that joinee".
+
+**Concretely:**
+
+| Scope dimension | Driver | Joined tables |
+|---|---|---|
+| Actor-scope (`<slug>.read = 'assigned'`) | Apply via `buildPredicate(...)` | **Skip** — driver is authorization root |
+| Soft-delete (`deleted_at IS NULL`) | Apply | **Apply** per-table |
+| Tenant (`tenant_id = $current`) | Apply | **Apply** per-table |
+
+`withScope(joinedTable, …)` on the JOIN ON or WHERE handles the bottom two automatically. The actor-scope predicate is built once, for the driver, and ANDed into the WHERE.
+
+**Example — filings list with display joins:**
+
+```ts
+const scopePredicate = await this.dataAccessScope.buildPredicate(accessCtx, {
+  anchors: COMPLIANCE_FILINGS_ANCHORS,
+  inlineResolvers: COMPLIANCE_FILINGS_INLINE_SCOPES,
+});
+
+await this.database.db
+  .select({ /* … filings cols + clients.name + users.firstName + orgUnits.name … */ })
+  .from(complianceFilings)
+  .leftJoin(clients,  withScope(clients,  eq(complianceFilings.clientId,        clients.id)))
+  .leftJoin(users,    withScope(users,    eq(complianceFilings.assigneeId,      users.id)))
+  .leftJoin(orgUnits, withScope(orgUnits, eq(complianceFilings.assigneeTeamId, orgUnits.id)))
+  .where(withScope(complianceFilings, scopePredicate));
+//                                    ^^^^^^^^^^^^^^^
+//                                    Driver actor-scope is built ONCE and ANDed into the WHERE.
+//                                    No buildPredicate call for clients / users / orgUnits.
+//
+// withScope on each LEFT JOIN ON clause adds soft-delete + tenant
+// predicates to the join condition itself — so a filing whose linked
+// client is soft-deleted still appears in the list (with clientName =
+// NULL) rather than being dropped. orgUnits has neither soft-delete nor
+// tenant columns today; withScope is a no-op there but stays in the call
+// site so future schema changes pick up automatically.
+```
+
+**Caveat — project columns deliberately.** The rule grants visibility of the columns you `SELECT` from the joined row, not the whole row. Don't `SELECT joinedTable.*` and dump it — pick the display columns intentionally. Sensitive columns (`users.salary`, `clients.taxId`) need column-level care regardless of join semantics.
+
+**Caveat — driver authority is the model, not a license.** The rule assumes the product treats joined display data as part of the parent's surface. If a domain ever introduces *truly confidential* joined data that even parent-row holders shouldn't see (NDA-shielded clients, restricted team membership), that needs explicit column-level RBAC — not row-level scope re-application.
+
 ### Hard prohibitions
 
 The following are NEVER acceptable, regardless of "this entity doesn't grant scoped reads today" or "internal tool, RBAC doesn't apply":

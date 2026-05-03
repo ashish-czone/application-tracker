@@ -73,7 +73,7 @@ export function OverdueFilingsWidget() {
           return (
             <li key={filing.id} className="flex items-center gap-4 px-5 py-3">
               <div className="flex-1 min-w-0">
-                <p className="text-sm text-ink truncate">{filing.clientId__label ?? '—'}</p>
+                <p className="text-sm text-ink truncate">{filing.clientName ?? '—'}</p>
                 <p className="mt-0.5 flex items-center gap-2 text-[11px] text-ink-muted">
                   <span className="font-mono uppercase tracking-tabular">
                     {filing.lawCode ?? ''}
