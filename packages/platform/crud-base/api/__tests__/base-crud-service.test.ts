@@ -19,18 +19,30 @@ const widgets = pgTable('widgets', {
  * Drizzle method (`.from`, `.where`, `.limit`, etc.) returns the same
  * proxy until awaited. `.where` records the predicate it was called with
  * so the scope-wiring tests can assert what was AND'd into the WHERE.
+ *
+ * Each `.select(...)` call records its projection argument (undefined for
+ * the rows query, `{ total: count() }` shape for the count query) so the
+ * count-query tests can assert structurally that a sibling count query
+ * was issued. The proxy is a single thenable: awaiting it resolves to
+ * `scriptedResult`. For tests that need different per-await results
+ * (e.g. rows then count), override `proxy.then` after constructing.
  */
 function makeFakeDb(scriptedResult: unknown) {
   const wherePredicates: unknown[] = [];
+  const selectArgs: unknown[] = [];
   const proxy: any = {};
-  const chain = ['select', 'from', 'limit', 'offset', 'insert', 'values', 'returning', 'update', 'set'];
+  const chain = ['from', 'limit', 'offset', 'insert', 'values', 'returning', 'update', 'set'];
   for (const m of chain) proxy[m] = vi.fn().mockReturnValue(proxy);
+  proxy.select = vi.fn((arg?: unknown) => {
+    selectArgs.push(arg);
+    return proxy;
+  });
   proxy.where = vi.fn((predicate: unknown) => {
     wherePredicates.push(predicate);
     return proxy;
   });
   proxy.then = (resolve: any) => resolve(scriptedResult);
-  return { db: proxy, wherePredicates };
+  return { db: proxy, wherePredicates, selectArgs };
 }
 
 function makeService(
@@ -209,11 +221,13 @@ describe('BaseCrudService', () => {
 
       await service.list({}, ctx);
 
-      // First .where() call is from list's withScope(...) wrap.
-      expect(fakeDb.wherePredicates).toHaveLength(1);
-      // The predicate passed to withScope must be defined (not undefined).
-      // This is the structural seal that the scope leg flows into the query.
+      // Two .where() calls: one for the rows query, one for the count
+      // query. Both must receive the SAME defined predicate so the
+      // rendered page and the reported total can't drift.
+      expect(fakeDb.wherePredicates).toHaveLength(2);
       expect(fakeDb.wherePredicates[0]).toBeDefined();
+      expect(fakeDb.wherePredicates[1]).toBeDefined();
+      expect(fakeDb.wherePredicates[0]).toBe(fakeDb.wherePredicates[1]);
     });
 
     it('findOne wires scope into the WHERE alongside the id predicate', async () => {
@@ -292,6 +306,110 @@ describe('BaseCrudService', () => {
       // job and is exercised by integration tests against a real DB.
       expect(result.data).toEqual([]);
       expect(scopeService.buildPredicate).toHaveBeenCalledTimes(1);
+    });
+  });
+
+  describe('list meta.total + totalPages', () => {
+    /**
+     * Build a fake db that returns one scripted result for the rows
+     * query and another for the count query. The proxy is awaited
+     * exactly twice per `list()` call — first for rows, then for count.
+     */
+    function makeListFakeDb(rowsResult: unknown, countResult: unknown) {
+      const fakeDb = makeFakeDb(rowsResult);
+      let awaitCount = 0;
+      fakeDb.db.then = (resolve: (value: unknown) => unknown) => {
+        awaitCount += 1;
+        return resolve(awaitCount === 1 ? rowsResult : countResult);
+      };
+      return fakeDb;
+    }
+
+    it('meta.total comes from the SQL count() query, NOT rows.length', async () => {
+      // Rows page returns 3 widgets (the page size). The full table has 47.
+      const rowsPage = [
+        { id: 'w1', name: 'A' },
+        { id: 'w2', name: 'B' },
+        { id: 'w3', name: 'C' },
+      ];
+      const countRow = [{ total: 47 }];
+      const fakeDb = makeListFakeDb(rowsPage, countRow);
+      const { service } = makeService(fakeDb, mockEvents, mockLogger);
+
+      const result = await service.list({ page: 1, limit: 3 });
+
+      expect(result.data).toHaveLength(3);
+      expect(result.meta.total).toBe(47);
+      expect(result.meta.total).not.toBe(result.data.length);
+    });
+
+    it('coerces a string total (Postgres count() returns bigint as string) to a number', async () => {
+      const fakeDb = makeListFakeDb([], [{ total: '123' }]);
+      const { service } = makeService(fakeDb, mockEvents, mockLogger);
+
+      const result = await service.list({});
+
+      expect(result.meta.total).toBe(123);
+      expect(typeof result.meta.total).toBe('number');
+    });
+
+    it('falls back to total=0 when the count query returns no rows', async () => {
+      const fakeDb = makeListFakeDb([], []);
+      const { service } = makeService(fakeDb, mockEvents, mockLogger);
+
+      const result = await service.list({});
+
+      expect(result.meta.total).toBe(0);
+    });
+
+    it('issues the count query against the same WHERE as the rows query', async () => {
+      const fakeDb = makeListFakeDb([], [{ total: 0 }]);
+      const { service } = makeService(fakeDb, mockEvents, mockLogger);
+
+      await service.list({});
+
+      // Two .select() calls — one for rows, one for count.
+      expect(fakeDb.selectArgs).toHaveLength(2);
+      // First select has no projection arg (Drizzle's `db.select()`).
+      expect(fakeDb.selectArgs[0]).toBeUndefined();
+      // Second select projects `{ total: <SQL> }` — the count query.
+      expect(fakeDb.selectArgs[1]).toBeDefined();
+      expect(fakeDb.selectArgs[1]).toHaveProperty('total');
+
+      // Two .where() calls; both receive the SAME predicate reference so
+      // the rendered page and the reported total can't drift.
+      expect(fakeDb.wherePredicates).toHaveLength(2);
+      expect(fakeDb.wherePredicates[0]).toBe(fakeDb.wherePredicates[1]);
+    });
+
+    it('totalPages = ceil(total / limit)', async () => {
+      const fakeDb = makeListFakeDb([], [{ total: 47 }]);
+      const { service } = makeService(fakeDb, mockEvents, mockLogger);
+
+      const result = await service.list({ page: 1, limit: 10 });
+
+      expect(result.meta.total).toBe(47);
+      expect(result.meta.limit).toBe(10);
+      expect(result.meta.totalPages).toBe(5);
+    });
+
+    it('totalPages floors at 1 even for empty result sets', async () => {
+      const fakeDb = makeListFakeDb([], [{ total: 0 }]);
+      const { service } = makeService(fakeDb, mockEvents, mockLogger);
+
+      const result = await service.list({ limit: 25 });
+
+      expect(result.meta.total).toBe(0);
+      expect(result.meta.totalPages).toBe(1);
+    });
+
+    it('totalPages is exactly 1 when total equals limit', async () => {
+      const fakeDb = makeListFakeDb([], [{ total: 25 }]);
+      const { service } = makeService(fakeDb, mockEvents, mockLogger);
+
+      const result = await service.list({ limit: 25 });
+
+      expect(result.meta.totalPages).toBe(1);
     });
   });
 });

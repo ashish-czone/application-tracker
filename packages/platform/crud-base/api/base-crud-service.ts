@@ -1,5 +1,5 @@
 import { Injectable, NotFoundException, type Provider } from '@nestjs/common';
-import { DatabaseService, eq, withScope } from '@packages/database';
+import { count, DatabaseService, eq, withScope } from '@packages/database';
 import { DomainEventEmitter } from '@packages/events';
 import { AppLoggerService, type ContextLogger } from '@packages/logger';
 import {
@@ -162,11 +162,20 @@ export class BaseCrudService<TTable extends TableWithId = TableWithId> {
    * (when configured) via `withScope`. Search/sort/structured filters are
    * not implemented in the base — consumers compose their own `list` and
    * call this only for the trivial pagination case.
+   *
+   * `meta.total` comes from a sibling SQL `count()` query issued against
+   * the same WHERE as the rows query, so the rendered page and the
+   * reported total always agree. `meta.totalPages` is `ceil(total/limit)`,
+   * floored to at least `1` so empty result sets still render an "of 1"
+   * page indicator.
    */
   async list(
     query: BaseListQuery = {},
     accessCtx?: DataAccessContext,
-  ): Promise<{ data: TTable['$inferSelect'][]; meta: { page: number; limit: number; total: number } }> {
+  ): Promise<{
+    data: TTable['$inferSelect'][];
+    meta: { page: number; limit: number; total: number; totalPages: number };
+  }> {
     type Row = TTable['$inferSelect'];
     const limitRaw = query.limit ?? this.defaultLimit;
     const limit = Math.max(1, Math.min(limitRaw, this.maxLimit));
@@ -174,18 +183,24 @@ export class BaseCrudService<TTable extends TableWithId = TableWithId> {
     const offset = (page - 1) * limit;
 
     const scopePredicate = await this.resolveScopePredicate(accessCtx);
+    const where = withScope(this.table, scopePredicate);
 
     const rows = (await this.database.db
       .select()
       .from(this.table as PgTable)
-      .where(withScope(this.table, scopePredicate))
+      .where(where)
       .limit(limit)
       .offset(offset)) as Row[];
 
-    // Total count is intentionally not computed in the base — most
-    // consumers want it but the signature varies (full count vs estimate
-    // vs none). Consumers compose their own list to add a count query.
-    return { data: rows, meta: { page, limit, total: rows.length } };
+    const [totalRow] = (await this.database.db
+      .select({ total: count() })
+      .from(this.table as PgTable)
+      .where(where)) as [{ total: number | string } | undefined];
+
+    const total = Number(totalRow?.total ?? 0);
+    const totalPages = Math.max(1, Math.ceil(total / limit));
+
+    return { data: rows, meta: { page, limit, total, totalPages } };
   }
 
   /** Returns the row by id, or null if not found / out of scope. */
