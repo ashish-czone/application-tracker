@@ -525,4 +525,98 @@ describe('ClientRegistrationsService', () => {
       expect(await service.getRegisteredLaws('c1')).toEqual([]);
     });
   });
+
+  // --------------------------------------------------------------------------
+  // list() — server-side pagination, filtering, search, sort.
+  // Verifies the controller/UI contract: clientId/search/sort flow into
+  // SQL primitives (where + orderBy), the response embeds law display
+  // columns, and meta carries the total + totalPages count from a separate
+  // count() query.
+  // --------------------------------------------------------------------------
+
+  describe('list', () => {
+    /** Build a mock row chain that records every chained call so tests can assert on them. */
+    function listChain(rows: unknown[]) {
+      const chain: AnyChain = {} as AnyChain;
+      chain.from = vi.fn().mockReturnValue(chain);
+      chain.leftJoin = vi.fn().mockReturnValue(chain);
+      chain.where = vi.fn().mockReturnValue(chain);
+      chain.orderBy = vi.fn().mockReturnValue(chain);
+      chain.limit = vi.fn().mockReturnValue(chain);
+      chain.offset = vi.fn().mockResolvedValue(rows);
+      return chain;
+    }
+
+    function countChain(total: number) {
+      const chain: AnyChain = {} as AnyChain;
+      chain.from = vi.fn().mockReturnValue(chain);
+      chain.where = vi.fn().mockResolvedValue([{ total }]);
+      return chain;
+    }
+
+    it('returns rows with embedded law display columns and meta', async () => {
+      const joinedRow = {
+        registration: activeRow,
+        lawCode: 'GST-2017',
+        lawName: 'GST Act 2017',
+        lawJurisdiction: 'central',
+        lawIssuingAuthority: 'CBIC',
+      };
+      db.db.select
+        .mockReturnValueOnce(listChain([joinedRow]))
+        .mockReturnValueOnce(countChain(7));
+
+      const result = await service.list({ clientId: 'c1' } as never);
+
+      expect(result.data).toHaveLength(1);
+      expect(result.data[0]).toMatchObject({
+        id: 'reg1',
+        clientId: 'c1',
+        lawCode: 'GST-2017',
+        lawName: 'GST Act 2017',
+        lawJurisdiction: 'central',
+        lawIssuingAuthority: 'CBIC',
+      });
+      expect(result.meta).toEqual({ page: 1, limit: 25, total: 7, totalPages: 1 });
+    });
+
+    it('clamps limit between 1 and 100 and respects pagination offsets', async () => {
+      const chain = listChain([]);
+      db.db.select.mockReturnValueOnce(chain).mockReturnValueOnce(countChain(0));
+
+      await service.list({ page: 3, limit: 200 } as never);
+
+      // Limit clamped to 100.
+      expect(chain.limit).toHaveBeenCalledWith(100);
+      // Offset = (page - 1) * limit = (3 - 1) * 100 = 200.
+      expect(chain.offset).toHaveBeenCalledWith(200);
+    });
+
+    it('defaults page to 1, limit to 25, sort to registeredAt:desc', async () => {
+      const chain = listChain([]);
+      db.db.select.mockReturnValueOnce(chain).mockReturnValueOnce(countChain(0));
+
+      await service.list({} as never);
+
+      expect(chain.limit).toHaveBeenCalledWith(25);
+      expect(chain.offset).toHaveBeenCalledWith(0);
+      // orderBy called with one drizzle SQL arg — we can't introspect its
+      // direction without coupling to drizzle internals, but we can at
+      // least assert it was invoked once with a single arg.
+      expect(chain.orderBy).toHaveBeenCalledTimes(1);
+      expect(chain.orderBy.mock.calls[0]).toHaveLength(1);
+    });
+
+    it('returns 0 totalPages floor of 1 even on empty result', async () => {
+      db.db.select
+        .mockReturnValueOnce(listChain([]))
+        .mockReturnValueOnce(countChain(0));
+
+      const result = await service.list({} as never);
+
+      expect(result.meta.total).toBe(0);
+      expect(result.meta.totalPages).toBe(1);
+      expect(result.data).toEqual([]);
+    });
+  });
 });

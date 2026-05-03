@@ -5,9 +5,23 @@ import {
   NotFoundException,
   BadRequestException,
 } from '@nestjs/common';
-import { DatabaseService, and, count, eq, gt, inArray, isNull, lte, not, withScope } from '@packages/database';
+import {
+  DatabaseService,
+  and,
+  asc,
+  count,
+  desc,
+  eq,
+  gt,
+  ilike,
+  inArray,
+  isNull,
+  lte,
+  not,
+  withScope,
+} from '@packages/database';
 import { DomainEventEmitter } from '@packages/events';
-import { BaseCrudService, type BaseListQuery } from '@packages/crud-base';
+import { BaseCrudService } from '@packages/crud-base';
 import { CLIENT_REGISTRATIONS_CRUD_TOKEN } from './client-registrations.crud-token';
 import type { DataAccessContext } from '@packages/rbac';
 import { AppLoggerService, type ContextLogger } from '@packages/logger';
@@ -22,7 +36,11 @@ import {
   CLIENT_REGISTRATIONS_CREATED,
   COMPLIANCE_REGISTRATION_DEACTIVATED,
 } from '../events/types';
-import type { CreateClientRegistrationDto, UpdateClientRegistrationDto } from './client-registrations.dto';
+import type {
+  CreateClientRegistrationDto,
+  RegistrationsListQuery,
+  UpdateClientRegistrationDto,
+} from './client-registrations.dto';
 
 /**
  * I20: raised when registration creation would produce a client/law tuple
@@ -112,8 +130,117 @@ export class ClientRegistrationsService {
 
   // ---- CRUD delegates (vendors template) -----------------------------------
 
-  list(query: BaseListQuery, accessCtx?: DataAccessContext) {
-    return this.crud.list(query, accessCtx);
+  /**
+   * List registrations with server-side pagination, filtering, sorting, and
+   * search. Bypasses `BaseCrudService.list` because:
+   *
+   *   - it doesn't filter by `clientId` (the client detail page's primary
+   *     access pattern — see `useClientRegistrationsList`),
+   *   - it doesn't search,
+   *   - it doesn't compute total counts, and
+   *   - the response embeds law display columns (`lawCode`, `lawName`,
+   *     `lawJurisdiction`, `lawIssuingAuthority`) via a server-side LEFT JOIN
+   *     on `complianceLaws` so the UI never client-side-joins `/laws`.
+   *
+   * `complianceClientRegistrations` has no actor-scope anchors today (see
+   * `client-registrations.module.ts`), so no `buildPredicate(...)` call —
+   * `withScope` covers the structural soft-delete + tenant legs on the
+   * driver, and `withScope(complianceLaws, …)` on the LEFT JOIN ON adds the
+   * same legs to the joined table per `data-scoping.md`.
+   */
+  async list(query: RegistrationsListQuery, _accessCtx?: DataAccessContext) {
+    const limit = Math.max(1, Math.min(query.limit ?? 25, 100));
+    const page = Math.max(1, query.page ?? 1);
+    const offset = (page - 1) * limit;
+
+    const conditions = [];
+    if (query.clientId) {
+      conditions.push(eq(complianceClientRegistrations.clientId, query.clientId));
+    }
+    if (typeof query.lawId === 'string' && query.lawId.length > 0) {
+      conditions.push(eq(complianceClientRegistrations.lawId, query.lawId));
+    }
+    if (query.search) {
+      const term = `%${query.search.trim()}%`;
+      conditions.push(ilike(complianceClientRegistrations.registrationNumber, term));
+    }
+
+    const where = withScope(complianceClientRegistrations, ...conditions);
+    const orderBy = this.buildOrderBy(query.sort, query.order);
+
+    const rows = await this.database.db
+      .select({
+        registration: complianceClientRegistrations,
+        lawCode: complianceLaws.code,
+        lawName: complianceLaws.name,
+        lawJurisdiction: complianceLaws.jurisdiction,
+        lawIssuingAuthority: complianceLaws.issuingAuthority,
+      })
+      .from(complianceClientRegistrations)
+      .leftJoin(
+        complianceLaws,
+        withScope(complianceLaws, eq(complianceClientRegistrations.lawId, complianceLaws.id)),
+      )
+      .where(where)
+      .orderBy(...orderBy)
+      .limit(limit)
+      .offset(offset);
+
+    const [totalRow] = await this.database.db
+      .select({ total: count() })
+      .from(complianceClientRegistrations)
+      .where(where);
+    const total = Number(totalRow?.total ?? 0);
+
+    const data = rows.map((row) => ({
+      ...(row.registration as Record<string, unknown>),
+      lawCode: row.lawCode,
+      lawName: row.lawName,
+      lawJurisdiction: row.lawJurisdiction,
+      lawIssuingAuthority: row.lawIssuingAuthority,
+    }));
+
+    return {
+      data,
+      meta: {
+        page,
+        limit,
+        total,
+        totalPages: Math.max(1, Math.ceil(total / limit)),
+      },
+    };
+  }
+
+  /**
+   * Translate the `sort` / `order` query params into a Drizzle `orderBy` arg
+   * list. Unknown / missing sort field falls back to `registeredAt:desc` so
+   * the most recent registration is on top.
+   *
+   * Allowlist mirrors the columns the client-registrations.ui list config
+   * surfaces — preventing arbitrary column probing via the URL.
+   */
+  private buildOrderBy(sortRaw?: string, orderRaw?: string) {
+    const t = complianceClientRegistrations;
+    const allowed = {
+      registrationNumber: t.registrationNumber,
+      effectiveFrom: t.effectiveFrom,
+      registeredAt: t.registeredAt,
+      deactivatedAt: t.deactivatedAt,
+      createdAt: t.createdAt,
+    } as const;
+
+    let field: keyof typeof allowed | undefined;
+    let dir: 'asc' | 'desc' | undefined;
+
+    if (sortRaw) {
+      const [f, d] = sortRaw.split(':');
+      if (f && f in allowed) field = f as keyof typeof allowed;
+      if (d === 'asc' || d === 'desc') dir = d;
+    }
+    if (!dir && (orderRaw === 'asc' || orderRaw === 'desc')) dir = orderRaw;
+
+    const column = field ? allowed[field] : t.registeredAt;
+    return [(dir ?? 'desc') === 'asc' ? asc(column) : desc(column)];
   }
 
   findOne(id: string, accessCtx?: DataAccessContext) {
