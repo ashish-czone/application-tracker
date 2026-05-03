@@ -257,8 +257,16 @@ export class ClientsService {
    * table. The composite `createWithContacts` stamps the same marker inline.
    */
   async create(input: Record<string, unknown>, actorId: string) {
+    // `createdBy` is `notNull()` on the shared `clients` table (see
+    // baseClientColumns in @packages/directory). BaseCrudService.create
+    // does not auto-stamp it, so the service is responsible — same pattern
+    // as `client-contacts.service.ts`.
     const row = await this.crud.create(
-      { ...input, complianceStatus: CLIENTS_WORKFLOW.initialState } as never,
+      {
+        ...input,
+        createdBy: actorId,
+        complianceStatus: CLIENTS_WORKFLOW.initialState,
+      } as never,
       actorId,
     ) as Record<string, unknown>;
     if (row && !row.complianceBecameClientAt && typeof row.id === 'string') {
