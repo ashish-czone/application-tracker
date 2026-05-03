@@ -16,8 +16,11 @@ import {
   type ActiveFilter,
   type KanbanColumnDef,
   type KanbanCardData,
+  type KanbanColumnState,
 } from '@packages/ui';
-import { ComplianceCalendar } from '../../../../components/composites';
+import { useOrgUnits, type OrgUnit } from '@packages/org-units-ui';
+import { ComplianceCalendar, type CalendarView } from '../../../../components/composites/ComplianceCalendar';
+import { TypeaheadFilterPopover } from '../../../../components/composites/TypeaheadFilterPopover';
 import type { FilingRow } from './types';
 import { FilingDetailDrawer } from './components/FilingDetailDrawer';
 import {
@@ -32,11 +35,16 @@ import {
 import { ViewModeSwitcher, type ViewModeOption } from './components/ViewModeSwitcher';
 import { FilingKanbanCard } from './components/FilingKanbanCard';
 import { OverdueAlert } from './components/OverdueAlert';
-import type { Filing } from '../../../../types';
+import type { Filing, Handler } from '../../../../types';
 import { ScreenPreviewTopBar } from '../shared/ScreenPreviewTopBar';
-import { useComplianceFilingRows, useUpdateComplianceFiling } from '../../../../hooks/useComplianceFilings';
+import { useUpdateComplianceFiling } from '../../../../hooks/useComplianceFilings';
 import { useFilingsList, type FilingsListBucket } from '../../../../hooks/useFilingsList';
+import { useFilingsBucketInfinite } from '../../../../hooks/useFilingsBucket';
+import { useFilingsRangeInfinite } from '../../../../hooks/useFilingsRange';
 import { useFilingsSummary } from '../../../../hooks/useFilingsSummary';
+import { useClientOptions } from '../../../../hooks/useClientsApi';
+import { useLawOptions } from '../../../../hooks/useLawsApi';
+import { useDebouncedValue } from '../../../../hooks/useDebouncedValue';
 import type { FilingListRow } from '../../../../hooks/useFilingsByDueWindow';
 
 type StatusTab = 'all' | Filing['status'];
@@ -148,6 +156,70 @@ function mapPriority(p: string): FilingRow['priority'] {
   return PRIORITY_MAP[p] ?? 'normal';
 }
 
+function unitToHandler(unit: OrgUnit | undefined): Handler | undefined {
+  if (!unit) return undefined;
+  const displayName = unit.head?.userName ?? unit.name;
+  return {
+    id: unit.id,
+    name: displayName,
+    initials: initialsFromName(displayName),
+    role: unit.head?.positionName,
+  };
+}
+
+function toISODate(d: Date): string {
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${y}-${m}-${day}`;
+}
+
+/**
+ * Compute the [dueAfter, dueBefore] inclusive window the calendar's grid
+ * occupies for a given anchor + view. Month view shows 6 rows × 7 cols
+ * starting from the Monday on or before the 1st of the anchor's month;
+ * week view shows the 7 days of the anchor's Monday-based week.
+ */
+function calendarWindow(anchor: Date, view: CalendarView): { dueAfter: string; dueBefore: string } {
+  if (view === 'week') {
+    const day = anchor.getDay();
+    const mondayOffset = (day + 6) % 7;
+    const monday = new Date(anchor.getFullYear(), anchor.getMonth(), anchor.getDate() - mondayOffset);
+    const sunday = new Date(monday);
+    sunday.setDate(monday.getDate() + 6);
+    return { dueAfter: toISODate(monday), dueBefore: toISODate(sunday) };
+  }
+  const year = anchor.getFullYear();
+  const month = anchor.getMonth();
+  const first = new Date(year, month, 1);
+  const leading = (first.getDay() + 6) % 7;
+  const start = new Date(year, month, 1 - leading);
+  const end = new Date(start);
+  end.setDate(start.getDate() + 41);
+  return { dueAfter: toISODate(start), dueBefore: toISODate(end) };
+}
+
+interface LoadMoreButtonProps {
+  rendered: number;
+  total: number;
+  isFetching: boolean;
+  onClick: () => void;
+}
+
+function LoadMoreButton({ rendered, total, isFetching, onClick }: LoadMoreButtonProps) {
+  const remaining = Math.max(0, total - rendered);
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      disabled={isFetching || remaining === 0}
+      className="mt-2 w-full px-3 py-2 text-[11px] uppercase tracking-eyebrow font-sans font-medium border border-rule text-ink-muted hover:text-ink hover:border-ink disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+    >
+      {isFetching ? 'Loading…' : `Load more (${remaining} remaining)`}
+    </button>
+  );
+}
+
 export function FilingsPage() {
   const { summary, loading: summaryLoading } = useFilingsSummary();
 
@@ -158,6 +230,12 @@ export function FilingsPage() {
   const [lawFilter, setLawFilter] = useState<string[]>([]);
   const [handlerFilter, setHandlerFilter] = useState<string[]>([]);
   const [page, setPage] = useState(1);
+  const [calendarAnchor, setCalendarAnchor] = useState<Date>(() => {
+    const d = new Date();
+    d.setHours(0, 0, 0, 0);
+    return d;
+  });
+  const [calendarView, setCalendarView] = useState<CalendarView>('month');
 
   const [visibleColumns, setVisibleColumns] = useState<string[]>(ALL_FILING_COLUMN_KEYS);
   const [selectedFiling, setSelectedFiling] = useState<FilingRow | null>(null);
@@ -190,21 +268,67 @@ export function FilingsPage() {
     [listQuery.rows],
   );
 
-  // Kanban + calendar still depend on the legacy hook (PR-3b will migrate
-  // them and retire useComplianceFilingRows). Filter-dropdown options also
-  // come from this hook for now; option-source endpoints are a separate
-  // follow-up.
-  const legacy = useComplianceFilingRows();
   const updateFiling = useUpdateComplianceFiling();
 
-  const clientOptions = legacy.clientOptions;
-  const lawOptions = legacy.lawOptions;
-  const handlers = legacy.handlers;
+  // Filter dropdowns: server-driven typeahead for client + law (the two
+  // unbounded sets); the handler list comes from `useOrgUnits` (a small,
+  // bounded per-deployment registry — qualifies as bounded reference data
+  // under data-fetching.md).
+  const [clientSearch, setClientSearch] = useState('');
+  const [lawSearch, setLawSearch] = useState('');
+  const debouncedClientSearch = useDebouncedValue(clientSearch, 250);
+  const debouncedLawSearch = useDebouncedValue(lawSearch, 250);
+
+  const clientSearchQuery = useClientOptions({ search: debouncedClientSearch });
+  const lawSearchQuery = useLawOptions({ search: debouncedLawSearch });
+  // Hydrate labels for selected chips so they render even when the current
+  // search query no longer matches them. The hook normalises ids so two
+  // permutations of the same set hit the same query-cache entry.
+  const clientSelectedQuery = useClientOptions({
+    ids: clientFilter.length > 0 ? clientFilter : undefined,
+  });
+  const lawSelectedQuery = useLawOptions({
+    ids: lawFilter.length > 0 ? lawFilter : undefined,
+  });
+
+  const orgUnitsQuery = useOrgUnits();
+  const handlers = useMemo<Handler[]>(
+    () =>
+      (orgUnitsQuery.data ?? [])
+        .map(unitToHandler)
+        .filter((h): h is Handler => h !== undefined),
+    [orgUnitsQuery.data],
+  );
+
+  const clientSearchOptions = useMemo(
+    () => (clientSearchQuery.data ?? []).map((c) => ({ value: c.id, label: c.name })),
+    [clientSearchQuery.data],
+  );
+  const lawSearchOptions = useMemo(
+    () =>
+      (lawSearchQuery.data ?? []).map((l) => ({
+        value: l.id,
+        label: l.code ? `${l.code} — ${l.name}` : l.name,
+      })),
+    [lawSearchQuery.data],
+  );
+  const clientSelectedOptions = useMemo(
+    () => (clientSelectedQuery.data ?? []).map((c) => ({ value: c.id, label: c.name })),
+    [clientSelectedQuery.data],
+  );
+  const lawSelectedOptions = useMemo(
+    () =>
+      (lawSelectedQuery.data ?? []).map((l) => ({
+        value: l.id,
+        label: l.code ? `${l.code} — ${l.name}` : l.name,
+      })),
+    [lawSelectedQuery.data],
+  );
 
   const activeFilters: ActiveFilter[] = useMemo(() => {
     const chips: ActiveFilter[] = [];
     for (const key of clientFilter) {
-      const opt = clientOptions.find((o) => o.value === key);
+      const opt = clientSelectedOptions.find((o) => o.value === key);
       chips.push({
         key: `client:${key}`,
         group: 'Client',
@@ -213,7 +337,7 @@ export function FilingsPage() {
       });
     }
     for (const key of lawFilter) {
-      const opt = lawOptions.find((o) => o.value === key);
+      const opt = lawSelectedOptions.find((o) => o.value === key);
       chips.push({
         key: `law:${key}`,
         group: 'Law',
@@ -231,7 +355,7 @@ export function FilingsPage() {
       });
     }
     return chips;
-  }, [clientFilter, lawFilter, handlerFilter, clientOptions, lawOptions, handlers]);
+  }, [clientFilter, lawFilter, handlerFilter, clientSelectedOptions, lawSelectedOptions, handlers]);
 
   const clearAll = () => {
     setClientFilter([]);
@@ -297,11 +421,99 @@ export function FilingsPage() {
     { value: 'filed' as const, label: 'Filed', count: summary.completed },
   ];
 
-  // Kanban + calendar both still derive from the legacy hook's full row set —
-  // see PR-3b for the per-column / per-month migration.
-  const kanbanCards: KanbanCardData[] = useMemo(
-    () => legacy.rows.map((f) => ({ ...f, id: f.id, columnId: f.status })),
-    [legacy.rows],
+  // Kanban: each column fires its own paginated query against the same
+  // /compliance-filings endpoint with a fixed bucket. Filters (search,
+  // client/law/team) propagate to all 5 columns. `enabled` gates fetching to
+  // when the kanban tab is actually visible — switching to list/calendar
+  // doesn't keep these queries refetching, but cached pages survive so
+  // returning to kanban is instant.
+  const kanbanFilters = {
+    search: search.trim() || undefined,
+    clientIds: clientFilter.length > 0 ? clientFilter : undefined,
+    lawIds: lawFilter.length > 0 ? lawFilter : undefined,
+    assigneeTeamIds: handlerFilter.length > 0 ? handlerFilter : undefined,
+    enabled: viewMode === 'kanban',
+  };
+  const overdueBucket = useFilingsBucketInfinite({ bucket: 'overdue', ...kanbanFilters });
+  const dueTodayBucket = useFilingsBucketInfinite({ bucket: 'due-today', ...kanbanFilters });
+  const dueThisWeekBucket = useFilingsBucketInfinite({ bucket: 'due-this-week', ...kanbanFilters });
+  const upcomingBucket = useFilingsBucketInfinite({ bucket: 'upcoming', ...kanbanFilters });
+  const filedBucket = useFilingsBucketInfinite({ bucket: 'filed', ...kanbanFilters });
+
+  const bucketsByColumn: Record<string, ReturnType<typeof useFilingsBucketInfinite>> = {
+    overdue: overdueBucket,
+    'due-today': dueTodayBucket,
+    'due-this-week': dueThisWeekBucket,
+    upcoming: upcomingBucket,
+    filed: filedBucket,
+  };
+
+  // Concatenate per-bucket rows in column order, stamping `columnId` from the
+  // bucket key. We trust the server's bucket assignment over a client-side
+  // dueDate recompute — `notCompleted + dueBefore=today-1` etc. are the
+  // single source of truth (see useFilingsList.bucketToQueryParams).
+  const kanbanCards: KanbanCardData[] = useMemo(() => {
+    const out: KanbanCardData[] = [];
+    for (const col of KANBAN_COLUMNS) {
+      const bucket = bucketsByColumn[col.id];
+      for (const row of bucket.rows) {
+        const filingRow = rowToFilingRow(row);
+        out.push({ ...filingRow, status: col.id as FilingRow['status'], id: filingRow.id, columnId: col.id });
+      }
+    }
+    return out;
+  }, [overdueBucket.rows, dueTodayBucket.rows, dueThisWeekBucket.rows, upcomingBucket.rows, filedBucket.rows]);
+
+  const kanbanColumnState: Record<string, KanbanColumnState> = useMemo(() => {
+    const state: Record<string, KanbanColumnState> = {};
+    for (const col of KANBAN_COLUMNS) {
+      const bucket = bucketsByColumn[col.id];
+      state[col.id] = {
+        total: bucket.total,
+        isLoading: bucket.isLoading,
+        footer: bucket.hasMore ? (
+          <LoadMoreButton
+            rendered={bucket.rows.length}
+            total={bucket.total}
+            isFetching={bucket.isFetchingNextPage}
+            onClick={bucket.fetchNextPage}
+          />
+        ) : undefined,
+      };
+    }
+    return state;
+  }, [
+    overdueBucket.rows.length, overdueBucket.total, overdueBucket.hasMore, overdueBucket.isLoading, overdueBucket.isFetchingNextPage,
+    dueTodayBucket.rows.length, dueTodayBucket.total, dueTodayBucket.hasMore, dueTodayBucket.isLoading, dueTodayBucket.isFetchingNextPage,
+    dueThisWeekBucket.rows.length, dueThisWeekBucket.total, dueThisWeekBucket.hasMore, dueThisWeekBucket.isLoading, dueThisWeekBucket.isFetchingNextPage,
+    upcomingBucket.rows.length, upcomingBucket.total, upcomingBucket.hasMore, upcomingBucket.isLoading, upcomingBucket.isFetchingNextPage,
+    filedBucket.rows.length, filedBucket.total, filedBucket.hasMore, filedBucket.isLoading, filedBucket.isFetchingNextPage,
+  ]);
+
+  // Calendar: paginated date-range fetch over the visible window. Filters
+  // (search, client/law/team) apply identically to list/kanban/calendar.
+  // Anchor + view live on the page so the window is recomputed when the
+  // user navigates months or switches between month/week.
+  const { dueAfter: calendarDueAfter, dueBefore: calendarDueBefore } = useMemo(
+    () => calendarWindow(calendarAnchor, calendarView),
+    [calendarAnchor, calendarView],
+  );
+  const calendarRange = useFilingsRangeInfinite({
+    dueAfter: calendarDueAfter,
+    dueBefore: calendarDueBefore,
+    search: search.trim() || undefined,
+    clientIds: clientFilter.length > 0 ? clientFilter : undefined,
+    lawIds: lawFilter.length > 0 ? lawFilter : undefined,
+    assigneeTeamIds: handlerFilter.length > 0 ? handlerFilter : undefined,
+    enabled: viewMode === 'calendar',
+  });
+  const calendarRows = useMemo<FilingRow[]>(
+    () => calendarRange.rows.map(rowToFilingRow),
+    [calendarRange.rows],
+  );
+  const calendarRowsById = useMemo(
+    () => new Map(calendarRows.map((r) => [r.id, r])),
+    [calendarRows],
   );
 
   function handleCardMove(event: {
@@ -318,17 +530,6 @@ export function FilingsPage() {
       .mutateAsync({ id: event.cardId, data: { status: nextStatus } })
       .catch(() => toast.error('Failed to update filing status'));
   }
-
-  function handleCalendarClick(filing: Filing) {
-    const row = legacy.rows.find((f) => f.id === filing.id);
-    if (row) setSelectedFiling(row);
-  }
-
-  const monthAnchor = useMemo(() => {
-    const d = new Date();
-    d.setHours(0, 0, 0, 0);
-    return d;
-  }, []);
 
   const dueThisWeekCount = summary.dueToday + summary.dueThisWeek;
   const showOverdueAlert = !summaryLoading && summary.overdue > 0;
@@ -416,17 +617,27 @@ export function FilingsPage() {
             }
             filters={
               <>
-                <FilterPopover
+                <TypeaheadFilterPopover
                   label="Client"
-                  options={clientOptions.map((c) => ({ value: c.value, label: c.label }))}
                   value={clientFilter}
-                  onChange={(v) => setClientFilter(v as string[])}
+                  onChange={setClientFilter}
+                  searchResults={clientSearchOptions}
+                  selectedLabels={clientSelectedOptions}
+                  searchValue={clientSearch}
+                  onSearchChange={setClientSearch}
+                  isLoading={clientSearchQuery.isFetching}
+                  searchPlaceholder="Search clients…"
                 />
-                <FilterPopover
+                <TypeaheadFilterPopover
                   label="Law"
-                  options={lawOptions.map((l) => ({ value: l.value, label: l.label }))}
                   value={lawFilter}
-                  onChange={(v) => setLawFilter(v as string[])}
+                  onChange={setLawFilter}
+                  searchResults={lawSearchOptions}
+                  selectedLabels={lawSelectedOptions}
+                  searchValue={lawSearch}
+                  onSearchChange={setLawSearch}
+                  isLoading={lawSearchQuery.isFetching}
+                  searchPlaceholder="Search laws by code or name…"
                 />
                 <FilterPopover
                   label="Handler"
@@ -536,15 +747,14 @@ export function FilingsPage() {
               <KanbanBoard
                 columns={KANBAN_COLUMNS}
                 cards={kanbanCards}
+                columnState={kanbanColumnState}
                 onCardMove={handleCardMove}
                 renderCard={(card) => {
                   const f = card as unknown as FilingRow;
                   return (
                     <FilingKanbanCard
                       filing={f}
-                      onOpen={(row) =>
-                        setSelectedFiling(legacy.rows.find((r) => r.id === row.id) ?? null)
-                      }
+                      onOpen={(row) => setSelectedFiling(row)}
                     />
                   );
                 }}
@@ -555,9 +765,19 @@ export function FilingsPage() {
           {viewMode === 'calendar' && (
             <div className="mt-4">
               <ComplianceCalendar
-                filings={legacy.rows}
-                month={monthAnchor}
-                onFilingClick={handleCalendarClick}
+                filings={calendarRows}
+                anchor={calendarAnchor}
+                view={calendarView}
+                onAnchorChange={setCalendarAnchor}
+                onViewChange={setCalendarView}
+                onFilingClick={(f) => setSelectedFiling(calendarRowsById.get(f.id) ?? null)}
+                meta={{
+                  rendered: calendarRows.length,
+                  total: calendarRange.total,
+                  isFetchingMore: calendarRange.isFetchingNextPage,
+                  isLoading: calendarRange.isLoading,
+                }}
+                onLoadMore={calendarRange.fetchNextPage}
               />
             </div>
           )}
