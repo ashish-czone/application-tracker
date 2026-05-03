@@ -218,6 +218,41 @@ export const ClientsListQuerySchema = z
     };
   });
 
+// ---- Options query schema -------------------------------------------------
+// Backs `GET /clients/options` (typeahead). `search` ILIKEs name/legalName;
+// `ids` (CSV) bypasses search and hydrates labels for already-selected chips
+// when the page is reopened. `limit` clamps low — typeaheads don't need
+// hundreds of rows.
+
+const OPTIONS_DEFAULT_LIMIT = 25;
+const OPTIONS_MAX_LIMIT = 50;
+
+const optionsClampedLimit = z.unknown().transform((raw) => {
+  if (raw == null || raw === '') return OPTIONS_DEFAULT_LIMIT;
+  const n = Number(raw);
+  if (!Number.isFinite(n) || n <= 0) return OPTIONS_DEFAULT_LIMIT;
+  return Math.min(Math.floor(n), OPTIONS_MAX_LIMIT);
+});
+
+export interface ClientsOptionsQuery {
+  search?: string;
+  ids?: string[];
+  limit: number;
+}
+
+export const ClientsOptionsQuerySchema = z
+  .object({
+    search: optionalString,
+    ids: optionalStringCsv,
+    limit: optionsClampedLimit,
+  })
+  .passthrough()
+  .transform((raw): ClientsOptionsQuery => ({
+    search: raw.search,
+    ids: raw.ids,
+    limit: raw.limit,
+  }));
+
 export type CreateClientDto = z.infer<typeof CreateClientSchema>;
 export type UpdateClientDto = z.infer<typeof UpdateClientSchema>;
 export type TransitionClientDto = z.infer<typeof TransitionClientSchema>;

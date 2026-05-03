@@ -18,6 +18,7 @@ describe('ClientsController', () => {
     transition: ReturnType<typeof vi.fn>;
     getSummary: ReturnType<typeof vi.fn>;
     getHandlerOptions: ReturnType<typeof vi.fn>;
+    getOptions: ReturnType<typeof vi.fn>;
   };
   let contactsService: { setPrimary: ReturnType<typeof vi.fn> };
   let registrationsService: {
@@ -47,6 +48,7 @@ describe('ClientsController', () => {
         clientsWithOverdue: 0,
       }),
       getHandlerOptions: vi.fn().mockResolvedValue([]),
+      getOptions: vi.fn().mockResolvedValue([]),
     };
     contactsService = { setPrimary: vi.fn().mockResolvedValue(undefined) };
     registrationsService = {
@@ -102,6 +104,35 @@ describe('ClientsController', () => {
       const accessCtx = { userId: 'u1', scopes: [{ type: 'unit' }] } as never;
       await controller.handlerOptions(accessCtx);
       expect(clientsService.getHandlerOptions).toHaveBeenCalledWith(accessCtx);
+    });
+
+    it('options endpoint parses query and forwards parsed query + access context', async () => {
+      clientsService.getOptions = vi.fn().mockResolvedValue([{ id: 'c1', name: 'Acme' }]);
+      const accessCtx = { userId: 'u1', scopes: [{ type: 'any' }] } as never;
+      await controller.options({ search: 'acm', limit: '10' }, accessCtx);
+      expect(clientsService.getOptions).toHaveBeenCalledWith(
+        expect.objectContaining({ search: 'acm', limit: 10 }),
+        accessCtx,
+      );
+    });
+
+    it('options endpoint clamps limit to 50 (typeahead bound)', async () => {
+      clientsService.getOptions = vi.fn().mockResolvedValue([]);
+      await controller.options({ limit: '500' }, undefined);
+      const call = clientsService.getOptions.mock.calls[0][0];
+      expect(call.limit).toBe(50);
+    });
+
+    it('options endpoint splits ids CSV into an array', async () => {
+      clientsService.getOptions = vi.fn().mockResolvedValue([]);
+      await controller.options({ ids: 'c1,c2,c3' }, undefined);
+      const call = clientsService.getOptions.mock.calls[0][0];
+      expect(call.ids).toEqual(['c1', 'c2', 'c3']);
+    });
+
+    it('options endpoint requires clients.read', () => {
+      const permission = Reflect.getMetadata('requiredPermission', ClientsController.prototype.options);
+      expect(permission).toBe('clients.read');
     });
 
     it('findOne requires clients.read', () => {
