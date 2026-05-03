@@ -10,6 +10,13 @@ export {
   mergeFilters,
 } from './query-builder';
 
+export { buildListQuery } from './build-list-query';
+export type {
+  BuildListQueryOptions,
+  BuildListQueryResult,
+  ListQueryInput,
+} from './build-list-query';
+
 export type {
   FilterExpression,
   FilterOperator,

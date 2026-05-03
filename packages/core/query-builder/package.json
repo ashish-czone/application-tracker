@@ -6,6 +6,9 @@
   "scripts": {
     "test": "vitest run"
   },
+  "dependencies": {
+    "@packages/database": "workspace:*"
+  },
   "devDependencies": {
     "drizzle-orm": "^0.45.1",
     "typescript": "^5.7.0",
