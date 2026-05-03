@@ -45,6 +45,7 @@ function groupCards(cards: KanbanCardData[], columnIds: string[]): CardsByColumn
 export function KanbanBoard({
   columns,
   cards,
+  columnState,
   onCardMove,
   onColumnReorder,
   renderCard,
@@ -276,6 +277,7 @@ export function KanbanBoard({
               column={col}
               cards={cardsByColumn[col.id] ?? []}
               sortableColumns={sortableColumns}
+              state={columnState?.[col.id]}
             >
               {(cardsByColumn[col.id] ?? []).map((card) => (
                 <KanbanCard key={card.id} id={card.id}>
