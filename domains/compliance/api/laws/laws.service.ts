@@ -1,11 +1,11 @@
 import { Inject, Injectable } from '@nestjs/common';
-import { eq, inArray, sql } from 'drizzle-orm';
+import { asc, eq, inArray, sql, type SQL } from 'drizzle-orm';
 import { BaseCrudService, type BaseListQuery } from '@packages/crud-base';
 import { DatabaseService, withScope } from '@packages/database';
 import type { DataAccessContext } from '@packages/rbac';
 import { complianceLaws } from './laws.schema';
 import { LAWS_CRUD_TOKEN } from './laws.crud-token';
-import type { CreateLawDto, UpdateLawDto } from './laws.dto';
+import type { CreateLawDto, LawsOptionsQuery, UpdateLawDto } from './laws.dto';
 
 export interface LawDisplayFields {
   id: string;
@@ -109,6 +109,41 @@ export class LawsService {
     })));
 
     return { tree, counts };
+  }
+
+  /**
+   * Typeahead options for the law filter dropdown. Returns `{id,code,name}`
+   * rows ordered by code (the typical user-facing label). `search` ILIKEs
+   * code + name; `ids` (when present) hydrates labels for already-selected
+   * chips and bypasses search so a reopened page can show its filter chips
+   * even when the saved filter values are off the typeahead's current
+   * visible page.
+   */
+  async getOptions(
+    query: LawsOptionsQuery,
+    _accessCtx?: DataAccessContext,
+  ): Promise<Array<{ id: string; code: string; name: string }>> {
+    const conditions: SQL[] = [];
+    if (query.ids && query.ids.length > 0) {
+      conditions.push(sql`${complianceLaws.id} = ANY(${query.ids}::text[])`);
+    } else if (query.search) {
+      const escaped = query.search.replace(/[%_\\]/g, (c) => `\\${c}`);
+      const pattern = `%${escaped}%`;
+      conditions.push(
+        sql`(${complianceLaws.code} ILIKE ${pattern} OR ${complianceLaws.name} ILIKE ${pattern})`,
+      );
+    }
+    const rows = await this.database.db
+      .select({
+        id: complianceLaws.id,
+        code: complianceLaws.code,
+        name: complianceLaws.name,
+      })
+      .from(complianceLaws)
+      .where(withScope(complianceLaws, ...conditions))
+      .orderBy(asc(complianceLaws.code))
+      .limit(query.limit);
+    return rows;
   }
 
   /**

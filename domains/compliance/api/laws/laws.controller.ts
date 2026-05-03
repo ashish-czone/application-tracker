@@ -18,7 +18,12 @@ import {
   type DataAccessContext,
 } from '@packages/rbac';
 import { LawsService } from './laws.service';
-import { CreateLawSchema, LawsListQuerySchema, UpdateLawSchema } from './laws.dto';
+import {
+  CreateLawSchema,
+  LawsListQuerySchema,
+  LawsOptionsQuerySchema,
+  UpdateLawSchema,
+} from './laws.dto';
 
 @Controller('laws')
 export class LawsController {
@@ -36,6 +41,15 @@ export class LawsController {
    * stitch parents on the client. Optional `?jurisdiction=central|state|...`
    * scopes the tree (counts always reflect the unfiltered set).
    */
+  @Get('options')
+  @RequirePermission('laws.read')
+  options(
+    @Query() query: Record<string, unknown>,
+    @AccessContext() accessCtx?: DataAccessContext,
+  ) {
+    return this.laws.getOptions(LawsOptionsQuerySchema.parse(query), accessCtx);
+  }
+
   @Get('tree')
   @RequirePermission('laws.read')
   tree(@Query('jurisdiction') jurisdiction?: string) {

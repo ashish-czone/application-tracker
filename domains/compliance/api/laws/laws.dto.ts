@@ -38,6 +38,61 @@ export const LawsListQuerySchema = z
   })
   .passthrough();
 
+// ---- Options query schema ------------------------------------------------
+// Backs `GET /laws/options` (typeahead). `search` ILIKEs name + code; `ids`
+// (CSV) bypasses search and hydrates labels for already-selected chips.
+// `limit` clamps low — typeaheads don't need hundreds of rows.
+
+const OPTIONS_DEFAULT_LIMIT = 25;
+const OPTIONS_MAX_LIMIT = 50;
+
+const optionalString = z
+  .string()
+  .optional()
+  .transform((s) => {
+    if (!s) return undefined;
+    const trimmed = s.trim();
+    return trimmed.length > 0 ? trimmed : undefined;
+  });
+
+const optionalStringCsv = z
+  .string()
+  .optional()
+  .transform((s) => {
+    if (!s) return undefined;
+    const parts = s
+      .split(',')
+      .map((p) => p.trim())
+      .filter((p) => p.length > 0);
+    return parts.length > 0 ? parts : undefined;
+  });
+
+const optionsClampedLimit = z.unknown().transform((raw) => {
+  if (raw == null || raw === '') return OPTIONS_DEFAULT_LIMIT;
+  const n = Number(raw);
+  if (!Number.isFinite(n) || n <= 0) return OPTIONS_DEFAULT_LIMIT;
+  return Math.min(Math.floor(n), OPTIONS_MAX_LIMIT);
+});
+
+export interface LawsOptionsQuery {
+  search?: string;
+  ids?: string[];
+  limit: number;
+}
+
+export const LawsOptionsQuerySchema = z
+  .object({
+    search: optionalString,
+    ids: optionalStringCsv,
+    limit: optionsClampedLimit,
+  })
+  .passthrough()
+  .transform((raw): LawsOptionsQuery => ({
+    search: raw.search,
+    ids: raw.ids,
+    limit: raw.limit,
+  }));
+
 export type CreateLawDto = z.infer<typeof CreateLawSchema>;
 export type UpdateLawDto = z.infer<typeof UpdateLawSchema>;
 export type LawRow = z.infer<typeof LawRowSchema>;
