@@ -1,11 +1,18 @@
 import { Inject, Injectable } from '@nestjs/common';
+import { count } from 'drizzle-orm';
 import { DatabaseService, and, eq, isNull, sql } from '@packages/database';
-import { BaseCrudService, type BaseListQuery } from '@packages/crud-base';
-import type { DataAccessContext } from '@packages/rbac';
+import { BaseCrudService } from '@packages/crud-base';
+import { buildListQuery } from '@packages/query-builder';
+import { type DataAccessContext, DataAccessScopeService } from '@packages/rbac';
 import { LawsService } from '../laws';
 import { complianceLawHandlers } from './law-handlers.schema';
 import { LAW_HANDLERS_CRUD_TOKEN } from './law-handlers.crud-token';
-import type { CreateLawHandlerDto, UpdateLawHandlerDto } from './law-handlers.dto';
+import { LAW_HANDLERS_ANCHORS } from './law-handlers.scope';
+import type {
+  CreateLawHandlerDto,
+  LawHandlersListQuery,
+  UpdateLawHandlerDto,
+} from './law-handlers.dto';
 
 export interface LawHandler {
   id: string;
@@ -23,6 +30,32 @@ export interface CreateLawHandlerInput {
 }
 
 /**
+ * Whitelisted columns for the list endpoint's structured `filters`
+ * JSON and bare passthrough id filters. Anything outside this map is
+ * silently dropped — the frontend cannot push arbitrary column
+ * predicates through. `orgEntityId` is the load-bearing entry: PR-7's
+ * per-unit panel paginates `?orgEntityId=…` and was previously
+ * dropped silently by `BaseCrudService.list`.
+ */
+const FILTERABLE_LAW_HANDLER_COLUMNS = {
+  id: complianceLawHandlers.id,
+  lawId: complianceLawHandlers.lawId,
+  orgEntityId: complianceLawHandlers.orgEntityId,
+  clientId: complianceLawHandlers.clientId,
+  isPrimary: complianceLawHandlers.isPrimary,
+} as const;
+
+/**
+ * Whitelisted sort keys. Anything outside this map falls back to the
+ * `defaultSort` registered with `buildListQuery` (`createdAt` DESC).
+ */
+const SORTABLE_LAW_HANDLER_COLUMNS = {
+  isPrimary: complianceLawHandlers.isPrimary,
+  createdAt: complianceLawHandlers.createdAt,
+  updatedAt: complianceLawHandlers.updatedAt,
+} as const;
+
+/**
  * Merged service: CRUD delegates for the entity engine + the programmatic
  * query/insert helpers used by seeds and by the rules service (for default-
  * handler checks).
@@ -38,30 +71,85 @@ export class LawHandlersService {
     private readonly crud: BaseCrudService<typeof complianceLawHandlers>,
     private readonly database: DatabaseService,
     private readonly lawsService: LawsService,
+    private readonly dataAccessScope: DataAccessScopeService,
   ) {}
 
   // ---- CRUD delegates -------------------------------------------------------
 
   /**
-   * List handlers with `lawCode` + `lawName` embedded per row. Service
-   * composition with LawsService.findDisplayByIds — same pattern as
-   * ComplianceFilingsService.list, never a JOIN.
+   * Server-paginated list with structured filters JSON, bare passthrough
+   * id filters (`?orgEntityId=…`, `?lawId=…`, `?clientId=…`,
+   * `?isPrimary=…`), whitelisted sort, and a SQL `count()` for
+   * `meta.total`. Each row gets `lawCode` / `lawName` / `lawJurisdiction`
+   * embedded via service composition with `LawsService.findDisplayByIds`
+   * — same pattern as `ComplianceFilingsService.list`, never a JOIN
+   * (laws is intra-domain but treated like compliance-filings does for
+   * consistency).
+   *
+   * Bypasses `BaseCrudService.list` because the base is by design a
+   * trivial pagination wrapper that drops filters and reports
+   * `total = rows.length` (the page size, not the table count). The
+   * `buildListQuery` helper composes search + sort + filters + scope
+   * into one WHERE that is reused for the count query so the rendered
+   * page and the reported total always agree.
+   *
+   * Closes the silent-filter gap PR-7's per-unit panel shipped with:
+   * the panel paginates `?orgEntityId=…` against this endpoint, so
+   * dropping the filter showed handlers from ALL org units. Once this
+   * fix lands the panel renders correctly with no frontend change.
+   *
+   * Actor-scope: `LAW_HANDLERS_ANCHORS` registers `team` (orgEntityId)
+   * for forward-compat. No current role grant uses a non-`'any'` scope
+   * on `law-handlers.read`, so the predicate is dormant today; the
+   * helper ANDs it through unchanged when a future grant lights it up.
    */
-  async list(query: BaseListQuery, accessCtx?: DataAccessContext) {
-    const result = await this.crud.list(query, accessCtx);
+  async list(query: LawHandlersListQuery, accessCtx?: DataAccessContext) {
+    const scopePredicate = accessCtx
+      ? await this.dataAccessScope.buildPredicate(accessCtx, {
+          anchors: LAW_HANDLERS_ANCHORS,
+        })
+      : undefined;
+
+    const built = buildListQuery(complianceLawHandlers, query, {
+      scopePredicate,
+      filterableColumns: FILTERABLE_LAW_HANDLER_COLUMNS,
+      sortableColumns: SORTABLE_LAW_HANDLER_COLUMNS,
+      // No free-text columns on this pivot — search is unsupported. The
+      // helper treats `searchableColumns: undefined` as a no-op.
+      defaultSort: { field: 'createdAt', order: 'desc' },
+      includeDeleted: query.includeDeleted,
+    });
+
+    const rows = await this.database.db
+      .select()
+      .from(complianceLawHandlers)
+      .where(built.where)
+      .orderBy(...built.orderBy)
+      .limit(built.limit)
+      .offset(built.offset);
+
+    const [totalRow] = await this.database.db
+      .select({ total: count() })
+      .from(complianceLawHandlers)
+      .where(built.where);
+
+    const meta = built.paginationMeta(Number(totalRow?.total ?? 0));
+
+    // Embed law display fields per row via service composition (no JOIN).
     const lawIds = new Set<string>();
-    for (const row of result.data as Record<string, unknown>[]) {
+    for (const row of rows as Record<string, unknown>[]) {
       const id = row.lawId;
       if (typeof id === 'string' && id.length > 0) lawIds.add(id);
     }
-    if (lawIds.size === 0) return result;
+    if (lawIds.size === 0) {
+      return { data: rows, meta };
+    }
 
     const laws = await this.lawsService.findDisplayByIds([...lawIds]);
     const byId = new Map(laws.map((l) => [l.id, l]));
 
     return {
-      ...result,
-      data: (result.data as Record<string, unknown>[]).map((row) => {
+      data: (rows as Record<string, unknown>[]).map((row) => {
         const lawId = typeof row.lawId === 'string' ? row.lawId : null;
         const law = lawId ? byId.get(lawId) : undefined;
         if (!law) return row;
@@ -72,6 +160,7 @@ export class LawHandlersService {
           lawJurisdiction: law.jurisdiction,
         };
       }),
+      meta,
     };
   }
 
