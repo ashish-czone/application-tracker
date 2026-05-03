@@ -1,18 +1,39 @@
-import { useState, useMemo, type HTMLAttributes } from 'react';
+import { useMemo, type HTMLAttributes } from 'react';
 import { motion } from 'framer-motion';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { Eyebrow, useSlidingHighlight } from '@packages/ui';
 import type { Filing } from '../../types';
 
-export interface ComplianceCalendarProps extends HTMLAttributes<HTMLDivElement> {
-  filings: Filing[];
-  /** Initial anchor date — defaults to current. */
-  month?: Date;
-  /** Handler invoked when a specific filing row is clicked. */
-  onFilingClick?: (filing: Filing) => void;
+export type CalendarView = 'month' | 'week';
+
+export interface ComplianceCalendarMeta {
+  /** Number of filings currently rendered in the calendar's window. */
+  rendered: number;
+  /** Server-known total of filings in the visible window (across all pages). */
+  total: number;
+  /** A "Load more" page is in flight. */
+  isFetchingMore: boolean;
+  /** True while the initial window fetch hasn't returned yet. */
+  isLoading: boolean;
 }
 
-type CalendarView = 'month' | 'week';
+export interface ComplianceCalendarProps extends Omit<HTMLAttributes<HTMLDivElement>, 'onChange'> {
+  filings: Filing[];
+  /** Anchor date for the visible window (controlled). */
+  anchor: Date;
+  /** Month or week mode (controlled). */
+  view: CalendarView;
+  onAnchorChange: (anchor: Date) => void;
+  onViewChange: (view: CalendarView) => void;
+  /** Reset to "today's" anchor. Falls back to a fresh `new Date()`. */
+  onGoToToday?: () => void;
+  /** Handler invoked when a specific filing row is clicked. */
+  onFilingClick?: (filing: Filing) => void;
+  /** Server-side load state for the current window. Drives the footer. */
+  meta?: ComplianceCalendarMeta;
+  /** Fired when the user clicks "Load more" in the footer. */
+  onLoadMore?: () => void;
+}
 
 const WEEKDAYS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
 
@@ -91,13 +112,17 @@ function formatHeading(anchor: Date, view: CalendarView): string {
  */
 export function ComplianceCalendar({
   filings,
-  month,
+  anchor,
+  view,
+  onAnchorChange,
+  onViewChange,
+  onGoToToday,
   onFilingClick,
+  meta,
+  onLoadMore,
   className = '',
   ...rest
 }: ComplianceCalendarProps) {
-  const [anchor, setAnchor] = useState<Date>(() => month ?? new Date());
-  const [view, setView] = useState<CalendarView>('month');
   const viewHighlight = useSlidingHighlight<CalendarView>(view);
 
   const cells = useMemo(
@@ -107,9 +132,11 @@ export function ComplianceCalendar({
 
   const heading = formatHeading(anchor, view);
   const maxVisible = view === 'week' ? 6 : 3;
-  const rows = view === 'month' ? 6 : 1;
 
-  const goToday = () => setAnchor(month ?? new Date());
+  const goToday = () => {
+    if (onGoToToday) onGoToToday();
+    else onAnchorChange(new Date());
+  };
 
   return (
     <div className={`bg-paper-raised border border-rule ${className}`} {...rest}>
@@ -123,7 +150,7 @@ export function ComplianceCalendar({
           <div className="flex items-center gap-1 ml-2">
             <button
               type="button"
-              onClick={() => setAnchor((a) => shiftAnchor(a, view, -1))}
+              onClick={() => onAnchorChange(shiftAnchor(anchor, view, -1))}
               className="w-7 h-7 flex items-center justify-center border border-rule hover:border-ink text-ink-muted hover:text-ink transition-colors"
               aria-label={view === 'month' ? 'Previous month' : 'Previous week'}
             >
@@ -138,7 +165,7 @@ export function ComplianceCalendar({
             </button>
             <button
               type="button"
-              onClick={() => setAnchor((a) => shiftAnchor(a, view, 1))}
+              onClick={() => onAnchorChange(shiftAnchor(anchor, view, 1))}
               className="w-7 h-7 flex items-center justify-center border border-rule hover:border-ink text-ink-muted hover:text-ink transition-colors"
               aria-label={view === 'month' ? 'Next month' : 'Next week'}
             >
@@ -163,7 +190,7 @@ export function ComplianceCalendar({
                 key={v}
                 ref={(el) => viewHighlight.setItemRef(v, el)}
                 type="button"
-                onClick={() => setView(v)}
+                onClick={() => onViewChange(v)}
                 className={`relative z-10 px-3 h-7 text-[10px] uppercase tracking-eyebrow font-sans font-medium transition-colors ${
                   view === v ? 'text-paper' : 'text-ink-muted hover:text-ink'
                 }`}
@@ -263,6 +290,22 @@ export function ComplianceCalendar({
           );
         })}
       </div>
+
+      {meta && (meta.total > meta.rendered || meta.isFetchingMore) && (
+        <div className="flex items-center justify-between px-5 py-3 border-t border-rule">
+          <span className="text-[11px] font-sans tabular-nums text-ink-soft">
+            Showing {meta.rendered} of {meta.total} filings in this {view}
+          </span>
+          <button
+            type="button"
+            onClick={onLoadMore}
+            disabled={meta.isFetchingMore || meta.total <= meta.rendered}
+            className="px-3 h-7 border border-rule hover:border-ink text-[10px] uppercase tracking-eyebrow font-sans font-medium text-ink-muted hover:text-ink disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+          >
+            {meta.isFetchingMore ? 'Loading…' : 'Load more'}
+          </button>
+        </div>
+      )}
     </div>
   );
 }

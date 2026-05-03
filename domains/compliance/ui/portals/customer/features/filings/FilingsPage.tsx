@@ -18,7 +18,7 @@ import {
   type KanbanCardData,
   type KanbanColumnState,
 } from '@packages/ui';
-import { ComplianceCalendar } from '../../../../components/composites';
+import { ComplianceCalendar, type CalendarView } from '../../../../components/composites/ComplianceCalendar';
 import type { FilingRow } from './types';
 import { FilingDetailDrawer } from './components/FilingDetailDrawer';
 import {
@@ -38,6 +38,7 @@ import { ScreenPreviewTopBar } from '../shared/ScreenPreviewTopBar';
 import { useComplianceFilingRows, useUpdateComplianceFiling } from '../../../../hooks/useComplianceFilings';
 import { useFilingsList, type FilingsListBucket } from '../../../../hooks/useFilingsList';
 import { useFilingsBucketInfinite } from '../../../../hooks/useFilingsBucket';
+import { useFilingsRangeInfinite } from '../../../../hooks/useFilingsRange';
 import { useFilingsSummary } from '../../../../hooks/useFilingsSummary';
 import type { FilingListRow } from '../../../../hooks/useFilingsByDueWindow';
 
@@ -150,6 +151,38 @@ function mapPriority(p: string): FilingRow['priority'] {
   return PRIORITY_MAP[p] ?? 'normal';
 }
 
+function toISODate(d: Date): string {
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${y}-${m}-${day}`;
+}
+
+/**
+ * Compute the [dueAfter, dueBefore] inclusive window the calendar's grid
+ * occupies for a given anchor + view. Month view shows 6 rows × 7 cols
+ * starting from the Monday on or before the 1st of the anchor's month;
+ * week view shows the 7 days of the anchor's Monday-based week.
+ */
+function calendarWindow(anchor: Date, view: CalendarView): { dueAfter: string; dueBefore: string } {
+  if (view === 'week') {
+    const day = anchor.getDay();
+    const mondayOffset = (day + 6) % 7;
+    const monday = new Date(anchor.getFullYear(), anchor.getMonth(), anchor.getDate() - mondayOffset);
+    const sunday = new Date(monday);
+    sunday.setDate(monday.getDate() + 6);
+    return { dueAfter: toISODate(monday), dueBefore: toISODate(sunday) };
+  }
+  const year = anchor.getFullYear();
+  const month = anchor.getMonth();
+  const first = new Date(year, month, 1);
+  const leading = (first.getDay() + 6) % 7;
+  const start = new Date(year, month, 1 - leading);
+  const end = new Date(start);
+  end.setDate(start.getDate() + 41);
+  return { dueAfter: toISODate(start), dueBefore: toISODate(end) };
+}
+
 interface LoadMoreButtonProps {
   rendered: number;
   total: number;
@@ -181,6 +214,12 @@ export function FilingsPage() {
   const [lawFilter, setLawFilter] = useState<string[]>([]);
   const [handlerFilter, setHandlerFilter] = useState<string[]>([]);
   const [page, setPage] = useState(1);
+  const [calendarAnchor, setCalendarAnchor] = useState<Date>(() => {
+    const d = new Date();
+    d.setHours(0, 0, 0, 0);
+    return d;
+  });
+  const [calendarView, setCalendarView] = useState<CalendarView>('month');
 
   const [visibleColumns, setVisibleColumns] = useState<string[]>(ALL_FILING_COLUMN_KEYS);
   const [selectedFiling, setSelectedFiling] = useState<FilingRow | null>(null);
@@ -389,6 +428,32 @@ export function FilingsPage() {
     filedBucket.rows.length, filedBucket.total, filedBucket.hasMore, filedBucket.isLoading, filedBucket.isFetchingNextPage,
   ]);
 
+  // Calendar: paginated date-range fetch over the visible window. Filters
+  // (search, client/law/team) apply identically to list/kanban/calendar.
+  // Anchor + view live on the page so the window is recomputed when the
+  // user navigates months or switches between month/week.
+  const { dueAfter: calendarDueAfter, dueBefore: calendarDueBefore } = useMemo(
+    () => calendarWindow(calendarAnchor, calendarView),
+    [calendarAnchor, calendarView],
+  );
+  const calendarRange = useFilingsRangeInfinite({
+    dueAfter: calendarDueAfter,
+    dueBefore: calendarDueBefore,
+    search: search.trim() || undefined,
+    clientIds: clientFilter.length > 0 ? clientFilter : undefined,
+    lawIds: lawFilter.length > 0 ? lawFilter : undefined,
+    assigneeTeamIds: handlerFilter.length > 0 ? handlerFilter : undefined,
+    enabled: viewMode === 'calendar',
+  });
+  const calendarRows = useMemo<FilingRow[]>(
+    () => calendarRange.rows.map(rowToFilingRow),
+    [calendarRange.rows],
+  );
+  const calendarRowsById = useMemo(
+    () => new Map(calendarRows.map((r) => [r.id, r])),
+    [calendarRows],
+  );
+
   function handleCardMove(event: {
     cardId: string;
     fromColumnId: string;
@@ -403,17 +468,6 @@ export function FilingsPage() {
       .mutateAsync({ id: event.cardId, data: { status: nextStatus } })
       .catch(() => toast.error('Failed to update filing status'));
   }
-
-  function handleCalendarClick(filing: Filing) {
-    const row = legacy.rows.find((f) => f.id === filing.id);
-    if (row) setSelectedFiling(row);
-  }
-
-  const monthAnchor = useMemo(() => {
-    const d = new Date();
-    d.setHours(0, 0, 0, 0);
-    return d;
-  }, []);
 
   const dueThisWeekCount = summary.dueToday + summary.dueThisWeek;
   const showOverdueAlert = !summaryLoading && summary.overdue > 0;
@@ -639,9 +693,19 @@ export function FilingsPage() {
           {viewMode === 'calendar' && (
             <div className="mt-4">
               <ComplianceCalendar
-                filings={legacy.rows}
-                month={monthAnchor}
-                onFilingClick={handleCalendarClick}
+                filings={calendarRows}
+                anchor={calendarAnchor}
+                view={calendarView}
+                onAnchorChange={setCalendarAnchor}
+                onViewChange={setCalendarView}
+                onFilingClick={(f) => setSelectedFiling(calendarRowsById.get(f.id) ?? null)}
+                meta={{
+                  rendered: calendarRows.length,
+                  total: calendarRange.total,
+                  isFetchingMore: calendarRange.isFetchingNextPage,
+                  isLoading: calendarRange.isLoading,
+                }}
+                onLoadMore={calendarRange.fetchNextPage}
               />
             </div>
           )}
