@@ -95,22 +95,26 @@ function filingRowToClientFiling(row: FilingListRow): ClientFiling {
 }
 
 function registrationToClientLaw(reg: ClientRegistrationRecord): ClientLaw {
-  const handler: Handler = reg.primaryHandlerTeamId
-    ? {
-        id: reg.primaryHandlerTeamId,
-        name: reg.primaryHandlerTeamId__label ?? '—',
-        initials: initialsFromName(reg.primaryHandlerTeamId__label ?? ''),
-      }
-    : UNASSIGNED_HANDLER;
+  // Per-registration handler / cadence are no longer carried on the table —
+  // assignment lives on filings via the law-handler resolver, and cadence
+  // lives on the law itself. The Laws tab shows assignment/cadence for each
+  // registered law via other surfaces; this row falls back to "Unassigned".
+  const handler: Handler = UNASSIGNED_HANDLER;
+
+  // `lawJurisdiction` is text on the laws table (no enum guarantee). Coerce
+  // to the front-end's narrow union; anything else (or null) defaults to
+  // 'central'.
+  const jurisdiction: ClientLaw['jurisdiction'] =
+    reg.lawJurisdiction === 'state' ? 'state' : 'central';
 
   return {
     id: reg.id,
     lawId: reg.lawId,
     clientId: reg.clientId,
-    code: '',
-    name: reg.lawId__label ?? '',
-    jurisdiction: 'central',
-    cadence: reg.cadence ?? '—',
+    code: reg.lawCode ?? '',
+    name: reg.lawName ?? '',
+    jurisdiction,
+    cadence: '—',
     nextDue: '',
     openFilings: 0,
     overdueFilings: 0,
@@ -124,7 +128,15 @@ function registrationToClientLaw(reg: ClientRegistrationRecord): ClientLaw {
 export interface BuildClientDetailInput {
   record: ClientRecord;
   summary: FilingsSummary;
+  /** Top-N preview from `useClientRegistrationsSummary`. */
   registrations: ClientRegistrationRecord[];
+  /**
+   * Server-reported total registrations for the client, sourced from
+   * `meta.total` of the same summary query. Used for the
+   * `registeredLaws` count so the UI never reflects the (capped)
+   * preview length.
+   */
+  registrationsTotal: number;
   recentFilings: FilingListRow[];
   contacts: ClientContactRecord[];
 }
@@ -137,7 +149,7 @@ export interface BuildClientDetailInput {
  * mergeClientDetail() + placeholder pattern.
  */
 export function buildClientDetail(input: BuildClientDetailInput): ClientDetail {
-  const { record, summary, registrations, recentFilings, contacts } = input;
+  const { record, summary, registrations, registrationsTotal, recentFilings, contacts } = input;
   const risk: ClientRiskLevel = summary.overdue > 5 ? 'critical' : summary.overdue > 0 ? 'at-risk' : 'healthy';
   const onTimePct = summary.completed + summary.cancelled > 0
     ? Math.round((summary.completed / (summary.completed + summary.cancelled + summary.overdue)) * 100)
@@ -155,7 +167,7 @@ export function buildClientDetail(input: BuildClientDetailInput): ClientDetail {
     color: colorForClient(record.id, record.name),
     status: normalizeStatus(record.complianceStatus),
     risk,
-    registeredLaws: registrations.length,
+    registeredLaws: registrationsTotal,
     openFilings: summary.overdue + summary.dueToday + summary.dueThisWeek + summary.upcoming,
     overdueFilings: summary.overdue,
     onTimePct,

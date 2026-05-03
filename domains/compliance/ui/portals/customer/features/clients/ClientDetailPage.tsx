@@ -13,16 +13,17 @@ import { ClientDetailOverview } from './components/ClientDetailOverview';
 import { CLIENT_DETAIL_FILING_COLUMNS } from './components/clientDetailFilingColumns';
 import { makeClientDetailLawColumns } from './components/clientDetailLawColumns';
 import { RegistrationDeactivationDialog } from './components/RegistrationDeactivationDialog';
+import { RegistrationsTab } from './components/RegistrationsTab';
 import { clientsQueries } from '../../../../hooks/useClientsApi';
 import {
   useClientContacts,
   useClientFilings,
   useClientFilingsSummary,
-  useClientRegistrations,
+  useClientRegistrationsSummary,
 } from '../../../../hooks/useClientDetailData';
 import { buildClientDetail } from './api/buildClientDetail';
 
-type DetailTab = 'overview' | 'filings' | 'laws' | 'audit-trail';
+type DetailTab = 'overview' | 'filings' | 'laws' | 'registrations' | 'audit-trail';
 
 const FILINGS_PAGE_LIMIT = 10;
 
@@ -33,7 +34,11 @@ export function ClientDetailPage() {
     clientsQueries(apiFn).detail(clientId),
   );
   const { summary, loading: summaryLoading } = useClientFilingsSummary(clientId);
-  const { registrations, loading: registrationsLoading } = useClientRegistrations(clientId);
+  const {
+    registrations,
+    total: registrationsTotal,
+    loading: registrationsLoading,
+  } = useClientRegistrationsSummary(clientId);
   const { contacts, loading: contactsLoading } = useClientContacts(clientId);
 
   const [activeTab, setActiveTab] = useState<DetailTab>('overview');
@@ -104,6 +109,7 @@ export function ClientDetailPage() {
     record,
     summary,
     registrations,
+    registrationsTotal,
     recentFilings: filingsQuery.rows,
     contacts,
   });
@@ -124,8 +130,13 @@ export function ClientDetailPage() {
     { value: 'overview' as const, label: 'Overview' },
     { value: 'filings' as const, label: 'Filings', count: client.openFilings },
     { value: 'laws' as const, label: 'Laws', count: client.registeredLaws },
+    { value: 'registrations' as const, label: 'Registrations', count: client.registeredLaws },
     { value: 'audit-trail' as const, label: 'Audit Trail' },
   ];
+
+  // Registrations preview shows top-5 — surface the gap so users know
+  // there's more behind the Registrations tab.
+  const lawsPreviewTruncated = registrationsTotal > registrations.length;
 
   return (
     <div className="min-h-screen bg-paper paper-grain">
@@ -194,7 +205,25 @@ export function ClientDetailPage() {
                 getRowKey={(l) => l.id}
                 onRowClick={() => {}}
               />
+              {lawsPreviewTruncated && (
+                <div className="px-3 py-3 border-t border-rule flex items-center justify-between">
+                  <span className="text-[11px] font-sans tabular-nums text-ink-soft">
+                    Showing {registrations.length} of {registrationsTotal} registrations
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => setActiveTab('registrations')}
+                    className="text-[11px] uppercase tracking-eyebrow font-sans font-medium text-ink-soft hover:text-ink transition-colors"
+                  >
+                    View all {registrationsTotal} →
+                  </button>
+                </div>
+              )}
             </div>
+          )}
+
+          {activeTab === 'registrations' && clientId && (
+            <RegistrationsTab clientId={clientId} />
           )}
 
           {activeTab === 'audit-trail' && clientId && (
