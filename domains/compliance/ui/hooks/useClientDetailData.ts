@@ -132,30 +132,49 @@ export interface ClientRegistrationRecord {
   id: string;
   clientId: string;
   lawId: string;
-  status?: string | null;
+  registrationNumber?: string | null;
+  effectiveFrom?: string | null;
   registeredAt?: string | null;
-  primaryHandlerUserId?: string | null;
-  primaryHandlerTeamId?: string | null;
-  cadence?: string | null;
-  /** Embedded by the engine's lookup-label resolver. */
-  lawId__label?: string | null;
-  primaryHandlerUserId__label?: string | null;
-  primaryHandlerTeamId__label?: string | null;
+  deactivatedAt?: string | null;
+  /**
+   * Embedded server-side via LEFT JOIN on `compliance_laws` — see
+   * `ClientRegistrationsService.list`. Pre-server-join the UI relied on
+   * `lawId__label` (entity-engine lookup resolver), but registrations
+   * never went through the engine; the labels were always undefined. The
+   * service now joins explicitly so these fields are populated.
+   */
+  lawCode?: string | null;
+  lawName?: string | null;
+  lawJurisdiction?: string | null;
+  lawIssuingAuthority?: string | null;
   [key: string]: unknown;
 }
 
 /**
- * Active registrations for a single client. Filters server-side via the
- * client-registrations endpoint with a `clientId=eq` legacy filter.
+ * Compact preview of a client's registrations for the Laws tab and overview
+ * surfaces. Fetches the top-5 by `registeredAt:desc` and surfaces
+ * `meta.total` so callers can render "view all N" without re-counting in JS.
+ *
+ * Pairs with {@link useClientRegistrationsList} for the full Registrations
+ * tab — the list/preview split exists so the preview never silently
+ * truncates (it asks for exactly 5 + a count) and the tab can paginate +
+ * sort + search server-side.
  */
-export function useClientRegistrations(clientId: string | null | undefined) {
+const REGISTRATIONS_PREVIEW_LIMIT = 5;
+
+export function useClientRegistrationsSummary(clientId: string | null | undefined) {
   const { apiFn } = useEntityEngine();
   const enabled = !!clientId;
+  const search = new URLSearchParams();
+  if (clientId) search.set('clientId', clientId);
+  search.set('limit', String(REGISTRATIONS_PREVIEW_LIMIT));
+  search.set('sort', 'registeredAt:desc');
+
   const query = useQuery<PaginatedResponse<ClientRegistrationRecord>>({
-    queryKey: ['client-registrations', { clientId }],
+    queryKey: ['client-registrations', 'summary', { clientId }],
     queryFn: () =>
       apiFn.get<PaginatedResponse<ClientRegistrationRecord>>(
-        `/client-registrations?clientId=${encodeURIComponent(clientId ?? '')}&limit=100`,
+        `/client-registrations?${search.toString()}`,
       ),
     enabled,
   });
@@ -166,3 +185,83 @@ export function useClientRegistrations(clientId: string | null | undefined) {
     error: query.error,
   };
 }
+
+export interface UseClientRegistrationsListOptions {
+  page?: number;
+  limit?: number;
+  search?: string;
+  sort?: string;
+}
+
+/**
+ * Pure URL builder for the registrations list endpoint. Extracted from
+ * `useClientRegistrationsList` so unit tests can assert query-param
+ * shape without needing a TanStack Query harness or apiFn mock.
+ */
+function buildRegistrationsListQueryString(
+  clientId: string | null | undefined,
+  options: UseClientRegistrationsListOptions,
+): string {
+  const params = new URLSearchParams();
+  params.set('page', String(options.page ?? 1));
+  params.set('limit', String(options.limit ?? 25));
+  params.set('sort', options.sort ?? 'registeredAt:desc');
+  if (clientId) params.set('clientId', clientId);
+  if (options.search) params.set('search', options.search);
+  return params.toString();
+}
+
+/**
+ * Server-paginated registrations for the Registrations tab on the client
+ * detail page. URL params round-trip to the server: page, limit, search
+ * (ilike on registrationNumber), sort (`<field>:<asc|desc>` —
+ * `registeredAt`, `effectiveFrom`, `registrationNumber`, `deactivatedAt`
+ * are allowlisted server-side; unknown fields fall back to
+ * `registeredAt:desc`).
+ *
+ * Each row carries embedded `lawCode` / `lawName` / `lawJurisdiction` /
+ * `lawIssuingAuthority` from the server-side LEFT JOIN, so the tab never
+ * client-side-joins `/laws`.
+ */
+export function useClientRegistrationsList(
+  clientId: string | null | undefined,
+  options: UseClientRegistrationsListOptions = {},
+) {
+  const { apiFn } = useEntityEngine();
+  const enabled = !!clientId;
+  const page = options.page ?? 1;
+  const limit = options.limit ?? 25;
+  const sort = options.sort ?? 'registeredAt:desc';
+  const qs = buildRegistrationsListQueryString(clientId, {
+    page,
+    limit,
+    sort,
+    search: options.search,
+  });
+
+  const query = useQuery<PaginatedResponse<ClientRegistrationRecord>>({
+    queryKey: [
+      'client-registrations',
+      'list',
+      'by-client',
+      { clientId, page, limit, sort, search: options.search ?? '' },
+    ],
+    queryFn: () =>
+      apiFn.get<PaginatedResponse<ClientRegistrationRecord>>(`/client-registrations?${qs}`),
+    enabled,
+    placeholderData: (prev) => prev,
+  });
+
+  return {
+    rows: query.data?.data ?? [],
+    meta: query.data?.meta,
+    total: query.data?.meta.total ?? 0,
+    loading: query.isLoading,
+    error: query.error,
+    refetch: () => query.refetch(),
+  };
+}
+
+export const __test__ = {
+  buildRegistrationsListQueryString,
+};
