@@ -4,14 +4,17 @@ import { users } from '@packages/database';
 import { roles, rolePermissions, userRoles } from '@packages/rbac';
 import { orgUnits, orgUnitLevels } from '@packages/org-units';
 import {
-  clients,
-  clientContacts,
   complianceLaws,
   complianceRules,
   complianceClientRegistrations,
   complianceLawHandlers,
   complianceFilings,
 } from '../../schema';
+// `clients` and `clientContacts` are NOT re-exported from `../../schema`
+// (see schema/index.ts comment). They live on shared identity tables and
+// are imported directly from each module's per-module schema file.
+import { clients } from '../../clients/clients.schema';
+import { clientContacts } from '../../client-contacts/client-contacts.schema';
 
 /**
  * Direct-insert fixtures for integration tests. Bypasses the entity-engine
