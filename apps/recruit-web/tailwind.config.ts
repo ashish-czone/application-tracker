@@ -5,55 +5,20 @@ const config: Config = {
   ...baseConfig,
   content: [
     './src/**/*.{ts,tsx}',
-    // @packages/debug-profiler-ui (core)
-    '../../packages/core/debug-profiler/ui/*.{ts,tsx}',
-    // @packages/app-shell-ui (platform)
-    '../../packages/platform/app-shell-ui/index.tsx',
-    '../../packages/platform/app-shell-ui/src/**/*.{ts,tsx}',
-    // @domains/recruit-ui
-    '../../domains/recruit/ui/index.tsx',
-    '../../domains/recruit/ui/components/**/*.{ts,tsx}',
-    '../../domains/recruit/ui/entity-configs/**/*.{ts,tsx}',
-    '../../domains/recruit/ui/hooks/**/*.{ts,tsx}',
-    '../../domains/recruit/ui/lib/**/*.{ts,tsx}',
-    '../../domains/recruit/ui/portals/**/*.{ts,tsx}',
-    // @packages/ui (core)
-    '../../packages/core/ui/components/**/*.{ts,tsx}',
-    '../../packages/core/ui/hooks/**/*.{ts,tsx}',
-    '../../packages/core/ui/lib/**/*.{ts,tsx}',
-    // @packages/entity-engine-ui (platform)
-    '../../packages/addons/entity-engine/ui/*.{ts,tsx}',
-    '../../packages/addons/entity-engine/ui/components/**/*.{ts,tsx}',
-    '../../packages/addons/entity-engine/ui/helpers/**/*.{ts,tsx}',
-    '../../packages/addons/entity-engine/ui/pages/**/*.{ts,tsx}',
-    // @packages/eav-attributes-ui (platform)
-    '../../packages/platform/eav-attributes-ui/components/**/*.{ts,tsx}',
-    '../../packages/platform/eav-attributes-ui/field-types/**/*.{ts,tsx}',
-    '../../packages/platform/eav-attributes-ui/helpers/**/*.{ts,tsx}',
-    // @packages/entity-relations-ui (addons)
-    '../../packages/addons/entity-relations-ui/field-types/**/*.{ts,tsx}',
-    // @packages/notes-ui (addons)
-    '../../packages/addons/notes-ui/components/**/*.tsx',
-    // @packages/attachments-ui (addons)
-    '../../packages/addons/attachments-ui/components/**/*.tsx',
-    // @packages/evaluations-ui (addons)
-    '../../packages/addons/evaluations-ui/components/**/*.tsx',
-    // @packages/platform-ui (platform)
-    '../../packages/platform/platform-ui/*.{ts,tsx}',
-    '../../packages/platform/platform-ui/audit/**/*.{ts,tsx}',
-    '../../packages/platform/platform-ui/conditions/*.tsx',
-    // @packages/notification-channels-ui (platform)
-    '../../packages/platform/notification-channels/ui/**/*.{ts,tsx}',
-    '../../packages/platform/platform-ui/automations/**/*.{ts,tsx}',
-    '../../packages/platform/platform-ui/notifications/**/*.{ts,tsx}',
-    '../../packages/platform/platform-ui/rbac/**/*.{ts,tsx}',
-    '../../packages/platform/platform-ui/settings/**/*.{ts,tsx}',
-    '../../packages/platform/platform-ui/tasks/**/*.{ts,tsx}',
-    '../../packages/platform/platform-ui/taxonomy/*.{ts,tsx}',
-    '../../packages/platform/platform-ui/taxonomy/components/**/*.{ts,tsx}',
-    '../../packages/platform/platform-ui/taxonomy/pages/**/*.{ts,tsx}',
-    '../../packages/platform/platform-ui/users/**/*.{ts,tsx}',
-    '../../packages/platform/platform-ui/workflows/**/*.{ts,tsx}',
+    // Scan UI source by the real package layout — the same way Vite resolves @packages/*-ui
+    // aliases (see packages/resolve-aliases.ts) — instead of a hand-maintained per-folder list.
+    // The previous explicit list silently rotted: ~18 entries pointed at paths that no longer
+    // exist (e.g. `platform/app-shell-ui` — the package actually lives at `platform/app-shell/ui`),
+    // so those packages' Tailwind classes were purged from the bundle. The app-shell sidebar
+    // offset (`lg:pl-60`) was a casualty, which made page content render *under* the fixed sidebar.
+    //
+    // Two layout conventions coexist and both are matched: nested `<feature>/ui/` (app-shell,
+    // entity-engine, notes, …) and flat `<feature>-ui/` (platform-ui, eav-attributes-ui).
+    // Scoping to `ui` / `*-ui` dirs keeps backend `api/` source out of the scan; Tailwind
+    // ignores node_modules by default.
+    '../../packages/{core,platform,addons}/**/ui/**/*.{ts,tsx}',
+    '../../packages/{core,platform,addons}/*-ui/**/*.{ts,tsx}',
+    '../../domains/*/ui/**/*.{ts,tsx}',
   ],
 };
 
